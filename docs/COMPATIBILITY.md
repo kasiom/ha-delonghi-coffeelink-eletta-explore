@@ -12,8 +12,10 @@ The 1.2.x line is tested against the actual Home Assistant 2026.8.2 runtime
 interfaces. Version 1.2.0 completed deployment, clean-restart and supervised
 physical acceptance on the Eletta Explore listed above. Version 1.2.1 changes
 distribution metadata and documentation without changing beverage-command or
-machine-state behavior. Newer Home Assistant versions are expected to work, but
-vendor and Home Assistant changes require continuing validation.
+machine-state behavior; it has since been installed through HACS and verified to
+load on the same target Home Assistant. Newer Home Assistant versions are
+expected to work, but vendor and Home Assistant changes require continuing
+validation.
 
 ## Verified Eletta behavior
 

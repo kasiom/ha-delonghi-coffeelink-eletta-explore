@@ -7,13 +7,13 @@ připojené přes Coffee Link a platformu Ayla IoT.
 
 | Položka | Stav |
 |---|---|
-| Vydávání | stabilní vydání na GitHubu; větev `main` obsahuje příští otestovanou verzi |
-| Základ fyzického ověření | 1.2.0 – probuzení, Cold Brew Start/Stop a pohotovostní režim |
+| Aktuální vydání | 1.2.1 – nainstalováno přes HACS a ověřeno načtení v cílovém Home Assistantu |
+| Fyzické ověření příkazů | 1.2.0 – probuzení, Cold Brew Start/Stop a pohotovostní režim; 1.2.1 tyto části běhu nemění |
 | Ověřený kávovar | Eletta Explore ECAM450.65.G (`DL-striker-cb`, oblast EU) |
 | Home Assistant | 2026.8.2 nebo novější |
 | Jazyky | čeština a angličtina |
 | Automatické testy | 312 izolovaných testů se 100% pokrytím + testy ve skutečném HA |
-| Distribuce | vlastní repozitář HACS nebo ruční instalace z vydání na GitHubu |
+| Distribuce | vlastní repozitář HACS nebo ruční instalace z vydání na GitHubu; zařazení do výchozího katalogu se posuzuje |
 
 Profil PrimaDonna Soul zůstává v kódu pro zkoušky kompatibility, neprošel však
 stejným fyzickým ověřením a je označen jako experimentální.
@@ -39,6 +39,9 @@ stejným fyzickým ověřením a je označen jako experimentální.
 
 Dokud integrace nebude součástí výchozího katalogu HACS, přidejte ji jednou jako
 vlastní repozitář:
+
+[Žádost o zařazení](https://github.com/hacs/default/pull/10136) je nyní ve frontě
+na kontrolu HACS.
 
 1. v HACS otevřete **Vlastní repozitáře**;
 2. přidejte

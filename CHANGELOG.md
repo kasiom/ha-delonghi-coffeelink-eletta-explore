@@ -6,6 +6,16 @@ All notable user-visible changes are documented here. The project follows
 
 ## [Unreleased]
 
+### Documentation
+
+- Update the technical audit and English/Czech project status after publication
+  of 1.2.1, its verified HACS installation and submission to the default HACS
+  catalog review queue.
+- Distinguish the installed 1.2.1 release from the 1.2.0 supervised physical
+  command-acceptance baseline; 1.2.1 does not change those runtime paths.
+- Record the current external HACS catalog check state without presenting it as
+  an integration or release-validation failure.
+
 ## [1.2.1] - 2026-08-19
 
 ### Changed

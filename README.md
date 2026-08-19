@@ -22,13 +22,13 @@ platform.
 
 | Item | Status |
 |---|---|
-| Release channel | Stable GitHub releases; `main` contains the next tested release |
-| Live acceptance baseline | 1.2.0 deployed; supervised Wake, Cold Brew Start/Stop and Standby passed |
+| Current release | 1.2.1; installed through HACS and verified to load on the target Home Assistant |
+| Physical command acceptance | 1.2.0; supervised Wake, Cold Brew Start/Stop and Standby passed; 1.2.1 does not change those runtime paths |
 | Verified machine | Eletta Explore ECAM450.65.G (`DL-striker-cb`, EU region) |
 | Home Assistant | 2026.8.2 or newer |
 | Languages | English and Czech |
 | Automated tests | 312 isolated tests at 100% line/branch coverage + real HA runtime tests |
-| Distribution | HACS custom repository or manual installation from a GitHub release |
+| Distribution | HACS custom repository or manual installation from a GitHub release; default-catalog review is pending |
 
 The PrimaDonna Soul profile remains available for compatibility testing, but it
 has not completed the same physical acceptance matrix and is therefore
@@ -73,6 +73,9 @@ diagnostics.
 
 Until the repository is included in the default HACS catalog, add it once as a
 custom repository:
+
+The [default-catalog request](https://github.com/hacs/default/pull/10136) is
+currently in the HACS review queue.
 
 1. Open HACS and choose **Custom repositories**.
 2. Add

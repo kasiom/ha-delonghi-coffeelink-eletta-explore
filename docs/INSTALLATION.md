@@ -13,6 +13,10 @@
 
 Until this integration is accepted into the default HACS catalog:
 
+The [default-catalog request](https://github.com/hacs/default/pull/10136) is in
+the HACS review queue. The custom-repository method below remains fully
+supported while that review is pending.
+
 1. Open HACS and choose **Custom repositories**.
 2. Add
    `https://github.com/kasiom/ha-delonghi-coffeelink-eletta-explore`
