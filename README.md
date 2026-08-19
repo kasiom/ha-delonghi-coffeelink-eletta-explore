@@ -22,7 +22,7 @@ platform.
 | Item | Status |
 |---|---|
 | Release candidate | 1.2.0 (not published yet) |
-| Live acceptance baseline | 1.2.0 deployed; restart and supervised power cycle passed |
+| Live acceptance baseline | 1.2.0 deployed; supervised Wake, Cold Brew Start/Stop and Standby passed |
 | Verified machine | Eletta Explore ECAM450.65.G (`DL-striker-cb`, EU region) |
 | Home Assistant | 2026.8.2 or newer |
 | Languages | English and Czech |

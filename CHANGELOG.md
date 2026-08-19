@@ -6,6 +6,8 @@ All notable user-visible changes are documented here. The project follows
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-08-19
+
 ### Added
 
 - Add real-runtime integration tests against Home Assistant 2026.8.2 for the
@@ -316,5 +318,5 @@ All notable user-visible changes are documented here. The project follows
 - Initial standalone version derived from substantially modified MIT-licensed
   Coffee Link integration work.
 
-[Unreleased]: https://github.com/kasiom/ha-delonghi-coffeelink-eletta-explore/compare/v1.1.26...HEAD
-[1.1.26]: https://github.com/kasiom/ha-delonghi-coffeelink-eletta-explore/releases/tag/v1.1.26
+[Unreleased]: https://github.com/kasiom/ha-delonghi-coffeelink-eletta-explore/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/kasiom/ha-delonghi-coffeelink-eletta-explore/releases/tag/v1.2.0

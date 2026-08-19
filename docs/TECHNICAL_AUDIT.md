@@ -12,8 +12,7 @@ learn-and-replay beverage commands, serialized cloud sessions, command
 acknowledgement, MonitorV2 decoding, dynamic entity discovery, reauthentication
 and privacy-safe diagnostics. It is not yet declared released. Version 1.2.0 is
 deployed on the target Home Assistant and has passed a clean restart plus a
-supervised wake/standby cycle; the selected beverage acceptance run remains a
-release gate.
+supervised Wake, Cold Brew Start/Stop and Standby cycle.
 
 The isolated suite covers every executable line and branch in all 17 Python
 modules. A second suite loads the integration through actual Home Assistant
@@ -94,8 +93,8 @@ fails validation.
 | Wake | 1.2.0 changed standby → waking up → ready | verified on Eletta |
 | Standby | 1.2.0 changed ready → standby | verified on Eletta |
 | Recipe learning | Espresso, Cappuccino and Cold Brew frames observed | verified |
-| Cold Brew start | command accepted and physical preparation observed | verified |
-| Cold Brew Stop | machine returned to ready and Stop availability cleared | verified |
+| Cold Brew start | 1.2.0 entered preparation and enabled context-aware Stop | verified on Eletta |
+| Cold Brew Stop | 1.2.0 returned to ready and disabled Stop | verified on Eletta |
 | Last Command Status | unknown after restart; app traffic kept separate | verified |
 | Coffee Link Session | free after deployment; history retained | verified |
 | Other beverage recipes | automated protocol paths only | physical matrix incomplete |
@@ -103,12 +102,12 @@ fails validation.
 | Fault and outage paths | deterministic automated coverage | controlled live faults pending |
 | PrimaDonna Soul | profile and automated compatibility paths | experimental |
 
-Wake and standby were physically repeated after deploying 1.2.0. Last Command
-Status recorded `pending`, `sent` and `acknowledged` for both operations; its
-later return to `unknown` followed a config-entry reload and is the documented
-runtime-only behavior, while Recorder retained the transitions. Cold Brew was
-accepted during the earlier 1.1.x cycle and remains to be repeated on 1.2.0.
-The table does not imply that every beverage was physically prepared.
+Wake, Cold Brew Start, Cold Brew Stop and Standby were physically repeated after
+deploying 1.2.0. Last Command Status recorded `pending`, `sent` and
+`acknowledged` for every operation. Its earlier return to `unknown` followed a
+config-entry reload and is the documented runtime-only behavior, while Recorder
+retained the transitions. The table does not imply that every beverage was
+physically prepared.
 
 ## Security and privacy review
 
@@ -158,7 +157,8 @@ Before changing the repository from private to public:
 - keep the verified 1.2.0 deployment and clean restart evidence with the private
   release records;
 - repeat a clean manual installation from the candidate source;
-- complete the selected supervised beverage acceptance matrix;
+- retain the successful supervised 1.2.0 Wake, Cold Brew Start/Stop and Standby
+  acceptance evidence with the private release records;
 - enable private vulnerability reporting and update `SECURITY.md` with the direct
   reporting path;
 - enable branch protection with required passing checks, or document the GitHub
