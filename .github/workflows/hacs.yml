@@ -3,6 +3,7 @@ name: HACS
 on:
   push:
   pull_request:
+  public:
   schedule:
     - cron: "17 3 * * 1"
   workflow_dispatch:
@@ -16,10 +17,10 @@ concurrency:
 
 jobs:
   hacs:
-    name: HACS repository validation
+    name: HACS repository validation (public repository)
     # HACS downloads manifests through public raw.githubusercontent.com URLs.
-    # Keep the repository private during development and enable this job
-    # automatically if the repository is later made public.
+    # The public event below starts this workflow automatically when repository
+    # visibility changes; private development runs keep this network check skipped.
     if: ${{ !github.event.repository.private }}
     runs-on: ubuntu-24.04
     steps:

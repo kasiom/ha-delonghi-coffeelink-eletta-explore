@@ -2,17 +2,19 @@
 
 Audit date: 2026-08-19
 
-Release candidate: 1.2.0
+Publication candidate: 1.2.1
 
 ## Verdict
 
-The 1.2.0 release candidate is internally consistent and unusually well tested
+The 1.2.1 publication candidate is internally consistent and unusually well tested
 for an unofficial reverse-engineered appliance integration. It combines validated
 learn-and-replay beverage commands, serialized cloud sessions, command
 acknowledgement, MonitorV2 decoding, dynamic entity discovery, reauthentication
-and privacy-safe diagnostics. It is not yet declared released. Version 1.2.0 is
-deployed on the target Home Assistant and has passed a clean restart plus a
-supervised Wake, Cold Brew Start/Stop and Standby cycle.
+and privacy-safe diagnostics. Version 1.2.0 is deployed on the target Home
+Assistant and has passed a clean restart plus a supervised Wake, Cold Brew
+Start/Stop and Standby cycle. Version 1.2.1 retains that runtime behavior and
+adds public-distribution documentation, current custom-integration localization
+packaging and automatic validation on the GitHub `public` event.
 
 The isolated suite covers every executable line and branch in all 17 Python
 modules. A second suite loads the integration through actual Home Assistant
@@ -23,7 +25,7 @@ tested Eletta Explore model and documented acceptance evidence.
 
 ## Audited environment
 
-- Source candidate and deployed live baseline: 1.2.0.
+- Source publication candidate: 1.2.1; deployed live acceptance baseline: 1.2.0.
 - Home Assistant: 2026.8.2.
 - Python: 3.14.6.
 - Home Assistant OS: 18.2.
@@ -51,13 +53,18 @@ Assistant quality certification.
 Repository layout, manifest metadata, brand assets and release guidance were
 checked against the current
 [HACS integration publishing requirements](https://www.hacs.xyz/docs/publish/integration/).
-Actual public HACS validation remains impossible until the repository is public.
+Actual public HACS validation remains intentionally gated until the repository is
+public. The workflow subscribes to GitHub's `public` event so that HACS,
+hassfest and the full test suite start automatically when visibility changes.
+Custom runtime localization is supplied completely by `translations/en.json`
+and `translations/cs.json`; the Core-only build source `strings.json` is not
+shipped.
 
 ## Automated verification
 
 | Check | Result |
 |---|---|
-| Unit and integration-isolation tests | 311 passed |
+| Unit and integration-isolation tests | 312 passed |
 | Actual Home Assistant runtime tests | 2 passed |
 | Python modules measured | 17 |
 | Statements | 2,050 / 2,050 |
@@ -69,7 +76,7 @@ Actual public HACS validation remains impossible until the repository is public.
 | English/Czech leaf-key parity | 188 / 188 |
 | Translation placeholders | synchronized |
 | Home Assistant hassfest | passed |
-| Manifest version | 1.2.0 |
+| Manifest version | 1.2.1 |
 
 Tests use deterministic local doubles and make no calls to a real account or
 vendor endpoint. Covered behavior includes authentication refresh and failure
@@ -139,35 +146,42 @@ physically prepared.
 4. The 30-second polling architecture can miss intermediate official-app commands.
 5. Account membership is reconciled every ten minutes, not instantly.
 6. Cup placement and every accessory condition cannot be detected.
-7. HACS distribution requires a public GitHub repository. While private, the
-   integration must be installed manually and the public HACS validator remains
-   intentionally skipped.
-8. Branch protection and the public private-vulnerability reporting endpoint are
-   unavailable for this private repository on the current GitHub plan. These
-   repository controls must be enabled or reassessed when publication changes
-   their availability.
-9. The release branch is rooted at a reviewed 1.2.0 baseline with no parent
-   commits or legacy tags. A pre-clean recovery bundle is retained privately
-   outside the repository and must never be published.
+7. HACS distribution requires a public GitHub repository. The public HACS
+   validator remains intentionally skipped until the visibility change and is
+   automatically triggered by that event.
+8. Branch rulesets and public private-vulnerability reporting become available
+   after publication on the current GitHub plan and must be enabled immediately
+   after the visibility change.
+9. The release branch is rooted at a reviewed clean baseline with no legacy
+   pull-request refs or tags. The pre-clean recovery bundle was permanently
+   removed after repository recreation; only a verified clean 1.2.0 release
+   bundle is retained outside the repository.
 
-## Publication checklist
+## Publication activation checklist
 
-Before changing the repository from private to public:
+Completed before the visibility change:
 
-- keep the verified 1.2.0 deployment and clean restart evidence with the private
-  release records;
-- repeat a clean manual installation from the candidate source;
-- retain the successful supervised 1.2.0 Wake, Cold Brew Start/Stop and Standby
-  acceptance evidence with the private release records;
-- enable private vulnerability reporting and update `SECURITY.md` with the direct
-  reporting path;
-- enable branch protection with required passing checks, or document the GitHub
-  plan limitation if it still applies;
-- confirm that no credentials, identifiers or private logs are present in Git
-  history, issues, releases or Actions artifacts;
-- verify that the remote branch and releases expose only the cleaned 1.2.0
-  baseline and its synthetic protocol fixtures;
-- make the repository public;
-- confirm that HACS validation, hassfest and the 100% test workflow all pass;
-- test HACS custom-repository installation on a separate Home Assistant instance;
-- only then request inclusion in the HACS default repository, if desired.
+- verified 1.2.0 deployment, clean restart and supervised Wake, Cold Brew
+  Start/Stop and Standby evidence retained outside the repository;
+- repository history recreated with only the reviewed clean baseline, current
+  release and synthetic protocol fixtures;
+- credentials, account/device identifiers, private logs and real command frames
+  excluded from Git history, Issues, releases and Actions artifacts;
+- public-facing English/Czech installation, security, compatibility and support
+  documentation prepared;
+- HACS, hassfest and full validation workflows pinned to reviewed commit SHAs and
+  configured to run automatically on GitHub's `public` event.
+
+Perform immediately after changing visibility to public:
+
+1. Confirm that HACS validation, hassfest and Validate all pass on `main` without
+   ignored checks.
+2. Enable GitHub private vulnerability reporting, Dependabot vulnerability
+   alerts/security updates and a `main` ruleset that blocks force-push/deletion
+   and requires the passing CI checks.
+3. Install through HACS as a custom repository on a separate Home Assistant
+   instance and verify setup, restart and removal.
+4. Create tag and GitHub release `v1.2.1` only after those checks are green.
+5. Request HACS default-catalog inclusion only if desired and only after checking
+   its current brand and submission requirements; custom-repository installation
+   does not depend on that review.

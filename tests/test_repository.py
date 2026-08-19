@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import re
 from pathlib import Path
+from urllib.parse import unquote
 
 import yaml
 
@@ -18,11 +19,24 @@ def test_release_metadata_quality_scale_and_workflows_are_consistent() -> None:
     hacs = json.loads((ROOT / "hacs.json").read_text(encoding="utf-8"))
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
     readme_cs = (ROOT / "docs" / "README_CS.md").read_text(encoding="utf-8")
+    installation = (ROOT / "docs" / "INSTALLATION.md").read_text(encoding="utf-8")
+    audit = (ROOT / "docs" / "TECHNICAL_AUDIT.md").read_text(encoding="utf-8")
+    hacs_link = (
+        "https://my.home-assistant.io/redirect/hacs_repository/"
+        "?owner=kasiom&repository=ha-delonghi-coffeelink-eletta-explore"
+        "&category=integration"
+    )
 
-    assert manifest["version"] == "1.2.0"
+    assert manifest["version"] == "1.2.1"
     assert hacs["homeassistant"] == "2026.8.2"
-    assert "Release candidate | 1.2.0" in readme
-    assert "Kandidát na vydání | 1.2.0" in readme_cs
+    assert all(hacs_link in document for document in (readme, readme_cs, installation))
+    assert "Private acceptance testing" not in readme
+    assert "soukromé ověřování" not in readme_cs
+    assert "private repository stage" not in installation.lower()
+    assert "v1.1.26" not in readme_cs
+    assert "pre-clean recovery bundle is retained" not in audit.lower()
+    assert "pre-clean recovery bundle was permanently" in audit.lower()
+    assert not (COMPONENT / "strings.json").exists()
     assert len([path for path in (ROOT / "custom_components").iterdir() if path.is_dir()]) == 1
 
     quality = yaml.safe_load(
@@ -47,3 +61,31 @@ def test_release_metadata_quality_scale_and_workflows_are_consistent() -> None:
     ]
     assert uses_lines
     assert all(pinned_action.fullmatch(line) for line in uses_lines)
+
+    workflows = [
+        workflow.read_text(encoding="utf-8")
+        for workflow in (ROOT / ".github" / "workflows").glob("*.yml")
+    ]
+    assert workflows
+    assert all("  public:" in workflow for workflow in workflows)
+
+
+def test_local_markdown_links_resolve() -> None:
+    """Keep public documentation free of broken repository-local links."""
+    markdown_link = re.compile(r"!?\[[^\]]*\]\(([^)]+)\)")
+    missing: list[str] = []
+
+    for document in ROOT.rglob("*.md"):
+        if ".git" in document.parts:
+            continue
+        for raw_target in markdown_link.findall(
+            document.read_text(encoding="utf-8")
+        ):
+            target = raw_target.strip().strip("<>").split(maxsplit=1)[0]
+            if target.startswith(("http://", "https://", "mailto:", "#")):
+                continue
+            target = unquote(target.split("#", maxsplit=1)[0])
+            if target and not (document.parent / target).resolve().exists():
+                missing.append(f"{document.relative_to(ROOT)} -> {target}")
+
+    assert not missing

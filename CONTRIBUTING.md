@@ -17,7 +17,9 @@ sanitized diagnostics only.
 
 - Keep changes focused and explain user-visible behavior.
 - Add or update tests for every behavior change.
-- Update English source strings and Czech translations together.
+- Update the complete runtime files `translations/en.json` and
+  `translations/cs.json` together; do not add a Core build-source
+  `strings.json` file to this custom integration.
 - Keep line and branch coverage at 100%.
 - Update `CHANGELOG.md` for user-visible changes.
 - Do not introduce network calls at module import time.

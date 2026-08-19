@@ -8,11 +8,12 @@
 | PrimaDonna Soul (`DL-millcore`) | Coffee Link/Ayla | Experimental; retained profile, incomplete physical acceptance |
 | Other models | Unknown/model-dependent | Unsupported unless validated with sanitized diagnostics and physical tests |
 
-The 1.2.0 release candidate is tested against the actual Home Assistant 2026.8.2
-runtime interfaces. Physical acceptance evidence comes from the 1.1.x cycle on
-the machine listed above; the 1.2.0 candidate still requires final deployment
-acceptance before release. Newer Home Assistant versions are expected to work,
-but vendor and Home Assistant changes require continuing validation.
+The 1.2.x line is tested against the actual Home Assistant 2026.8.2 runtime
+interfaces. Version 1.2.0 completed deployment, clean-restart and supervised
+physical acceptance on the Eletta Explore listed above. Version 1.2.1 changes
+distribution metadata and documentation without changing beverage-command or
+machine-state behavior. Newer Home Assistant versions are expected to work, but
+vendor and Home Assistant changes require continuing validation.
 
 ## Verified Eletta behavior
 
@@ -24,11 +25,10 @@ but vendor and Home Assistant changes require continuing validation.
 - Coffee Link session ownership and command acknowledgement handling.
 - English/Czech translation-key and placeholder parity.
 
-Wake, standby and Cold Brew were physically accepted during the 1.1.x test cycle.
-Release 1.1.26 was subsequently deployed cleanly. The 1.2.0 candidate has full
-automated regression coverage and real-HA interface tests but has not yet repeated
-the complete physical acceptance pass. Other beverage recipes have not all
-completed the same physical matrix.
+Wake, standby and Cold Brew Start/Stop were physically repeated after deploying
+1.2.0. Last Command Status recorded the expected transaction transitions and the
+machine returned to standby. Other beverage recipes have not all completed the
+same supervised physical matrix.
 
 ## Known limitations
 

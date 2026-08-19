@@ -7,13 +7,13 @@ připojené přes Coffee Link a platformu Ayla IoT.
 
 | Položka | Stav |
 |---|---|
-| Kandidát na vydání | 1.2.0 (zatím nezveřejněn) |
-| Základ fyzického ověření | [1.1.26](https://github.com/kasiom/ha-delonghi-coffeelink-eletta-explore/releases/tag/v1.1.26) |
+| Vydávání | stabilní vydání na GitHubu; větev `main` obsahuje příští otestovanou verzi |
+| Základ fyzického ověření | 1.2.0 – probuzení, Cold Brew Start/Stop a pohotovostní režim |
 | Ověřený kávovar | Eletta Explore ECAM450.65.G (`DL-striker-cb`, oblast EU) |
 | Home Assistant | 2026.8.2 nebo novější |
 | Jazyky | čeština a angličtina |
-| Automatické testy | 311 izolovaných testů se 100% pokrytím + testy ve skutečném HA |
-| Repozitář | soukromé ověřování; nyní pouze ruční instalace |
+| Automatické testy | 312 izolovaných testů se 100% pokrytím + testy ve skutečném HA |
+| Distribuce | vlastní repozitář HACS nebo ruční instalace z vydání na GitHubu |
 
 Profil PrimaDonna Soul zůstává v kódu pro zkoušky kompatibility, neprošel však
 stejným fyzickým ověřením a je označen jako experimentální.
@@ -35,18 +35,24 @@ stejným fyzickým ověřením a je označen jako experimentální.
 
 ## Instalace
 
-HACS vyžaduje veřejně dostupný repozitář. Dokud je tento repozitář soukromý:
+[![Otevřít tento repozitář v HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=kasiom&repository=ha-delonghi-coffeelink-eletta-explore&category=integration)
 
-1. stáhněte jej z GitHub účtu s uděleným přístupem;
-2. zkopírujte celou složku
-   `custom_components/ha_delonghi_coffeelink_eletta_explore` do
-   `/config/custom_components/`;
-3. restartujte Home Assistant;
+Dokud integrace nebude součástí výchozího katalogu HACS, přidejte ji jednou jako
+vlastní repozitář:
+
+1. v HACS otevřete **Vlastní repozitáře**;
+2. přidejte
+   `https://github.com/kasiom/ha-delonghi-coffeelink-eletta-explore`
+   jako **Integraci**;
+3. nainstalujte **De'Longhi Coffee Link – Eletta Explore** a restartujte Home
+   Assistant;
 4. v **Nastavení → Zařízení a služby → Přidat integraci** vyhledejte
    **De'Longhi Coffee Link – Eletta Explore**.
 
-Po zveřejnění bude možné repozitář přidat do HACS jako vlastní repozitář typu
-**Integrace**. Podrobnosti jsou v [návodu k instalaci](INSTALLATION.md).
+Při ruční instalaci stáhněte nejnovější vydání, zkopírujte celou složku
+`custom_components/ha_delonghi_coffeelink_eletta_explore` do
+`/config/custom_components/` a restartujte Home Assistant. Nemíchejte soubory z
+různých vydání. Podrobnosti jsou v [návodu k instalaci](INSTALLATION.md).
 
 ## Naučení nápoje
 

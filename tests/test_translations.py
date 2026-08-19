@@ -80,14 +80,12 @@ def _literal_value(path: Path, name: str) -> Any:
 
 
 def test_translation_files_have_identical_leaf_keys_and_placeholders() -> None:
-    strings_json = _load(COMPONENT / "strings.json")
     english_json = _load(COMPONENT / "translations" / "en.json")
-    strings = _flatten(strings_json)
     english = _flatten(english_json)
     czech = _flatten(_load(COMPONENT / "translations" / "cs.json"))
 
-    assert strings_json == english_json
-    assert strings.keys() == english.keys() == czech.keys()
+    assert not (COMPONENT / "strings.json").exists()
+    assert english.keys() == czech.keys()
     for key, english_text in english.items():
         assert set(PLACEHOLDER_PATTERN.findall(english_text)) == set(
             PLACEHOLDER_PATTERN.findall(czech[key])
@@ -96,12 +94,10 @@ def test_translation_files_have_identical_leaf_keys_and_placeholders() -> None:
 
 def test_runtime_exception_keys_and_fallbacks_match_translations() -> None:
     messages = _literal_mapping(COMPONENT / "errors.py", "ERROR_MESSAGES")
-    strings = _load(COMPONENT / "strings.json")["exceptions"]
     english = _load(COMPONENT / "translations" / "en.json")["exceptions"]
     czech = _load(COMPONENT / "translations" / "cs.json")["exceptions"]
 
-    assert set(strings) == set(english) == set(czech) == set(messages)
-    assert {key: item["message"] for key, item in strings.items()} == messages
+    assert set(english) == set(czech) == set(messages)
     assert {key: item["message"] for key, item in english.items()} == messages
 
 
@@ -183,7 +179,6 @@ def test_all_runtime_entity_translation_keys_exist_in_both_languages() -> None:
     }
 
     for language_path in (
-        COMPONENT / "strings.json",
         COMPONENT / "translations" / "en.json",
         COMPONENT / "translations" / "cs.json",
     ):
@@ -252,16 +247,14 @@ def test_machine_status_enum_states_remain_complete() -> None:
 
 
 def test_machine_status_nomenclature_matches_english_and_czech() -> None:
-    strings = _load(COMPONENT / "strings.json")
     english = _load(COMPONENT / "translations" / "en.json")
     czech = _load(COMPONENT / "translations" / "cs.json")
 
     expected_english = "Preparing beverage"
-    for translations in (strings, english):
-        states = translations["entity"]["sensor"]["machine_status"]["state"]
-        assert states["preparing_beverage"] == expected_english
-        assert "grinding" not in states
-        assert "brewing" not in states
+    states = english["entity"]["sensor"]["machine_status"]["state"]
+    assert states["preparing_beverage"] == expected_english
+    assert "grinding" not in states
+    assert "brewing" not in states
 
     czech_states = czech["entity"]["sensor"]["machine_status"]["state"]
     assert czech_states["preparing_beverage"] == "Připravuje nápoj"

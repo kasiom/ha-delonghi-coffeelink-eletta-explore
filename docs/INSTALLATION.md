@@ -7,37 +7,41 @@
 - Internet access from Home Assistant to the De'Longhi/Gigya and Ayla services.
 - A current Home Assistant backup before installation or a major update.
 
-## Private repository stage: manual installation
+## HACS installation (recommended)
 
-HACS custom repositories must be publicly accessible. While this repository is
-private, download it using an authorized GitHub account and install it manually:
+[![Open your Home Assistant instance and open this repository in HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=kasiom&repository=ha-delonghi-coffeelink-eletta-explore&category=integration)
 
-1. Copy the complete
+Until this integration is accepted into the default HACS catalog:
+
+1. Open HACS and choose **Custom repositories**.
+2. Add
+   `https://github.com/kasiom/ha-delonghi-coffeelink-eletta-explore`
+   with category **Integration**. The badge above opens the same repository
+   directly when My Home Assistant is configured.
+3. Select **De'Longhi Coffee Link – Eletta Explore** and install the latest
+   stable release.
+4. Restart Home Assistant.
+5. Open **Settings → Devices & services → Add integration**, search for the
+   integration and enter the account used by the official Coffee Link app.
+
+## Manual installation
+
+1. Download the source archive attached to the latest GitHub release.
+2. Copy the complete
    `custom_components/ha_delonghi_coffeelink_eletta_explore` directory to
    `/config/custom_components/`.
-2. Restart Home Assistant.
-3. Open **Settings → Devices & services → Add integration**.
-4. Search for **De'Longhi Coffee Link – Eletta Explore**.
-5. Enter the account used by the official Coffee Link app.
+3. Restart Home Assistant.
+4. Open **Settings → Devices & services → Add integration**.
+5. Search for **De'Longhi Coffee Link – Eletta Explore** and enter the Coffee
+   Link account credentials.
+
+Never copy the repository root into `custom_components` and never mix files from
+different releases.
 
 A successful setup creates one Home Assistant device for each supported coffee
 maker returned by the account. The account device list is checked every ten
 minutes; membership changes trigger a controlled integration reload and stale
 registry records are removed.
-
-## HACS installation after publication
-
-After the repository becomes public:
-
-1. Open HACS and select **Custom repositories**.
-2. Add
-   `https://github.com/kasiom/ha-delonghi-coffeelink-eletta-explore`
-   as an **Integration**.
-3. Install **De'Longhi Coffee Link – Eletta Explore**.
-4. Restart Home Assistant and add the integration through the UI.
-
-The HACS validation job is deliberately skipped while the repository is private
-and activates automatically when it becomes public.
 
 ## Updates
 

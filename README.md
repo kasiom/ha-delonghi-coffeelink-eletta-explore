@@ -10,6 +10,7 @@ platform.
 
 [![Validate](https://github.com/kasiom/ha-delonghi-coffeelink-eletta-explore/actions/workflows/validate.yml/badge.svg)](https://github.com/kasiom/ha-delonghi-coffeelink-eletta-explore/actions/workflows/validate.yml)
 [![HACS and hassfest](https://github.com/kasiom/ha-delonghi-coffeelink-eletta-explore/actions/workflows/hacs.yml/badge.svg)](https://github.com/kasiom/ha-delonghi-coffeelink-eletta-explore/actions/workflows/hacs.yml)
+[![Latest release](https://img.shields.io/github/v/release/kasiom/ha-delonghi-coffeelink-eletta-explore)](https://github.com/kasiom/ha-delonghi-coffeelink-eletta-explore/releases/latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 > [!CAUTION]
@@ -21,13 +22,13 @@ platform.
 
 | Item | Status |
 |---|---|
-| Release candidate | 1.2.0 (not published yet) |
+| Release channel | Stable GitHub releases; `main` contains the next tested release |
 | Live acceptance baseline | 1.2.0 deployed; supervised Wake, Cold Brew Start/Stop and Standby passed |
 | Verified machine | Eletta Explore ECAM450.65.G (`DL-striker-cb`, EU region) |
 | Home Assistant | 2026.8.2 or newer |
 | Languages | English and Czech |
-| Automated tests | 311 isolated tests at 100% line/branch coverage + real HA runtime tests |
-| Repository stage | Private acceptance testing; manual installation only |
+| Automated tests | 312 isolated tests at 100% line/branch coverage + real HA runtime tests |
+| Distribution | HACS custom repository or manual installation from a GitHub release |
 
 The PrimaDonna Soul profile remains available for compatibility testing, but it
 has not completed the same physical acceptance matrix and is therefore
@@ -66,26 +67,28 @@ diagnostics.
 
 ## Installation
 
-### Current private testing stage
+### HACS (recommended)
 
-HACS repositories must be publicly accessible. While this repository is private,
-install it manually:
+[![Open your Home Assistant instance and open this repository in HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=kasiom&repository=ha-delonghi-coffeelink-eletta-explore&category=integration)
 
-1. Download the repository from an authorized GitHub account.
-2. Copy the complete
-   `custom_components/ha_delonghi_coffeelink_eletta_explore` directory to
-   `/config/custom_components/` in Home Assistant.
-3. Restart Home Assistant.
+Until the repository is included in the default HACS catalog, add it once as a
+custom repository:
+
+1. Open HACS and choose **Custom repositories**.
+2. Add
+   `https://github.com/kasiom/ha-delonghi-coffeelink-eletta-explore`
+   with category **Integration**. The badge above opens the same repository
+   directly when My Home Assistant is configured.
+3. Install **De'Longhi Coffee Link – Eletta Explore** and restart Home Assistant.
 4. Open **Settings → Devices & services → Add integration** and search for
    **De'Longhi Coffee Link – Eletta Explore**.
 
-### After the repository becomes public
+### Manual installation
 
-Add
-`https://github.com/kasiom/ha-delonghi-coffeelink-eletta-explore` to HACS as a
-custom repository of type **Integration**, install it and restart Home Assistant.
-The HACS validation job is intentionally skipped while the repository is private
-and will run automatically after publication.
+Download the latest GitHub release, copy the complete
+`custom_components/ha_delonghi_coffeelink_eletta_explore` directory to
+`/config/custom_components/`, restart Home Assistant and add the integration
+through the UI. Never mix files from different releases.
 
 Detailed installation, update and removal instructions are in
 [Installation and updates](docs/INSTALLATION.md).
@@ -118,6 +121,7 @@ after every discarded command has been learned again.
 - [Privacy and cloud data](docs/PRIVACY.md)
 - [Architecture and provenance](docs/ARCHITECTURE.md)
 - [Current technical audit](docs/TECHNICAL_AUDIT.md)
+- [Maintainer release process](docs/RELEASING.md)
 - [Quality-scale self-assessment](custom_components/ha_delonghi_coffeelink_eletta_explore/quality_scale.yaml)
 - [MonitorV2 protocol map](docs/MONITOR_V2_CODE_MAP.md)
 - [Security policy](SECURITY.md)

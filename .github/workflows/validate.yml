@@ -3,6 +3,7 @@ name: Validate
 on:
   push:
   pull_request:
+  public:
   workflow_dispatch:
 
 permissions:

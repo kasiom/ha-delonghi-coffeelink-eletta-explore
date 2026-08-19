@@ -6,6 +6,30 @@ All notable user-visible changes are documented here. The project follows
 
 ## [Unreleased]
 
+## [1.2.1] - 2026-08-19
+
+### Changed
+
+- Prepare the repository for public distribution with stable HACS-first and
+  manual installation guidance in English and Czech, a one-click My Home
+  Assistant link and a documented maintainer release process.
+- Trigger validation automatically when the repository changes from private to
+  public, while retaining the public-only guard required by the HACS validator.
+- Align custom-integration localization with current Home Assistant guidance:
+  `translations/en.json` and `translations/cs.json` are the complete runtime
+  sources and the unused core-build `strings.json` duplicate is removed.
+- Update compatibility, security and technical-audit statements to reflect the
+  completed 1.2.0 physical acceptance and cleaned Git history.
+
+### Security
+
+- Add a stable private-vulnerability-reporting path and a safe non-sensitive
+  fallback contact procedure.
+- Add repository tests that reject pre-publication wording, obsolete releases,
+  duplicate translation sources and unpinned workflow actions.
+- Keep 100% line and branch coverage with 312 isolated tests, including local
+  Markdown-link validation for the public documentation set.
+
 ## [1.2.0] - 2026-08-19
 
 ### Added
@@ -318,5 +342,6 @@ All notable user-visible changes are documented here. The project follows
 - Initial standalone version derived from substantially modified MIT-licensed
   Coffee Link integration work.
 
-[Unreleased]: https://github.com/kasiom/ha-delonghi-coffeelink-eletta-explore/compare/v1.2.0...HEAD
+[Unreleased]: https://github.com/kasiom/ha-delonghi-coffeelink-eletta-explore/compare/v1.2.1...HEAD
+[1.2.1]: https://github.com/kasiom/ha-delonghi-coffeelink-eletta-explore/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/kasiom/ha-delonghi-coffeelink-eletta-explore/releases/tag/v1.2.0

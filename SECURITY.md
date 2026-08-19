@@ -9,17 +9,19 @@ Security fixes are provided for the latest released version only.
 Do not put vulnerability details, credentials, identifiers or command frames in
 an issue, discussion or pull request.
 
-During the current private staging phase, GitHub's public private-vulnerability
-reporting endpoint is not available for this repository. An authorized
-collaborator who cannot open a private draft security advisory should create only
-a non-sensitive issue titled **Security contact requested**. The maintainer must
-then establish a private reporting channel before any details are shared.
-
-Private vulnerability reporting must be enabled and this section updated with a
-direct private-reporting path before the repository is made public.
+Use GitHub's
+[private vulnerability reporting](https://github.com/kasiom/ha-delonghi-coffeelink-eletta-explore/security/advisories/new).
+If GitHub reports that the private form is temporarily unavailable, create only
+a non-sensitive issue titled **Security contact requested**. Do not include the
+vulnerability, credentials, account details or device data in that issue; the
+maintainer will establish a private channel.
 
 Include the affected version, impact, reproduction steps and a suggested fix when
 available. Do not test against devices or accounts you do not own.
+
+The maintainer will acknowledge a complete report on a best-effort basis within
+seven days. Disclosure timing will be coordinated with the reporter after a fix
+and supported release path are available.
 
 ## Credential handling
 
