@@ -179,9 +179,11 @@ Perform immediately after changing visibility to public:
 2. Enable GitHub private vulnerability reporting, Dependabot vulnerability
    alerts/security updates and a `main` ruleset that blocks force-push/deletion
    and requires the passing CI checks.
-3. Install through HACS as a custom repository on a separate Home Assistant
-   instance and verify setup, restart and removal.
-4. Create tag and GitHub release `v1.2.1` only after those checks are green.
+3. Create tag and GitHub release `v1.2.1` only after those checks are green.
+4. Install release 1.2.1 through HACS as a custom repository on a separate Home
+   Assistant instance and verify setup, restart and removal before announcing it
+   broadly. Never rewrite the tag if this test finds a problem; publish a new
+   patch version instead.
 5. Request HACS default-catalog inclusion only if desired and only after checking
    its current brand and submission requirements; custom-repository installation
    does not depend on that review.
