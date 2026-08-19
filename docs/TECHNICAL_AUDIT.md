@@ -1,20 +1,20 @@
 # Technical audit
 
-Audit date: 2026-08-19
+Audit date: 2026-08-20
 
-Publication candidate: 1.2.1
+Audited release: 1.2.1
 
 ## Verdict
 
-The 1.2.1 publication candidate is internally consistent and unusually well tested
-for an unofficial reverse-engineered appliance integration. It combines validated
+Release 1.2.1 is internally consistent and unusually well tested for an
+unofficial reverse-engineered appliance integration. It combines validated
 learn-and-replay beverage commands, serialized cloud sessions, command
 acknowledgement, MonitorV2 decoding, dynamic entity discovery, reauthentication
-and privacy-safe diagnostics. Version 1.2.0 is deployed on the target Home
-Assistant and has passed a clean restart plus a supervised Wake, Cold Brew
-Start/Stop and Standby cycle. Version 1.2.1 retains that runtime behavior and
-adds public-distribution documentation, current custom-integration localization
-packaging and automatic validation on the GitHub `public` event.
+and privacy-safe diagnostics. Version 1.2.0 passed a clean restart plus a
+supervised Wake, Cold Brew Start/Stop and Standby cycle. Version 1.2.1 retains
+those runtime paths, has been published and installed through HACS on the target
+Home Assistant, and was verified to load with the coffee maker and cloud
+connection available.
 
 The isolated suite covers every executable line and branch in all 17 Python
 modules. A second suite loads the integration through actual Home Assistant
@@ -25,7 +25,8 @@ tested Eletta Explore model and documented acceptance evidence.
 
 ## Audited environment
 
-- Source publication candidate: 1.2.1; deployed live acceptance baseline: 1.2.0.
+- Published and installed release: 1.2.1; physical command-acceptance baseline:
+  1.2.0.
 - Home Assistant: 2026.8.2.
 - Python: 3.14.6.
 - Home Assistant OS: 18.2.
@@ -33,16 +34,18 @@ tested Eletta Explore model and documented acceptance evidence.
 - OEM model/profile: `DL-striker-cb` / `eletta`.
 - Cloud region: EU Coffee Link/Ayla.
 - Deployment evidence: 1.2.0 passed Home Assistant configuration validation,
-  loaded its config entry after restart and produced no relevant post-restart
-  errors. All deployed text files were verified against the candidate with
-  SHA-256 hashes and the previous component tree was backed up locally.
+  clean restart and supervised command acceptance. Release 1.2.1 was then
+  installed through HACS and verified to load its config entry with the coffee
+  maker ready, cloud connectivity available and no relevant integration error.
+  All deployed text files were verified with SHA-256 hashes and the previous
+  component tree was backed up locally.
 - Post-restart command state: unknown, by design until Home Assistant issues a
   command.
 - Post-restart Coffee Link session: free.
 
 ## Standards baseline
 
-The candidate was reviewed against the current Home Assistant
+The release was reviewed against the current Home Assistant
 [Integration Quality Scale](https://developers.home-assistant.io/docs/core/integration-quality-scale/),
 including typed runtime data, explicit parallel-update policy, icon translations,
 dynamic/stale devices and Repairs. The tracked implementation status is in
@@ -53,9 +56,11 @@ Assistant quality certification.
 Repository layout, manifest metadata, brand assets and release guidance were
 checked against the current
 [HACS integration publishing requirements](https://www.hacs.xyz/docs/publish/integration/).
-Actual public HACS validation remains intentionally gated until the repository is
-public. The workflow subscribes to GitHub's `public` event so that HACS,
-hassfest and the full test suite start automatically when visibility changes.
+The repository is public. Its release validation completed successfully for
+HACS, hassfest and the full test suite. A request for inclusion in the default
+HACS catalog is open as
+[hacs/default#10136](https://github.com/hacs/default/pull/10136); custom-repository
+installation is already available and does not depend on that review.
 Custom runtime localization is supplied completely by `translations/en.json`
 and `translations/cs.json`; the Core-only build source `strings.json` is not
 shipped.
@@ -75,6 +80,7 @@ shipped.
 | Python compilation | passed |
 | English/Czech leaf-key parity | 188 / 188 |
 | Translation placeholders | synchronized |
+| Public HACS repository validation | passed |
 | Home Assistant hassfest | passed |
 | Manifest version | 1.2.1 |
 
@@ -95,7 +101,7 @@ fails validation.
 
 | Area | Evidence | Status |
 |---|---|---|
-| Installation and restart | 1.2.0 loaded cleanly on target HA | verified |
+| Installation and restart | 1.2.0 passed clean restart; 1.2.1 installed through HACS and loaded | verified |
 | Read-only polling | cloud data and entities available after restart | verified |
 | Wake | 1.2.0 changed standby → waking up → ready | verified on Eletta |
 | Standby | 1.2.0 changed ready → standby | verified on Eletta |
@@ -113,8 +119,10 @@ Wake, Cold Brew Start, Cold Brew Stop and Standby were physically repeated after
 deploying 1.2.0. Last Command Status recorded `pending`, `sent` and
 `acknowledged` for every operation. Its earlier return to `unknown` followed a
 config-entry reload and is the documented runtime-only behavior, while Recorder
-retained the transitions. The table does not imply that every beverage was
-physically prepared.
+retained the transitions. Release 1.2.1 does not alter the associated runtime
+paths, but the physical cycle was not repeated merely for its documentation and
+packaging changes. The table does not imply that every beverage was physically
+prepared.
 
 ## Security and privacy review
 
@@ -136,7 +144,7 @@ physically prepared.
 - Beverage start is rejected when readiness or supported tank/container safety
   conditions cannot be established.
 
-## Remaining limitations and release gates
+## Remaining limitations and distribution status
 
 1. Full automated coverage cannot validate undocumented vendor semantics or
    physical dispensing safety.
@@ -146,44 +154,45 @@ physically prepared.
 4. The 30-second polling architecture can miss intermediate official-app commands.
 5. Account membership is reconciled every ten minutes, not instantly.
 6. Cup placement and every accessory condition cannot be detected.
-7. HACS distribution requires a public GitHub repository. The public HACS
-   validator remains intentionally skipped until the visibility change and is
-   automatically triggered by that event.
-8. Branch rulesets and public private-vulnerability reporting become available
-   after publication on the current GitHub plan and must be enabled immediately
-   after the visibility change.
+7. Default-catalog inclusion is pending review in
+   [hacs/default#10136](https://github.com/hacs/default/pull/10136). Installation
+   as a HACS custom repository and from the GitHub release is already supported.
+8. The repository's own HACS and hassfest jobs passed. In the HACS catalog pull
+   request, the central hassfest job currently ends with `No integrations found!`
+   after the repository is cloned; its HACS-action and repository-format checks
+   pass. This external review status should be revisited when HACS re-runs or
+   reviews the submission.
 9. The release branch is rooted at a reviewed clean baseline with no legacy
    pull-request refs or tags. The pre-clean recovery bundle was permanently
-   removed after repository recreation; only a verified clean 1.2.0 release
-   bundle is retained outside the repository.
+   removed after repository recreation. Published source and fixtures contain
+   no known account/device identifiers or captured real command frames.
 
-## Publication activation checklist
+## Publication status
 
-Completed before the visibility change:
+Completed:
 
-- verified 1.2.0 deployment, clean restart and supervised Wake, Cold Brew
-  Start/Stop and Standby evidence retained outside the repository;
-- repository history recreated with only the reviewed clean baseline, current
-  release and synthetic protocol fixtures;
+- the repository is public and release `v1.2.1` is published from commit
+  `1b13ce9`;
+- public HACS repository validation, hassfest, the complete test suite and real
+  Home Assistant interface tests passed for the release;
+- release 1.2.1 was installed through HACS and verified to load on the target
+  Home Assistant;
+- private vulnerability reporting and protected `main` branch rules are enabled;
+- repository history contains the reviewed clean baseline, current releases and
+  synthetic protocol fixtures;
 - credentials, account/device identifiers, private logs and real command frames
-  excluded from Git history, Issues, releases and Actions artifacts;
-- public-facing English/Czech installation, security, compatibility and support
-  documentation prepared;
-- HACS, hassfest and full validation workflows pinned to reviewed commit SHAs and
-  configured to run automatically on GitHub's `public` event.
+  are excluded from tracked source, releases and Actions artifacts;
+- public English/Czech installation, security, compatibility, provenance and
+  support documentation is available;
+- the default-catalog request
+  [hacs/default#10136](https://github.com/hacs/default/pull/10136) was submitted
+  and is in the review queue.
 
-Perform immediately after changing visibility to public:
+Open follow-up:
 
-1. Confirm that HACS validation, hassfest and Validate all pass on `main` without
-   ignored checks.
-2. Enable GitHub private vulnerability reporting, Dependabot vulnerability
-   alerts/security updates and a `main` ruleset that blocks force-push/deletion
-   and requires the passing CI checks.
-3. Create tag and GitHub release `v1.2.1` only after those checks are green.
-4. Install release 1.2.1 through HACS as a custom repository on a separate Home
-   Assistant instance and verify setup, restart and removal before announcing it
-   broadly. Never rewrite the tag if this test finds a problem; publish a new
-   patch version instead.
-5. Request HACS default-catalog inclusion only if desired and only after checking
-   its current brand and submission requirements; custom-repository installation
-   does not depend on that review.
+1. Monitor the HACS catalog review and respond only when a maintainer requests a
+   change or when material new information is required.
+2. After catalog acceptance, replace the temporary custom-repository-first
+   installation wording with the normal catalog search flow.
+3. Never rewrite a published release tag. If a release needs correction, publish
+   a new patch version and retain the previous release history.
