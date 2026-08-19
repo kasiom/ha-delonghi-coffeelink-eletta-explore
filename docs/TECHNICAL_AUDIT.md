@@ -10,8 +10,10 @@ The 1.2.0 release candidate is internally consistent and unusually well tested
 for an unofficial reverse-engineered appliance integration. It combines validated
 learn-and-replay beverage commands, serialized cloud sessions, command
 acknowledgement, MonitorV2 decoding, dynamic entity discovery, reauthentication
-and privacy-safe diagnostics. It is not yet declared released or physically
-accepted; the deployed live baseline remains 1.1.26.
+and privacy-safe diagnostics. It is not yet declared released. Version 1.2.0 is
+deployed on the target Home Assistant and has passed a clean restart plus a
+supervised wake/standby cycle; the selected beverage acceptance run remains a
+release gate.
 
 The isolated suite covers every executable line and branch in all 17 Python
 modules. A second suite loads the integration through actual Home Assistant
@@ -22,16 +24,17 @@ tested Eletta Explore model and documented acceptance evidence.
 
 ## Audited environment
 
-- Source candidate: 1.2.0; deployed live baseline: 1.1.26.
+- Source candidate and deployed live baseline: 1.2.0.
 - Home Assistant: 2026.8.2.
 - Python: 3.14.6.
 - Home Assistant OS: 18.2.
 - Physical device: De'Longhi Eletta Explore ECAM450.65.G.
 - OEM model/profile: `DL-striker-cb` / `eletta`.
 - Cloud region: EU Coffee Link/Ayla.
-- Deployment evidence: the 1.1.26 baseline passed config check, loaded its config
-  entry and produced no relevant post-restart errors. Candidate 1.2.0 deployment
-  remains a release gate.
+- Deployment evidence: 1.2.0 passed Home Assistant configuration validation,
+  loaded its config entry after restart and produced no relevant post-restart
+  errors. All deployed text files were verified against the candidate with
+  SHA-256 hashes and the previous component tree was backed up locally.
 - Post-restart command state: unknown, by design until Home Assistant issues a
   command.
 - Post-restart Coffee Link session: free.
@@ -86,10 +89,10 @@ fails validation.
 
 | Area | Evidence | Status |
 |---|---|---|
-| Installation and restart | 1.1.26 loaded cleanly on target HA | baseline verified; 1.2.0 pending |
+| Installation and restart | 1.2.0 loaded cleanly on target HA | verified |
 | Read-only polling | cloud data and entities available after restart | verified |
-| Wake | physical standby-to-ready transition during 1.1.x cycle | verified on Eletta |
-| Standby | physical ready-to-standby transition during 1.1.x cycle | verified on Eletta |
+| Wake | 1.2.0 changed standby → waking up → ready | verified on Eletta |
+| Standby | 1.2.0 changed ready → standby | verified on Eletta |
 | Recipe learning | Espresso, Cappuccino and Cold Brew frames observed | verified |
 | Cold Brew start | command accepted and physical preparation observed | verified |
 | Cold Brew Stop | machine returned to ready and Stop availability cleared | verified |
@@ -100,11 +103,12 @@ fails validation.
 | Fault and outage paths | deterministic automated coverage | controlled live faults pending |
 | PrimaDonna Soul | profile and automated compatibility paths | experimental |
 
-Wake, standby and Cold Brew were physically accepted earlier in the 1.1.x test
-cycle. Release 1.1.26 was then deployed and verified read-only. Candidate 1.2.0
-adds runtime hardening, registry reconciliation and Home Assistant API
-modernization, so it must be deployed and accepted separately. The table does
-not imply that every beverage was physically prepared on either version.
+Wake and standby were physically repeated after deploying 1.2.0. Last Command
+Status recorded `pending`, `sent` and `acknowledged` for both operations; its
+later return to `unknown` followed a config-entry reload and is the documented
+runtime-only behavior, while Recorder retained the transitions. Cold Brew was
+accepted during the earlier 1.1.x cycle and remains to be repeated on 1.2.0.
+The table does not imply that every beverage was physically prepared.
 
 ## Security and privacy review
 
@@ -143,16 +147,16 @@ not imply that every beverage was physically prepared on either version.
    unavailable for this private repository on the current GitHub plan. These
    repository controls must be enabled or reassessed when publication changes
    their availability.
-9. Earlier private commits and the 1.1.26 tag retain protocol fixtures derived
-   from a public upstream issue before their device signatures were replaced with
-   synthetic bytes. The current tree is sanitized, but publication must use a
-   cleaned history or an explicitly reviewed new public baseline.
+9. The release branch is rooted at a reviewed 1.2.0 baseline with no parent
+   commits or legacy tags. A pre-clean recovery bundle is retained privately
+   outside the repository and must never be published.
 
 ## Publication checklist
 
 Before changing the repository from private to public:
 
-- deploy candidate 1.2.0 to the target Home Assistant and repeat a clean restart;
+- keep the verified 1.2.0 deployment and clean restart evidence with the private
+  release records;
 - repeat a clean manual installation from the candidate source;
 - complete the selected supervised beverage acceptance matrix;
 - enable private vulnerability reporting and update `SECURITY.md` with the direct
@@ -161,8 +165,8 @@ Before changing the repository from private to public:
   plan limitation if it still applies;
 - confirm that no credentials, identifiers or private logs are present in Git
   history, issues, releases or Actions artifacts;
-- publish from a cleaned history or new baseline that contains only the
-  synthetic protocol fixtures in the current tree;
+- verify that the remote branch and releases expose only the cleaned 1.2.0
+  baseline and its synthetic protocol fixtures;
 - make the repository public;
 - confirm that HACS validation, hassfest and the 100% test workflow all pass;
 - test HACS custom-repository installation on a separate Home Assistant instance;
