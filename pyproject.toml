@@ -1,0 +1,18 @@
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--strict-markers"
+
+[tool.ruff]
+target-version = "py314"
+line-length = 130
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.coverage.run]
+branch = true
+source = ["custom_components/ha_delonghi_coffeelink_eletta_explore"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true

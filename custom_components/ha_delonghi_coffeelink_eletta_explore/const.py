@@ -1,0 +1,239 @@
+"""Constants for the De'Longhi Coffee Link – Eletta Explore integration."""
+from __future__ import annotations
+
+DOMAIN = "ha_delonghi_coffeelink_eletta_explore"
+MANUFACTURER = "De'Longhi"
+
+# Extracted from Coffee Link APK v4.9.6
+APP_ID = "DLonghiCoffeeIdKit-sQ-id"
+APP_SECRET = "DLonghiCoffeeIdKit-HT6b0VNd4y6CSha9ivM5k8navLw"
+GIGYA_API_KEY = "3_e5qn7USZK-QtsIso1wCelqUKAK_IVEsYshRIssQ-X-k55haiZXmKWDHDRul2e5Y2"
+GIGYA_BASE_URL = "https://accounts.eu1.gigya.com"
+AYLA_EU_ADS_URL = "https://ads-eu.aylanetworks.com"
+AYLA_EU_USER_URL = "https://user-field-eu.aylanetworks.com"
+
+# Polling
+DEFAULT_SCAN_INTERVAL = 30  # seconds
+DEVICE_METADATA_REFRESH_INTERVAL = 600  # seconds
+STATISTICS_SYNC_SETTLE_DELAY = 7  # seconds
+POST_COMMAND_REFRESH_DELAY = 8  # seconds
+
+# Persistence of learned Eletta beverage frames (survives HA restarts).
+RECIPE_STORE_VERSION = 1
+RECIPE_STORE_SAVE_DELAY = 2  # seconds; debounce writes to disk
+
+# Property names vary by model:
+# - PrimaDonna Soul (DL-millcore): data_request / data_response / device_connected
+# - Eletta Explore (DL-striker-cb): app_data_request / app_data_response / app_device_connected
+# Listed in detection priority order.
+COMMAND_PROPERTY_CANDIDATES = ["data_request", "app_data_request"]
+RESPONSE_PROPERTY_CANDIDATES = ["data_response", "app_data_response"]
+CONNECTED_PROPERTY_CANDIDATES = ["device_connected", "app_device_connected"]
+
+# Fallback cloud client id until an ECAM frame has supplied the machine-specific
+# 4-byte signature. Learned signatures replace this value for session registration.
+INTEGRATION_CLOUD_APP_ID = 0xC0FFEE11
+
+APP_ID_PROPERTY = "app_id"  # machine property: current session holder
+CONNECT_REFRESH_INTERVAL = 240  # refresh before 4*60s (device timeout ~300s)
+CONNECT_SETTLE_DELAY = 4  # sleep after POST connect before confirmation
+CONNECT_CONFIRM_TIMEOUT = 30  # do not leave a HA action hanging for several minutes
+CONNECT_CONFIRM_POLL_INTERVAL = 1  # seconds between app_id polls during confirm
+COMMAND_CONFIRM_TIMEOUT = 20  # beverage cloud propagation can exceed ten seconds
+POWER_COMMAND_CONFIRM_TIMEOUT = 30  # waking/sleeping is slower than beverage acknowledgement
+COMMAND_CONFIRM_POLL_INTERVAL = 1
+
+# Ayla HTTP resilience (502/503/504 gateway timeouts seen on ads-eu.aylanetworks.com).
+CLOUD_HTTP_RETRY_COUNT = 2
+CLOUD_HTTP_RETRY_BACKOFF = 1.5  # seconds; multiplied by attempt index
+CLOUD_TRANSIENT_HTTP_CODES = frozenset({408, 429, 500, 502, 503, 504})
+CLOUD_HTTP_TIMEOUT = 20  # seconds per request
+
+# Config
+CONF_EMAIL = "email"
+CONF_PASSWORD = "password"
+
+# CRC16 AUG-CCITT
+CRC_POLY = 0x1021
+CRC_INIT = 0x1D0F
+
+# Command structure
+CMD_PREFIX = 0x0d       # App -> machine
+CMD_RESPONSE_PREFIX = 0xd0  # Machine -> app
+CMD_LENGTH = 0x0d       # 13 bytes payload
+CMD_FAMILY_BREW = bytes([0x83, 0xf0])  # Brew beverage command family
+
+# Eletta Explore (oem_model=DL-striker-cb) beverage frames carry a variable
+# length recipe block terminated by this 2-byte trailer, then the CRC. The Soul
+# (DL-millcore) frame has no trailer (fixed 6-byte recipe). See command_builder.
+ELETTA_RECIPE_TRAILER = bytes([0x01, 0x0a])
+# oem_model prefix of the Eletta Explore family (app_data_request channel).
+ELETTA_OEM_PREFIX = "DL-striker"
+
+# Actions
+ACTION_START = 0x01
+ACTION_STOP = 0x02
+
+# Power / Wake command family (0x84 0x0f)
+CMD_FAMILY_POWER = bytes([0x84, 0x0f])
+POWER_WAKE_PARAMS = bytes([0x02, 0x01])  # observed wake command payload
+# Standby (power off) payload - reported on Eletta (issue #1) and validated
+# live on the reference PrimaDonna Soul (machine powered off, 2026-06-07).
+POWER_STANDBY_PARAMS = bytes([0x01, 0x01])
+# Session refresh / deep-standby nudge (DlghIoT refresh(), params 03 02, CRC 5640).
+POWER_SESSION_REFRESH_PARAMS = bytes([0x03, 0x02])
+
+# Machine monitor (d302_monitor_machine) - operational state published by the
+# machine. Status codes from the DlghIoT client (framagit.org/mattgk/dlghiot),
+# contributed via PR #5.
+MONITOR_PROPERTY_CANDIDATES = ("d302_monitor_machine", "d302_monitor")
+MACHINE_STATUS = {
+    0: "standby",
+    1: "waking_up",
+    2: "going_to_sleep",
+    4: "descaling",
+    5: "preparing_steam",
+    6: "recovering",
+    7: "ready",
+    8: "rinsing",
+    10: "preparing_milk",
+    11: "dispensing_hot_water",
+    12: "cleaning_milk",
+    16: "preparing_chocolate",
+    17: "preparing_milk_alt",
+    29: "unknown",
+}
+MACHINE_STATUS_OPTIONS = tuple(
+    dict.fromkeys((*MACHINE_STATUS.values(), "preparing_beverage"))
+)
+CONNECTION_STATUS_OPTIONS = ("online", "offline", "unknown")
+
+
+def normalize_connection_status(value: object) -> str:
+    """Return a stable Home Assistant enum key for an Ayla connection value."""
+    normalized = str(value).strip().lower() if value is not None else ""
+    return normalized if normalized in CONNECTION_STATUS_OPTIONS else "unknown"
+
+# Default recipe params (from captured hot water command)
+# Bytes: temp_flag, reserved, quantity_low, quantity_high?, recipe_type, ???
+DEFAULT_RECIPE_PARAMS = bytes([0x0f, 0x00, 0xfa, 0x1b, 0x01, 0x06])
+
+# Beverage definitions: (bev_id, key, display_name, icon)
+BEVERAGES = [
+    (0x01, "espresso",        "Espresso",         "mdi:coffee"),
+    (0x02, "coffee",          "Coffee",           "mdi:coffee"),
+    (0x03, "long_coffee",     "Long Coffee",      "mdi:coffee-outline"),
+    (0x04, "double_espresso", "Double Espresso",  "mdi:coffee"),
+    (0x05, "doppio",          "Doppio+",          "mdi:coffee"),
+    (0x06, "americano",       "Americano",        "mdi:coffee"),
+    (0x07, "cappuccino",      "Cappuccino",       "mdi:coffee"),
+    (0x08, "latte_macchiato", "Latte Macchiato",  "mdi:coffee"),
+    (0x09, "caffelatte",      "Caffe Latte",      "mdi:coffee"),
+    (0x0a, "flat_white",      "Flat White",       "mdi:coffee"),
+    (0x0b, "espresso_macchiato", "Espresso Macchiato", "mdi:coffee"),
+    (0x0c, "hot_milk",        "Hot Milk",         "mdi:cup"),
+    (0x0d, "cappuccino_doppio", "Cappuccino Doppio+", "mdi:coffee"),
+    (0x0f, "cappuccino_reverse", "Cappuccino Reverse", "mdi:coffee"),
+    (0x10, "hot_water",       "Hot Water",        "mdi:water"),
+    (0x16, "tea",             "Tea",              "mdi:tea"),
+    (0x17, "coffee_pot",      "Coffee Pot",       "mdi:coffee-maker"),
+    (0x18, "cortado",         "Cortado",          "mdi:coffee"),
+    (0x19, "long_black",      "Long Black",       "mdi:coffee"),
+    (0x1a, "mug_to_go",       "Mug to Go",        "mdi:coffee-to-go"),
+    (0x1b, "brew_over_ice",   "Brew Over Ice",    "mdi:coffee"),
+]
+
+# Counter properties to expose as sensors:
+#   (candidate_property_names, entity_key, display_name, icon)
+# Property names differ between models; the first candidate present on the device
+# wins (same approach as COMMAND_PROPERTY_CANDIDATES). A sensor whose property is
+# absent on the device is not created (avoids permanently-"unknown" entities).
+#   - PrimaDonna Soul (DL-millcore): d700_tot_bev_b, d701_tot_bev_bw, d703_tot_bev_w, d825_descale_status
+#   - Eletta Explore (DL-striker-cb): d701_tot_bev_b (no milk/water/descale equivalents exposed)
+COUNTER_SENSORS = [
+    (["d700_tot_bev_b", "d701_tot_bev_b"], "total_beverages",       "Total Beverages",       "mdi:counter"),
+    (["d704_tot_bev_espressi"],            "total_espresso",        "Total Espresso",        "mdi:coffee"),
+    (["d701_tot_bev_bw"],                  "total_milk_drinks",     "Total Milk Drinks",     "mdi:cup"),
+    (["d703_tot_bev_w"],                   "total_water",           "Total Water",           "mdi:water"),
+    (["d705_tot_id1_espr"],                "total_espresso_alt",    "Total Espresso Alt",    "mdi:coffee"),
+    (["d706_tot_id2_coffee"],              "total_coffee",          "Total Coffee",          "mdi:coffee"),
+    (["d707_tot_id3_long"],                "total_long_coffee",     "Total Long Coffee",     "mdi:coffee"),
+    (["d708_tot_id5_doppio_p"],            "total_doppio",          "Total Doppio+",         "mdi:coffee"),
+    (["d709_id6_americano"],               "total_americano",       "Total Americano",       "mdi:coffee"),
+    (["d710_tot_id7_capp"],                "total_cappuccino",      "Total Cappuccino",      "mdi:coffee"),
+    (["d711_id8_lattmacc"],                "total_latte_macchiato", "Total Latte Macchiato", "mdi:coffee"),
+    (["d712_id9_cafflatt"],                "total_caffelatte",      "Total Caffe Latte",     "mdi:coffee"),
+    (["d713_id10_flatwhite"],              "total_flat_white",      "Total Flat White",      "mdi:coffee"),
+    (["d714_id11_esprmacc"],               "total_espresso_macchiato", "Total Espresso Macchiato", "mdi:coffee"),
+    (["d715_id12_hotmilk"],                "total_hot_milk",        "Total Hot Milk",        "mdi:cup"),
+    (["d716_id13_cappdoppio_p"],           "total_cappuccino_doppio", "Total Cappuccino Doppio+", "mdi:coffee"),
+    (["d717_id15_caprev"],                 "total_cappuccino_reverse", "Total Cappuccino Reverse", "mdi:coffee"),
+    (["d718_id16_hotwater"],               "total_hot_water",       "Total Hot Water",       "mdi:water"),
+    (["d719_id22_tea"],                    "total_tea",             "Total Tea",             "mdi:tea"),
+    (["d720_tot_id23_coffee_pot"],         "total_coffee_pot",      "Total Coffee Pot",      "mdi:coffee-maker"),
+    (["d730_tot_id27_brew_over_ice"],      "total_brew_over_ice",   "Total Brew Over Ice",   "mdi:coffee"),
+    (["d731_tot_mug_hot"],                 "total_mug_hot",         "Total Mug Hot",         "mdi:coffee-to-go"),
+    (["d732_tot_mug_cold"],                "total_mug_cold",        "Total Mug Cold",        "mdi:coffee-to-go"),
+    (["d735_iced_bev"],                    "total_iced_bev",        "Total Iced Beverages",  "mdi:snowflake"),
+    (["d736_mug_bev"],                     "total_mug_bev",         "Total Mug Beverages",   "mdi:coffee-to-go"),
+    (["d737_mug_iced_bev"],                "total_mug_iced_bev",    "Total Mug Iced Beverages", "mdi:snowflake"),
+    (["d738_cold_brew_bev"],               "total_cold_brew_bev",   "Total Cold Brew Beverages", "mdi:snowflake"),
+    (["d510_ground_cnt_percentage"],       "grounds_container_fill", "Grounds Container Fill", "mdi:delete-variant"),
+    (["d513_percentage_usage_fltr"],       "filter_usage",          "Filter Usage",           "mdi:filter-check"),
+    (["d512_percentage_to_deca"],          "descale_limit_usage",   "Descale Limit Usage",    "mdi:water-percent"),
+    (["d552_cnt_calc_tot"],                "total_descales",        "Total Descales",        "mdi:water-pump"),
+    (["d553_water_tot_qty"],               "water_total_quantity",  "Water Total Quantity",  "mdi:water"),
+    (["d554_cnt_filter_tot"],              "total_filters_used",    "Total Filters Used",    "mdi:filter"),
+    (["d555_water_filter_qty"],            "water_filter_quantity", "Water Filter Quantity", "mdi:water-check"),
+    (["d825_descale_status"],              "descale_status",        "Descale Status",        "mdi:water-pump"),
+    (["d556_water_hardness"],              "water_hardness",        "Water Hardness",        "mdi:water-percent"),
+    (["d558_bev_cnt_desc_on"],              "beverages_since_descale_warning", "Beverages Since Descale Warning", "mdi:counter"),
+    (["d524_ix_calcare_alm_qty"],           "descale_alert_count",   "Descale Alert Count",   "mdi:alert-circle-outline"),
+]
+
+# A property can represent a different scope on another model while retaining
+# the same historical unique_id. Only the translation key changes. In
+# particular, Eletta's d701 counter contains black-coffee beverages rather than
+# every beverage dispensed by the machine; Soul's d700 mapping stays unchanged.
+COUNTER_TRANSLATION_KEY_OVERRIDES = {
+    ("total_beverages", "d701_tot_bev_b"): "total_black_coffee_beverages",
+}
+
+# Selected user-facing counters derived from JSON breakdowns. The parent
+# d738_cold_brew_bev counter is a mixed group: recipe id 57 is Over Ice
+# Espresso, while ids 120-142 are Cold Brew variants. Keeping explicit key
+# lists prevents future, unrelated firmware fields from being included by
+# accident.
+BREAKDOWN_COUNTER_SENSORS = [
+    (
+        ["d738_cold_brew_bev"],
+        "total_over_ice_espresso",
+        "Total Over Ice Espresso",
+        "mdi:snowflake",
+        ("tot_id57_over_ice_espresso",),
+    ),
+    (
+        ["d738_cold_brew_bev"],
+        "total_cold_brew",
+        "Total Cold Brew Beverages",
+        "mdi:snowflake",
+        (
+            "tot_id120_cold_brew_coffee",
+            "tot_id121_cold_brew_coffee_ess",
+            "tot_id122_cold_brew_coffee_pot",
+            "tot_id123_cold_brew_latte",
+            "tot_id124_cold_brew_cappuccino",
+            "tot_id140_cold_brew_mug",
+            "tot_id141_cold_brew_latte_mug",
+            "tot_id142_cold_brew_cappuccino_mug",
+        ),
+    ),
+]
+
+PLATFORMS = ["sensor", "binary_sensor", "button"]
+
+# Service names
+SERVICE_SEND_RAW_COMMAND = "send_raw_command"
+SERVICE_START_BEVERAGE = "start_beverage"
+SERVICE_STOP_BEVERAGE = "stop_beverage"
+

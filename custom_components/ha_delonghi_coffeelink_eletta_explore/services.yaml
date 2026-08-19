@@ -1,0 +1,84 @@
+start_beverage:
+  fields:
+    device_id:
+      required: true
+      selector:
+        device:
+          integration: ha_delonghi_coffeelink_eletta_explore
+    beverage:
+      required: true
+      example: hot_water
+      selector:
+        select:
+          translation_key: beverage
+          options:
+            - espresso
+            - coffee
+            - long_coffee
+            - double_espresso
+            - doppio
+            - americano
+            - cappuccino
+            - latte_macchiato
+            - caffelatte
+            - flat_white
+            - espresso_macchiato
+            - hot_milk
+            - cappuccino_doppio
+            - cappuccino_reverse
+            - hot_water
+            - tea
+            - coffee_pot
+            - cortado
+            - long_black
+            - mug_to_go
+            - brew_over_ice
+
+stop_beverage:
+  fields:
+    device_id:
+      required: true
+      selector:
+        device:
+          integration: ha_delonghi_coffeelink_eletta_explore
+    beverage:
+      required: false
+      example: hot_water
+      selector:
+        select:
+          translation_key: beverage
+          options:
+            - espresso
+            - coffee
+            - long_coffee
+            - double_espresso
+            - doppio
+            - americano
+            - cappuccino
+            - latte_macchiato
+            - caffelatte
+            - flat_white
+            - espresso_macchiato
+            - hot_milk
+            - cappuccino_doppio
+            - cappuccino_reverse
+            - hot_water
+            - tea
+            - coffee_pot
+            - cortado
+            - long_black
+            - mug_to_go
+            - brew_over_ice
+
+send_raw_command:
+  fields:
+    device_id:
+      required: true
+      selector:
+        device:
+          integration: ha_delonghi_coffeelink_eletta_explore
+    value_base64:
+      required: true
+      selector:
+        text:
+

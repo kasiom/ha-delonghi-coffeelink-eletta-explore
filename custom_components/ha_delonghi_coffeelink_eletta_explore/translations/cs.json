@@ -1,0 +1,261 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "De'Longhi Coffee Link – Eletta Explore",
+        "description": "Zadejte přihlašovací údaje k účtu Coffee Link. Jde o stejné údaje, které používáte v mobilní aplikaci Coffee Link.",
+        "data": { "email": "E-mail", "password": "Heslo" }
+      },
+      "reauth_confirm": {
+        "title": "Obnovení připojení De'Longhi Coffee Link – Eletta Explore",
+        "description": "Zadejte aktuální heslo k účtu {email}.",
+        "data": { "password": "Heslo" }
+      },
+      "reconfigure": {
+        "title": "Změna nastavení De'Longhi Coffee Link – Eletta Explore",
+        "description": "Zadejte a ověřte údaje účtu Coffee Link, které mají nahradit účet {email}.",
+        "data": { "email": "E-mail", "password": "Heslo" }
+      }
+    },
+    "error": {
+      "invalid_auth": "Neplatný e-mail nebo heslo.",
+      "cannot_connect": "Ke cloudu De'Longhi se nepodařilo připojit.",
+      "no_devices": "Pro tento účet nebyl nalezen žádný kávovar De'Longhi.",
+      "unknown": "Došlo k neočekávané chybě."
+    },
+    "abort": {
+      "already_configured": "Tento účet je již nastaven.",
+      "reauth_successful": "Přihlášení bylo úspěšně obnoveno.",
+      "reconfigure_successful": "Účet Coffee Link byl úspěšně změněn."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "total_beverages": { "name": "Počet nápojů celkem" },
+      "total_black_coffee_beverages": { "name": "Počet černých káv celkem" },
+      "total_espresso": { "name": "Počet Espresso celkem" },
+      "total_milk_drinks": { "name": "Počet mléčných nápojů" },
+      "total_water": { "name": "Počet výdejů vody" },
+      "total_espresso_alt": { "name": "Počet Espresso" },
+      "total_coffee": { "name": "Počet káv" },
+      "total_long_coffee": { "name": "Počet Long Coffee" },
+      "total_doppio": { "name": "Počet Doppio+" },
+      "total_americano": { "name": "Počet Americano" },
+      "total_cappuccino": { "name": "Počet Cappuccino" },
+      "total_latte_macchiato": { "name": "Počet Latte Macchiato" },
+      "total_caffelatte": { "name": "Počet Caffe Latte" },
+      "total_flat_white": { "name": "Počet Flat White" },
+      "total_espresso_macchiato": { "name": "Počet Espresso Macchiato" },
+      "total_hot_milk": { "name": "Počet výdejů horkého mléka" },
+      "total_cappuccino_doppio": { "name": "Počet Cappuccino Doppio+" },
+      "total_cappuccino_reverse": { "name": "Počet Cappuccino Reverse" },
+      "total_hot_water": { "name": "Počet výdejů horké vody" },
+      "total_tea": { "name": "Počet čajů" },
+      "total_coffee_pot": { "name": "Počet konvic kávy" },
+      "total_brew_over_ice": { "name": "Počet Brew Over Ice" },
+      "total_mug_hot": { "name": "Počet horkých nápojů Mug to Go" },
+      "total_mug_cold": { "name": "Počet studených nápojů Mug to Go" },
+      "total_iced_bev": { "name": "Počet ledových nápojů celkem" },
+      "total_mug_bev": { "name": "Počet Mug to Go" },
+      "total_mug_iced_bev": { "name": "Počet ledových nápojů Mug to Go" },
+      "total_cold_brew_bev": { "name": "Počet studených káv celkem" },
+      "total_over_ice_espresso": { "name": "Počet Over Ice Espresso" },
+      "total_cold_brew": { "name": "Počet Cold Brew celkem" },
+      "grounds_container_fill": { "name": "Naplnění zásobníku sedliny" },
+      "filter_usage": { "name": "Využití vodního filtru" },
+      "descale_limit_usage": { "name": "Do odvápnění zbývá" },
+      "total_descales": { "name": "Počet odvápnění" },
+      "water_total_quantity": { "name": "Celková spotřeba vody" },
+      "total_filters_used": { "name": "Počet použitých filtrů" },
+      "water_filter_quantity": { "name": "Objem vody přes vložený filtr" },
+      "descale_status": { "name": "Stav odvápnění" },
+      "water_hardness": { "name": "Tvrdost vody" },
+      "beverages_since_descale_warning": { "name": "Počet nápojů od upozornění na odvápnění" },
+      "descale_alert_count": { "name": "Počet upozornění na odvápnění" },
+      "machine_status": {
+        "name": "Stav kávovaru",
+        "state": {
+          "standby": "Pohotovostní režim",
+          "waking_up": "Zapíná se",
+          "going_to_sleep": "Přechází do pohotovostního režimu",
+          "descaling": "Probíhá odvápnění",
+          "preparing_steam": "Připravuje páru",
+          "recovering": "Obnovuje provoz",
+          "ready": "Připraven",
+          "rinsing": "Proplachuje se",
+          "preparing_milk": "Připravuje mléko",
+          "dispensing_hot_water": "Vydává horkou vodu",
+          "cleaning_milk": "Čistí mléčný systém",
+          "preparing_chocolate": "Připravuje čokoládu",
+          "preparing_milk_alt": "Připravuje mléko",
+          "preparing_beverage": "Připravuje nápoj",
+          "unknown": "Neznámý stav"
+        }
+      },
+      "cloud_session_app_id": {
+        "name": "Relace Coffee Link",
+        "state": {
+          "unknown": "Neznámá",
+          "free": "Volná",
+          "ha": "Home Assistant",
+          "foreign": "Jiná aplikace"
+        }
+      },
+      "last_command_status": {
+        "name": "Stav posledního příkazu",
+        "state": {
+          "pending": "Probíhá",
+          "sent": "Odeslán",
+          "acknowledged": "Potvrzen kávovarem",
+          "timed_out": "Vypršel časový limit",
+          "rejected": "Odmítnut"
+        }
+      }
+    },
+    "button": {
+      "start_espresso": { "name": "Espresso" },
+      "start_coffee": { "name": "Káva" },
+      "start_long_coffee": { "name": "Long Coffee" },
+      "start_double_espresso": { "name": "Double Espresso" },
+      "start_doppio": { "name": "Doppio+" },
+      "start_americano": { "name": "Americano" },
+      "start_cappuccino": { "name": "Cappuccino" },
+      "start_latte_macchiato": { "name": "Latte Macchiato" },
+      "start_caffelatte": { "name": "Caffe Latte" },
+      "start_flat_white": { "name": "Flat White" },
+      "start_espresso_macchiato": { "name": "Espresso Macchiato" },
+      "start_hot_milk": { "name": "Horké mléko" },
+      "start_cappuccino_doppio": { "name": "Cappuccino Doppio+" },
+      "start_cappuccino_reverse": { "name": "Cappuccino Reverse" },
+      "start_hot_water": { "name": "Horká voda" },
+      "start_tea": { "name": "Čaj" },
+      "start_coffee_pot": { "name": "Konvice kávy" },
+      "start_cortado": { "name": "Cortado" },
+      "start_long_black": { "name": "Long Black" },
+      "start_mug_to_go": { "name": "Mug to Go" },
+      "start_brew_over_ice": { "name": "Brew Over Ice" },
+      "start_cold_brew": { "name": "Cold Brew" },
+      "start_cold_brew_mug_to_go": { "name": "Cold Brew Mug to Go" },
+      "start_cold_brew_latte_mug_to_go": { "name": "Cold Brew Latte Mug to Go" },
+      "start_cold_brew_cappuccino_mug_to_go": { "name": "Cold Brew Cappuccino Mug to Go" },
+      "wake": { "name": "Zapnout" },
+      "standby": { "name": "Pohotovostní režim" },
+      "stop": { "name": "Zastavit přípravu nápoje" },
+      "synchronize": { "name": "Synchronizovat data" },
+      "start_recipe": { "name": "Recept {recipe_id}" },
+      "dump_recipes": { "name": "Vypsat data receptů" }
+    },
+    "binary_sensor": {
+      "connection_status": { "name": "Připojení ke cloudu" },
+      "water_tank_empty": { "name": "Nádržka na vodu" },
+      "waste_container_full": { "name": "Zásobník na sedlinu" },
+      "decalcification_needed": { "name": "Odvápnění" },
+      "filter_change_needed": { "name": "Vodní filtr" }
+    }
+  },
+  "exceptions": {
+    "target_exactly_one": { "message": "Vyberte právě jeden kávovar De'Longhi." },
+    "target_missing": { "message": "Vybrané zařízení Home Assistant již neexistuje." },
+    "target_not_loaded": { "message": "Vybraný cíl neodpovídá právě jednomu načtenému kávovaru De'Longhi." },
+    "credentials_invalid": { "message": "Přihlašovací údaje Coffee Link již nejsou platné." },
+    "coffee_maker_not_connected": { "message": "Kávovar není připojen ke cloudu." },
+    "state_unverified": { "message": "Stav kávovaru se nepodařilo ověřit; před spuštěním přípravy nápoje aktualizujte jeho data." },
+    "not_ready": { "message": "Kávovar není připraven zahájit přípravu nápoje." },
+    "already_preparing": { "message": "Kávovar již připravuje nápoj." },
+    "water_tank_empty": { "message": "Nádržka na vodu je prázdná." },
+    "grounds_container_full": { "message": "Zásobník na sedlinu je plný." },
+    "water_tank_missing": { "message": "Nádržka na vodu není vložena." },
+    "grounds_container_missing": { "message": "Zásobník na sedlinu není vložen." },
+    "command_not_acknowledged": { "message": "Příkaz byl odeslán, ale kávovar jej nepotvrdil včas." },
+    "cloud_session_in_use": { "message": "Cloudovou relaci Coffee Link používá jiná aplikace; zavřete ji nebo počkejte na uvolnění relace." },
+    "cached_session_unverified": { "message": "Uloženou cloudovou relaci Coffee Link se nepodařilo ověřit." },
+    "cloud_session_timeout": { "message": "Při navazování cloudové relace Coffee Link vypršel časový limit." },
+    "learned_command_invalid": { "message": "Naučený příkaz nápoje neprošel kontrolou integrity; připravte nápoj jednou v oficiální aplikaci Coffee Link, aby se příkaz znovu naučil." },
+    "command_not_learned": { "message": "Tento příkaz není dostupný, dokud se nenaučí z oficiální aplikace Coffee Link." },
+    "active_beverage_unknown": { "message": "Aktivní nápoj není známý; před použitím tlačítka Zastavit spusťte přípravu nápoje." },
+    "command_in_progress": { "message": "Stále probíhá jiný příkaz kávovaru; zkuste to znovu za chvíli." },
+    "cloud_command_failed": { "message": "Cloudový příkaz Coffee Link se nepodařilo dokončit." },
+    "command_failed": { "message": "Příkaz kávovaru selhal před dokončením." },
+    "wake_not_learned": { "message": "Probuzení není dostupné, dokud se jeho příkaz nenaučí z oficiální aplikace Coffee Link." },
+    "standby_not_learned": { "message": "Pohotovostní režim není dostupný, dokud se nenaučí podpis zařízení." },
+    "raw_command_invalid": { "message": "Binární příkaz neprošel kontrolou protokolu, podpisu zařízení nebo bezpečnostního stavu." }
+  },
+  "issues": {
+    "relearn_commands": {
+      "title": "Znovu naučte příkazy Coffee Link",
+      "description": "Home Assistant zahodil uložené příkazy pro zařízení {device_name}, protože neprošly kontrolou integrity nebo podpisu zařízení. V oficiální aplikaci Coffee Link znovu spusťte nedostupné recepty; každý recept také zastavte, pokud je nedostupné jeho tlačítko Stop, a podle potřeby kávovar jednou probuďte. Po opětovném naučení všech zahozených příkazů se tato oprava automaticky odstraní. Zbývá naučit: {count}."
+    }
+  },
+  "services": {
+    "start_beverage": {
+      "name": "Spustit přípravu nápoje",
+      "description": "Spustí přípravu zvoleného nápoje na vybraném kávovaru De'Longhi.",
+      "fields": {
+        "device_id": {
+          "name": "Kávovar",
+          "description": "Kávovar De'Longhi, který má nápoj připravit."
+        },
+        "beverage": {
+          "name": "Nápoj",
+          "description": "Nápoj, který se má připravit."
+        }
+      }
+    },
+    "stop_beverage": {
+      "name": "Zastavit přípravu nápoje",
+      "description": "Zastaví přípravu zvoleného nápoje.",
+      "fields": {
+        "device_id": {
+          "name": "Kávovar",
+          "description": "Kávovar De'Longhi, na kterém se má příprava zastavit."
+        },
+        "beverage": {
+          "name": "Nápoj",
+          "description": "Nápoj, jehož příprava se má zastavit."
+        }
+      }
+    },
+    "send_raw_command": {
+      "name": "Odeslat binární příkaz",
+      "description": "Odešle kávovaru pokročilý binární příkaz zadaný ve formátu base64.",
+      "fields": {
+        "device_id": {
+          "name": "Kávovar",
+          "description": "Kávovar De'Longhi, který má příkaz přijmout."
+        },
+        "value_base64": {
+          "name": "Binární příkaz (base64)",
+          "description": "Binární příkaz zakódovaný ve formátu base64."
+        }
+      }
+    }
+  },
+  "selector": {
+    "beverage": {
+      "options": {
+        "espresso": "Espresso",
+        "coffee": "Káva",
+        "long_coffee": "Long Coffee",
+        "double_espresso": "Double Espresso",
+        "doppio": "Doppio+",
+        "americano": "Americano",
+        "cappuccino": "Cappuccino",
+        "latte_macchiato": "Latte Macchiato",
+        "caffelatte": "Caffe Latte",
+        "flat_white": "Flat White",
+        "espresso_macchiato": "Espresso Macchiato",
+        "hot_milk": "Horké mléko",
+        "cappuccino_doppio": "Cappuccino Doppio+",
+        "cappuccino_reverse": "Cappuccino Reverse",
+        "hot_water": "Horká voda",
+        "tea": "Čaj",
+        "coffee_pot": "Konvice kávy",
+        "cortado": "Cortado",
+        "long_black": "Long Black",
+        "mug_to_go": "Mug to Go",
+        "brew_over_ice": "Brew Over Ice"
+      }
+    }
+  }
+}
+

@@ -1,0 +1,61 @@
+name: Bug report
+description: Report a reproducible integration problem using sanitized data.
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not include your Coffee Link password, e-mail, token, DSN, serial
+        number or raw command frame. Attach only sanitized integration diagnostics.
+  - type: input
+    id: version
+    attributes:
+      label: Integration version
+      placeholder: 1.2.0
+    validations:
+      required: true
+  - type: input
+    id: home_assistant
+    attributes:
+      label: Home Assistant version
+      placeholder: 2026.8.2
+    validations:
+      required: true
+  - type: input
+    id: model
+    attributes:
+      label: Coffee maker model and region
+      placeholder: Eletta Explore ECAM450.65.G, EU
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What happened and what did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Reproduction steps
+      placeholder: "1. …\n2. …\n3. …"
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Sanitized diagnostics or relevant log excerpt
+      description: Download diagnostics from the integration entry. Attach the file or include only the smallest relevant sanitized excerpt.
+      render: text
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Safety and privacy confirmation
+      options:
+        - label: I removed credentials, e-mail, DSN, serial number, tokens and raw frames.
+          required: true
+        - label: I did not test against a device or account I do not own.
+          required: true

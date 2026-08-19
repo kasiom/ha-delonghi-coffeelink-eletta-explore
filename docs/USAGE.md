@@ -1,0 +1,110 @@
+# Usage and safety
+
+## Data updates
+
+The integration polls the vendor cloud every 30 seconds. The **Synchronize Data**
+button acquires a safe Coffee Link cloud session, waits for the machine to publish
+fresh values and then refreshes the coordinator. Counter changes can still be
+delayed by the machine or vendor cloud.
+
+The Coffee Link account device list is checked every ten minutes. A membership
+change schedules one config-entry reload so newly added machines appear and
+removed machines do not leave stale devices or entities behind.
+
+## Entities
+
+- **Cloud Connection** is Home Assistant's standard connectivity binary sensor.
+- **Machine Status** reports the verified MonitorV2 state and keeps raw status,
+  step, progress, accessory and alarm values in attributes for diagnostics.
+- **Coffee Link Session** reports whether the exclusive command session is free,
+  held by this integration or held by another application.
+- **Last Command Status** tracks only commands issued by Home Assistant:
+  pending, sent, acknowledged, timed out or rejected.
+- Beverage and maintenance sensors expose current counters and percentages with
+  appropriate units and state classes.
+- Water tank, grounds container, descaling and filter binary sensors use the
+  Home Assistant problem device class, so their normal state is shown as OK.
+
+Diagnostic or developer-only entities, such as **Dump Recipe Datapoints**, can be
+disabled by default and enabled from the entity registry when required.
+
+## Controls
+
+- **Wake** requests a transition from standby.
+- **Standby** requests the same state as the physical power control.
+- **Synchronize Data** requests a fresh session and cloud-property refresh.
+- **Stop** is available only while the active beverage and its validated Stop
+  command are known.
+- Beverage buttons replay a validated command learned from Coffee Link.
+
+A greyed-out button is normally an intentional safety state, not a failed entity.
+
+## Learning a recipe
+
+Prepare the recipe once in the official Coffee Link app while Home Assistant is
+polling the machine. The integration observes, validates and stores the exact
+frame, then dynamically adds a button. If multiple app commands occur between two
+polls, an intermediate command can be missed; repeat the recipe if needed.
+
+If a command restored from Home Assistant storage no longer passes integrity or
+device-signature validation, the integration discards it and creates an item in
+**Settings → System → Repairs**. The item explains how to reproduce the affected
+commands in Coffee Link and disappears automatically after all of them have been
+learned again.
+
+Eletta Explore controls also require a device signature learned from a valid app
+frame. Wake, standby and synchronization remain unavailable until that signature
+is known.
+
+## Actions
+
+The integration registers `start_beverage`, `stop_beverage` and the
+administrator-only `send_raw_command` action. Normal automations should use the
+entity buttons or beverage actions. The raw action is intended only for controlled
+protocol diagnostics and rejects malformed, unsupported or checksum-invalid
+frames. It also enforces the current coffee maker's learned device signature,
+accepts only beverage and wake/standby frames, and applies the same readiness,
+water-tank and grounds-container checks as the normal beverage actions.
+
+## Automation examples
+
+The following non-dispensing example reports a sustained cloud outage. Replace
+the entity and notification target with those from your Home Assistant instance:
+
+```yaml
+alias: Coffee maker cloud unavailable
+triggers:
+  - trigger: state
+    entity_id: binary_sensor.eletta_explore_cloud_connection
+    to: "off"
+    for: "00:05:00"
+actions:
+  - action: notify.mobile_app_phone
+    data:
+      message: Coffee Link has been unavailable for five minutes.
+mode: single
+```
+
+For preparation, prefer a visible Home Assistant button that the user presses
+only after checking the cup and accessory. A script can call the integration
+action explicitly:
+
+```yaml
+sequence:
+  - action: ha_delonghi_coffeelink_eletta_explore.start_beverage
+    target:
+      device_id: YOUR_COFFEE_MAKER_DEVICE_ID
+    data:
+      beverage: espresso
+```
+
+Do not attach preparation to presence, schedules or other unattended triggers.
+
+## Safety rules
+
+- Never start a drink without checking the cup, outlet and required accessory.
+- Do not use remote preparation around children, animals or unattended equipment.
+- Treat an unavailable control or a rejected pre-brew check as a safety decision.
+- Do not bypass safety checks with raw commands.
+- The integration cannot confirm every physical condition, including cup
+  placement.

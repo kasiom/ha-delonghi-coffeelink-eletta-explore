@@ -1,0 +1,13 @@
+__pycache__/
+*.py[cod]
+.coverage
+.coverage.*
+.idea/
+.pytest_cache/
+.ruff_cache/
+.test-deps/
+.review-deps/
+.venv/
+coverage.xml
+htmlcov/
+test-tools/

@@ -1,0 +1,19 @@
+{
+  "domain": "ha_delonghi_coffeelink_eletta_explore",
+  "name": "De'Longhi Coffee Link – Eletta Explore",
+  "codeowners": [
+    "@kasiom"
+  ],
+  "config_flow": true,
+  "dependencies": [],
+  "documentation": "https://github.com/kasiom/ha-delonghi-coffeelink-eletta-explore",
+  "integration_type": "hub",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/kasiom/ha-delonghi-coffeelink-eletta-explore/issues",
+  "loggers": [
+    "custom_components.ha_delonghi_coffeelink_eletta_explore"
+  ],
+  "requirements": [],
+  "version": "1.2.0"
+}
+
