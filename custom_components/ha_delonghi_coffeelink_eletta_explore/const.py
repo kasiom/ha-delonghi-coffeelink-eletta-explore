@@ -11,12 +11,28 @@ GIGYA_API_KEY = "3_e5qn7USZK-QtsIso1wCelqUKAK_IVEsYshRIssQ-X-k55haiZXmKWDHDRul2e
 GIGYA_BASE_URL = "https://accounts.eu1.gigya.com"
 AYLA_EU_ADS_URL = "https://ads-eu.aylanetworks.com"
 AYLA_EU_USER_URL = "https://user-field-eu.aylanetworks.com"
+AYLA_EU_MDSS_URL = "https://mdss-field-eu.aylanetworks.com"
+AYLA_EU_MSTREAM_URL = "https://mstream-field-eu.aylanetworks.com"
 
 # Polling
 DEFAULT_SCAN_INTERVAL = 30  # seconds
+DSS_FALLBACK_SCAN_INTERVAL = 300  # full reconciliation while push is healthy
 DEVICE_METADATA_REFRESH_INTERVAL = 600  # seconds
+CONNECTION_INFO_REFRESH_INTERVAL = 3600  # seconds; diagnostic only
 STATISTICS_SYNC_SETTLE_DELAY = 7  # seconds
 POST_COMMAND_REFRESH_DELAY = 8  # seconds
+
+# Ayla Data Stream Service (DSS). Coffee Link 4.9.6 enables this service and
+# subscribes to both datapoint changes and device acknowledgements. The
+# integration treats it as an acceleration layer; polling always remains the
+# authoritative fallback.
+DSS_SUBSCRIPTION_NAME = "HOME_ASSISTANT_COFFEELINK"
+DSS_SUBSCRIPTION_DESCRIPTION = "DATAPOINT"
+DSS_SUBSCRIPTION_TYPES = "datapoint,datapointack"
+DSS_STREAM_IDLE_TIMEOUT = 75  # official heartbeat interval is 30 seconds
+DSS_RECONNECT_MIN_DELAY = 3
+DSS_RECONNECT_MAX_DELAY = 60
+DSS_ACK_GRACE_PERIOD = 3  # wait briefly for exact ACK before polling fallback
 
 # Persistence of learned Eletta beverage frames (survives HA restarts).
 RECIPE_STORE_VERSION = 1

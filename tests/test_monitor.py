@@ -47,6 +47,21 @@ crc16_aug_ccitt = cb.crc16_aug_ccitt
 MONITOR_REQUEST_ID = monitor.MONITOR_REQUEST_ID
 
 
+def test_monitor_ordering_token_matches_official_signed_big_endian_value():
+    assert monitor.monitor_ordering_token(None) is None
+    assert monitor.monitor_ordering_token("") is None
+    assert monitor.monitor_ordering_token("not-base64") is None
+    assert monitor.monitor_ordering_token(base64.b64encode(b"abc").decode()) is None
+    assert (
+        monitor.monitor_ordering_token(base64.b64encode(b"head\x00\x00\x00\x2a").decode())
+        == 42
+    )
+    assert (
+        monitor.monitor_ordering_token(base64.b64encode(b"head\xff\xff\xff\xff").decode())
+        == -1
+    )
+
+
 def _build_monitor_blob(contents: bytes) -> str:
     """Build a valid MonitorV2 EcamPacket base64 around a given contents block.
 

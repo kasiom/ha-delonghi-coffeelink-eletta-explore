@@ -24,6 +24,7 @@ ERROR_MESSAGES: dict[str, str] = {
     "water_tank_missing": "The water tank is missing.",
     "grounds_container_missing": "The grounds container is missing.",
     "command_not_acknowledged": "The command was sent, but the coffee maker did not acknowledge it in time.",
+    "command_rejected_by_device": "The coffee machine explicitly rejected the command.",
     "cloud_session_in_use": (
         "Another application is using the Coffee Link cloud session; close it or wait "
         "for the session to be released."

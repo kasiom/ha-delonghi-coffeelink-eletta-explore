@@ -32,6 +32,13 @@ async def async_get_config_entry_diagnostics(
                 "connectivity_firmware_version": coordinator.device.sw_version,
                 "profile": coordinator.profile.key,
                 "connection_status": coordinator.device.connection_status,
+                "connection_info": {
+                    "supported": coordinator._connection_info_supported,
+                    "connectivity_type": coordinator.connection_info.get(
+                        "connectivity_type"
+                    ),
+                    "wifi_signal_dbm": coordinator.connection_info.get("rssi"),
+                },
                 "detected_properties": {
                     "command": coordinator.command_property,
                     "response": coordinator.response_property,
@@ -40,6 +47,8 @@ async def async_get_config_entry_diagnostics(
                 "property_names": sorted((coordinator.data or {}).keys()),
                 "coordinator": {
                     "last_update_success": coordinator.last_update_success,
+                    "cloud_update_mode": coordinator.dss_state,
+                    "dss_events_received": coordinator.dss_events_received,
                     "last_command_result": coordinator.last_command_result,
                     "active_beverage_known": coordinator.active_beverage_id is not None,
                     "monitor": {
@@ -69,12 +78,24 @@ async def async_get_config_entry_diagnostics(
                 },
             }
         )
+    dss_manager = getattr(entry.runtime_data, "dss_manager", None)
     return {
         "integration": {
             "domain": DOMAIN,
             "version": integration.version,
             "config_entry_version": entry.version,
         },
+        "cloud_stream": (
+            {
+                "state": dss_manager.state,
+                "events_received": dss_manager.events_received,
+                "reconnect_count": dss_manager.reconnect_count,
+                "last_event_at": dss_manager.last_event_at,
+                "last_error_type": dss_manager.last_error_type,
+            }
+            if dss_manager is not None
+            else {"state": "disabled"}
+        ),
         "devices": devices,
     }
 

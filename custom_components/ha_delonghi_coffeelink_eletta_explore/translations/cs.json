@@ -110,6 +110,9 @@
           "timed_out": "Vypršel časový limit",
           "rejected": "Odmítnut"
         }
+      },
+      "wifi_signal_strength": {
+        "name": "Síla signálu Wi-Fi"
       }
     },
     "button": {
@@ -167,6 +170,7 @@
     "water_tank_missing": { "message": "Nádržka na vodu není vložena." },
     "grounds_container_missing": { "message": "Zásobník na sedlinu není vložen." },
     "command_not_acknowledged": { "message": "Příkaz byl odeslán, ale kávovar jej nepotvrdil včas." },
+    "command_rejected_by_device": { "message": "Kávovar příkaz výslovně odmítl." },
     "cloud_session_in_use": { "message": "Cloudovou relaci Coffee Link používá jiná aplikace; zavřete ji nebo počkejte na uvolnění relace." },
     "cached_session_unverified": { "message": "Uloženou cloudovou relaci Coffee Link se nepodařilo ověřit." },
     "cloud_session_timeout": { "message": "Při navazování cloudové relace Coffee Link vypršel časový limit." },

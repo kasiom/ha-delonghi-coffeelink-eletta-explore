@@ -17,9 +17,16 @@ load on the same target Home Assistant. Newer Home Assistant versions are
 expected to work, but vendor and Home Assistant changes require continuing
 validation.
 
+Local beta 1.3.0-beta.2 has additionally completed automated verification and a
+read-only live deployment on the same Eletta Explore. Its Ayla DSS stream connected
+without retry, stayed healthy beyond the idle timeout and preserved the 1.2.1
+entity availability baseline. Beverage commands and their exact live DSS
+acknowledgements have not yet been physically repeated on this beta.
+
 ## Verified Eletta behavior
 
-- Account setup, reauthentication, polling and cloud-outage recovery logic.
+- Account setup, reauthentication, hybrid DSS/polling and cloud-outage recovery
+  logic.
 - Machine, counter and maintenance-state parsing.
 - Dynamic recipe learning and stable button identity.
 - Wake and standby transitions.
@@ -39,8 +46,8 @@ same supervised physical matrix.
 - Vendor authentication, cloud-property or mobile-app changes may require an
   integration update.
 - Eletta recipe controls must normally be observed once in Coffee Link.
-- Multiple app actions between two 30-second polls can cause an intermediate
-  command to be missed.
+- While DSS is unavailable, multiple app actions between two 30-second fallback
+  polls can cause an intermediate command to be missed.
 - Account membership is checked every ten minutes. Adding or removing a coffee
   maker triggers an automatic integration reload; the change is therefore not
   instantaneous.

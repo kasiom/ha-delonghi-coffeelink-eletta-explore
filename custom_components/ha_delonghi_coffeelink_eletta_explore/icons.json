@@ -44,7 +44,8 @@
       "descale_alert_count": { "default": "mdi:alert-circle-outline" },
       "machine_status": { "default": "mdi:coffee-maker" },
       "cloud_session_app_id": { "default": "mdi:key-chain" },
-      "last_command_status": { "default": "mdi:progress-check" }
+      "last_command_status": { "default": "mdi:progress-check" },
+      "wifi_signal_strength": { "default": "mdi:wifi" }
     },
     "button": {
       "start_espresso": { "default": "mdi:coffee" },

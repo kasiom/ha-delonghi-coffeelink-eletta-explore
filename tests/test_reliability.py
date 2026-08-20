@@ -51,6 +51,7 @@ class DataUpdateCoordinator:
         self.config_entry = config_entry
         self.data = {}
         self.last_update_success = True
+        self.update_interval = update_interval
         self._test_listeners = []
 
     async def async_shutdown(self):
@@ -131,6 +132,7 @@ def _install_homeassistant_stubs() -> None:
 
     class SensorDeviceClass:
         ENUM = "enum"
+        SIGNAL_STRENGTH = "signal_strength"
         WATER = "water"
 
     class SensorStateClass:
@@ -228,6 +230,7 @@ def _install_homeassistant_stubs() -> None:
     config_entries.ConfigFlowResult = dict
     constants.ATTR_DEVICE_ID = "device_id"
     constants.PERCENTAGE = "%"
+    constants.SIGNAL_STRENGTH_DECIBELS_MILLIWATT = "dBm"
     constants.EntityCategory = EntityCategory
     constants.Platform = Platform
     constants.UnitOfVolume = UnitOfVolume
@@ -415,6 +418,9 @@ class FakeClient:
     async def async_post_cloud_session(self, dsn, prop, app_id):
         self.connect_posts += 1
 
+    async def async_get_connection_info(self, dsn):
+        return {}
+
 
 class FakeConfigEntry:
     """Test double that owns coordinator background tasks like Home Assistant."""
@@ -472,6 +478,28 @@ def test_sensor_platform_reports_counters_machine_and_command_state():
     assert command.native_value is None
     assert command.extra_state_attributes == {}
     assert counter.device_info["sw_version"] == "1"
+
+
+def test_optional_wifi_signal_sensor_is_diagnostic_and_disabled_by_default():
+    coordinator, _client = _coordinator("DL-striker-cb")
+    coordinator.connection_info = {"rssi": -58}
+    signal = sensor_module.DelonghiWifiSignalSensor(coordinator)
+    assert signal.native_value == -58
+    assert signal._attr_native_unit_of_measurement == "dBm"
+    assert signal._attr_entity_registry_enabled_default is False
+    coordinator.connection_info = {"rssi": "invalid"}
+    assert signal.native_value is None
+
+    entry = types.SimpleNamespace(
+        runtime_data=types.SimpleNamespace(coordinators=[coordinator])
+    )
+    coordinator.connection_info = {"rssi": -60}
+    coordinator.data = {}
+    added = []
+    asyncio.run(sensor_module.async_setup_entry(object(), entry, added.extend))
+    assert any(
+        isinstance(entity, sensor_module.DelonghiWifiSignalSensor) for entity in added
+    )
 
 
 def test_binary_sensor_platform_uses_stable_maintenance_snapshot():
@@ -1827,14 +1855,30 @@ def test_setup_entry_success_and_partial_initialization_cleanup(monkeypatch):
         async def async_shutdown(self):
             self.shutdown = True
 
+    class DssManager:
+        instances = []
+
+        def __init__(self, hass, entry, client, coordinators):
+            self.started = False
+            self.stopped = False
+            self.__class__.instances.append(self)
+
+        def start(self):
+            self.started = True
+
+        async def async_stop(self):
+            self.stopped = True
+
     monkeypatch.setattr(integration_module, "DelonghiAylaClient", Client)
     monkeypatch.setattr(integration_module, "DelonghiCoordinator", Coordinator)
+    monkeypatch.setattr(integration_module, "AylaDssManager", DssManager)
 
     hass = _lifecycle_hass()
     entry = _lifecycle_entry()
     assert asyncio.run(integration_module.async_setup_entry(hass, entry)) is True
     assert len(entry.runtime_data.coordinators) == 2
     assert all(item.loaded and item.refreshed for item in entry.runtime_data.coordinators)
+    assert entry.runtime_data.dss_manager.started is True
     assert hass.config_entries.forwarded == [(entry, integration_module.PLATFORMS)]
 
     Coordinator.instances = []
@@ -1860,13 +1904,27 @@ def test_setup_entry_success_and_partial_initialization_cleanup(monkeypatch):
     assert first.shutdown is True
     assert second.shutdown is False
 
+    Coordinator.instances = []
+    Coordinator.fail_second = False
+    failing_hass = _lifecycle_hass()
+    failing_hass.config_entries.async_forward_entry_setups = AsyncMock(
+        side_effect=RuntimeError("forward failed")
+    )
+    with pytest.raises(RuntimeError, match="forward failed"):
+        asyncio.run(
+            integration_module.async_setup_entry(failing_hass, _lifecycle_entry())
+        )
+    assert DssManager.instances[-1].stopped is True
+    assert all(item.shutdown for item in Coordinator.instances)
+
 
 def test_unload_entry_shuts_down_only_after_platform_success():
     first = types.SimpleNamespace(async_shutdown=AsyncMock())
     second = types.SimpleNamespace(async_shutdown=AsyncMock())
+    dss_manager = types.SimpleNamespace(async_stop=AsyncMock())
     entry = types.SimpleNamespace(
         runtime_data=integration_module.DelonghiRuntimeData(
-            client=object(), coordinators=[first, second]
+            client=object(), coordinators=[first, second], dss_manager=dss_manager
         )
     )
 
@@ -1875,14 +1933,28 @@ def test_unload_entry_shuts_down_only_after_platform_success():
     ) is True
     first.async_shutdown.assert_awaited_once()
     second.async_shutdown.assert_awaited_once()
+    dss_manager.async_stop.assert_awaited_once()
 
     first.async_shutdown.reset_mock()
     second.async_shutdown.reset_mock()
+    dss_manager.async_stop.reset_mock()
     assert asyncio.run(
         integration_module.async_unload_entry(_lifecycle_hass(unload_ok=False), entry)
     ) is False
     first.async_shutdown.assert_not_awaited()
     second.async_shutdown.assert_not_awaited()
+    dss_manager.async_stop.assert_not_awaited()
+
+    no_dss_entry = types.SimpleNamespace(
+        runtime_data=integration_module.DelonghiRuntimeData(
+            client=object(), coordinators=[first, second], dss_manager=None
+        )
+    )
+    assert asyncio.run(
+        integration_module.async_unload_entry(
+            _lifecycle_hass(unload_ok=True), no_dss_entry
+        )
+    ) is True
 
 
 def test_reauth_rejects_bad_password_then_updates_existing_entry(monkeypatch):

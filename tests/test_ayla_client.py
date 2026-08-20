@@ -150,6 +150,111 @@ def authenticated(client: Any) -> None:
     client._expires_at = 10_000
 
 
+@async_test
+async def test_connection_info_normalizes_wrappers_and_rejects_bad_shapes() -> None:
+    client = make_client()
+    client._request_json = AsyncMock(
+        side_effect=[
+            {"connection_info": {"rssi": -58}},
+            {"connectionInfo": {"rssi": -59}},
+            {"rssi": -60},
+            [],
+            {"connection_info": []},
+        ]
+    )
+    assert await client.async_get_connection_info("dsn") == {"rssi": -58}
+    assert await client.async_get_connection_info("dsn") == {"rssi": -59}
+    assert await client.async_get_connection_info("dsn") == {"rssi": -60}
+    with pytest.raises(ac.CloudError, match="JSON object"):
+        await client.async_get_connection_info("dsn")
+    with pytest.raises(ac.CloudError, match="unexpected"):
+        await client.async_get_connection_info("dsn")
+
+
+def test_dss_subscription_small_helpers() -> None:
+    assert ac.DelonghiAylaClient._unwrap_dss_subscription(None) is None
+    assert ac.DelonghiAylaClient._unwrap_dss_subscription({"subscription": []}) is None
+    assert ac.DelonghiAylaClient._unwrap_dss_subscription({"id": "one"}) == {
+        "id": "one"
+    }
+    assert ac.DelonghiAylaClient.dss_subscription_stream_key({}) is None
+    assert ac.DelonghiAylaClient.dss_subscription_stream_key({"streamKey": "camel"}) == "camel"
+    assert ac.DelonghiAylaClient.dss_subscription_stream_key({"stream_key": 3}) is None
+
+
+@async_test
+async def test_dss_subscription_reuses_own_and_creates_when_missing() -> None:
+    client = make_client()
+    client._request_json = AsyncMock(
+        return_value=[
+            {"subscription": {"name": "ANDROID_DSS", "stream_key": "official"}},
+            {"subscription": {"name": const.DSS_SUBSCRIPTION_NAME}},
+            {
+                "subscription": {
+                    "name": const.DSS_SUBSCRIPTION_NAME,
+                    "stream_key": "ours",
+                }
+            },
+        ]
+    )
+    subscription = await client.async_get_or_create_dss_subscription()
+    assert subscription["stream_key"] == "ours"
+    assert client._request_json.await_count == 1
+
+    client._request_json = AsyncMock(
+        side_effect=[
+            [],
+            {"subscription": {"stream_key": "created"}},
+        ]
+    )
+    subscription = await client.async_get_or_create_dss_subscription()
+    assert subscription["stream_key"] == "created"
+    create_call = client._request_json.await_args_list[1]
+    assert create_call.args[0] == "POST"
+    assert create_call.kwargs["json_body"] == {
+        "name": const.DSS_SUBSCRIPTION_NAME,
+        "description": const.DSS_SUBSCRIPTION_DESCRIPTION,
+        "dsn": None,
+        "property_name": "*",
+        "client_type": "mobile",
+        "batch_size": "1",
+        "subscription_type": const.DSS_SUBSCRIPTION_TYPES,
+    }
+
+
+@async_test
+async def test_dss_subscription_rejects_invalid_cloud_responses() -> None:
+    client = make_client()
+    client._request_json = AsyncMock(return_value={})
+    with pytest.raises(ac.CloudError, match="JSON list"):
+        await client.async_get_or_create_dss_subscription()
+
+    client._request_json = AsyncMock(side_effect=[[], {"subscription": {}}])
+    with pytest.raises(ac.CloudError, match="stream key missing"):
+        await client.async_get_or_create_dss_subscription()
+
+
+@async_test
+async def test_open_dss_websocket_uses_encoded_key_without_auth_header() -> None:
+    class WebSocketSession:
+        def __init__(self):
+            self.calls = []
+
+        async def ws_connect(self, url, **kwargs):
+            self.calls.append((url, kwargs))
+            return "websocket"
+
+    session = WebSocketSession()
+    client = make_client(session)
+    client.async_ensure_auth = AsyncMock()
+    assert await client.async_open_dss_websocket("secret key") == "websocket"
+    url, kwargs = session.calls[0]
+    assert url.startswith("wss://mstream-field-eu.aylanetworks.com/stream?")
+    assert "stream_key=secret+key" in url
+    assert kwargs["heartbeat"] is None
+    client.async_ensure_auth.assert_awaited_once()
+
+
 def test_cloud_error_device_and_small_helpers(caplog: pytest.LogCaptureFixture) -> None:
     error = ac.CloudError("offline", http_status=503)
     assert str(error) == "offline"

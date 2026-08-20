@@ -9,7 +9,12 @@ from homeassistant.components.sensor import (
     SensorEntity,
     SensorStateClass,
 )
-from homeassistant.const import PERCENTAGE, EntityCategory, UnitOfVolume
+from homeassistant.const import (
+    PERCENTAGE,
+    SIGNAL_STRENGTH_DECIBELS_MILLIWATT,
+    EntityCategory,
+    UnitOfVolume,
+)
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
@@ -107,6 +112,8 @@ async def async_setup_entry(
             )
         entities.append(DelonghiMachineStatusSensor(coord))
         entities.append(DelonghiLastCommandSensor(coord))
+        if coord.connection_info.get("rssi") is not None:
+            entities.append(DelonghiWifiSignalSensor(coord))
         if coord.profile.uses_cloud_session and APP_ID_PROPERTY in (coord.data or {}):
             entities.append(DelonghiCloudSessionAppIdSensor(coord))
     async_add_entities(entities)
@@ -338,4 +345,22 @@ class DelonghiLastCommandSensor(_Base):
         # This sensor deliberately exposes only the HA-issued command. Frames
         # sniffed from the official Coffee Link app are unrelated diagnostics.
         return dict(self.coordinator.last_command or {})
+
+
+class DelonghiWifiSignalSensor(_Base):
+    """Optional Ayla Wi-Fi RSSI diagnostic, disabled by default."""
+
+    _attr_device_class = SensorDeviceClass.SIGNAL_STRENGTH
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_entity_registry_enabled_default = False
+    _attr_native_unit_of_measurement = SIGNAL_STRENGTH_DECIBELS_MILLIWATT
+    _attr_state_class = SensorStateClass.MEASUREMENT
+
+    def __init__(self, coord: DelonghiCoordinator) -> None:
+        super().__init__(coord, "wifi_signal_strength")
+
+    @property
+    def native_value(self) -> int | None:
+        value = self.coordinator.connection_info.get("rssi")
+        return value if isinstance(value, int) else None
 

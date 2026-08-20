@@ -12,7 +12,8 @@
 ## Beverage button is missing
 
 - Prepare the recipe once from Coffee Link while Home Assistant is running.
-- Wait for at least one 30-second polling interval.
+- Wait for one DSS update; when the stream is unavailable, wait for at least one
+  30-second polling interval.
 - Reload the integration if dynamic entity discovery did not add the button.
 - Review the log for a rejected checksum, recipe identity, action or device
   signature.

@@ -2,7 +2,7 @@
 
 Audit date: 2026-08-20
 
-Audited release: 1.2.1
+Audited release: 1.2.1 stable; 1.3.0-beta.2 local beta addendum
 
 ## Verdict
 
@@ -16,7 +16,16 @@ those runtime paths, has been published and installed through HACS on the target
 Home Assistant, and was verified to load with the coffee maker and cloud
 connection available.
 
-The isolated suite covers every executable line and branch in all 17 Python
+Local beta 1.3.0-beta.2 adds an account-wide Ayla DSS stream, automatic polling
+fallback, ordered event application, exact datapoint acknowledgements and
+privacy-safe connection diagnostics. It passed a backed-up deployment and clean
+restart on the same Home Assistant. The stream remained connected beyond its
+75-second idle timeout with no reconnect or relevant system-log entry; entity
+availability counts were identical to 1.2.1. No appliance command was sent during
+this read-only beta acceptance, so exact live ACK and physical beverage paths
+remain deliberately pending.
+
+The beta isolated suite covers every executable line and branch in all 18 Python
 modules. A second suite loads the integration through actual Home Assistant
 2026.8.2 interfaces. These results establish strong software confidence, but
 they do not prove every vendor-cloud response, model or physical beverage path.
@@ -27,6 +36,8 @@ tested Eletta Explore model and documented acceptance evidence.
 
 - Published and installed release: 1.2.1; physical command-acceptance baseline:
   1.2.0.
+- Locally installed beta: 1.3.0-beta.2 on branch `feature/cloud-dss-hybrid`; not
+  pushed to GitHub.
 - Home Assistant: 2026.8.2.
 - Python: 3.14.6.
 - Home Assistant OS: 18.2.
@@ -69,20 +80,20 @@ shipped.
 
 | Check | Result |
 |---|---|
-| Unit and integration-isolation tests | 312 passed |
+| Unit and integration-isolation tests | 334 passed |
 | Actual Home Assistant runtime tests | 2 passed |
-| Python modules measured | 17 |
-| Statements | 2,050 / 2,050 |
-| Branches | 628 / 628 |
+| Python modules measured | 18 |
+| Statements | 2,478 / 2,478 |
+| Branches | 800 / 800 |
 | Line coverage | 100% |
 | Branch coverage | 100% |
 | Ruff | passed |
 | Python compilation | passed |
-| English/Czech leaf-key parity | 188 / 188 |
+| English/Czech leaf-key parity | 190 / 190 |
 | Translation placeholders | synchronized |
 | Public HACS repository validation | passed |
 | Home Assistant hassfest | passed |
-| Manifest version | 1.2.1 |
+| Manifest version | 1.3.0-beta.2 (local beta) |
 
 Tests use deterministic local doubles and make no calls to a real account or
 vendor endpoint. Covered behavior includes authentication refresh and failure
@@ -101,8 +112,9 @@ fails validation.
 
 | Area | Evidence | Status |
 |---|---|---|
-| Installation and restart | 1.2.0 passed clean restart; 1.2.1 installed through HACS and loaded | verified |
-| Read-only polling | cloud data and entities available after restart | verified |
+| Installation and restart | 1.2.0 passed clean restart; 1.2.1 installed through HACS; 1.3.0-beta.2 backed up, installed and loaded locally | verified |
+| Hybrid cloud updates | DSS streaming remained healthy beyond idle timeout; fallback covered deterministically | read-only live + automated |
+| Exact DSS command ACK | datapoint matching, rejection and fallback covered deterministically | physical command pending |
 | Wake | 1.2.0 changed standby → waking up → ready | verified on Eletta |
 | Standby | 1.2.0 changed ready → standby | verified on Eletta |
 | Recipe learning | Espresso, Cappuccino and Cold Brew frames observed | verified |
@@ -151,7 +163,9 @@ prepared.
 2. Every supported model requires model-specific, reproducible acceptance
    evidence. PrimaDonna Soul remains experimental.
 3. Not every Eletta beverage has completed a supervised Start/Stop matrix.
-4. The 30-second polling architecture can miss intermediate official-app commands.
+4. DSS normally captures intermediate official-app commands immediately. During a
+   stream outage, the 30-second polling fallback can still miss an intermediate
+   command.
 5. Account membership is reconciled every ten minutes, not instantly.
 6. Cup placement and every accessory condition cannot be detected.
 7. Default-catalog inclusion is pending review in

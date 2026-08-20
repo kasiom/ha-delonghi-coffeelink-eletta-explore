@@ -53,9 +53,12 @@ from .const import (
     CONNECT_REFRESH_INTERVAL,
     CONNECT_SETTLE_DELAY,
     CONNECTED_PROPERTY_CANDIDATES,
+    CONNECTION_INFO_REFRESH_INTERVAL,
     DEFAULT_SCAN_INTERVAL,
     DEVICE_METADATA_REFRESH_INTERVAL,
     DOMAIN,
+    DSS_ACK_GRACE_PERIOD,
+    DSS_FALLBACK_SCAN_INTERVAL,
     INTEGRATION_CLOUD_APP_ID,
     MONITOR_PROPERTY_CANDIDATES,
     POST_COMMAND_REFRESH_DELAY,
@@ -67,9 +70,10 @@ from .const import (
     RESPONSE_PROPERTY_CANDIDATES,
     STATISTICS_SYNC_SETTLE_DELAY,
 )
+from .dss import DssEvent
 from .errors import translated_auth_error, translated_error
 from .model_profiles import profile_for
-from .monitor import parse_monitor_b64
+from .monitor import monitor_ordering_token, parse_monitor_b64
 
 if TYPE_CHECKING:
     from . import DelonghiConfigEntry
@@ -123,7 +127,18 @@ class DelonghiCoordinator(DataUpdateCoordinator[AylaProperties]):
         self.last_command_result: str | None = None
         self.last_command: dict[str, Any] | None = None
         self._last_device_metadata_refresh = 0.0
+        self._last_connection_info_refresh = 0.0
+        self._connection_info_supported: bool | None = None
+        self.connection_info: dict[str, Any] = {}
         self._post_command_refresh_task: asyncio.Task | None = None
+        self._dss_fallback_refresh_task: asyncio.Task | None = None
+        self.dss_state = "polling"
+        self.dss_events_received = 0
+        self._dss_sequences: dict[tuple[str, str], int | str] = {}
+        self._dss_ack_waiters: dict[str, asyncio.Future[int | None]] = {}
+        self._recent_dss_acks: dict[str, int | None] = {}
+        self._recent_dss_ack_order: deque[str] = deque(maxlen=32)
+        self._monitor_ordering_token: int | None = None
         if self.profile.uses_cloud_session:
             self._last_seen_app_id: int | None = None
         # --- Command sniffer state ---------------------------------------
@@ -167,12 +182,19 @@ class DelonghiCoordinator(DataUpdateCoordinator[AylaProperties]):
         if self._post_command_refresh_task:
             self._post_command_refresh_task.cancel()
             self._post_command_refresh_task = None
+        if self._dss_fallback_refresh_task:
+            self._dss_fallback_refresh_task.cancel()
+            self._dss_fallback_refresh_task = None
+        for waiter in self._dss_ack_waiters.values():
+            waiter.cancel()
+        self._dss_ack_waiters.clear()
         await super().async_shutdown()
 
     async def _async_update_data(self) -> AylaProperties:
         """Fetch all properties + refresh device meta."""
         try:
             props = await self.client.async_get_properties(self.device.dsn)
+            props = self._merge_poll_with_push(props)
             if self.command_property is None:
                 self.command_property = self._detect_property(
                     props, COMMAND_PROPERTY_CANDIDATES, "command"
@@ -194,8 +216,9 @@ class DelonghiCoordinator(DataUpdateCoordinator[AylaProperties]):
             self._update_monitor(props)
             self._update_session_from_props(props)
             # Device metadata changes slowly. Avoid listing every account device
-            # on every 30-second property poll.
+            # on every property reconciliation.
             now = time.monotonic()
+            await self._async_refresh_connection_info(now)
             if now - self._last_device_metadata_refresh >= DEVICE_METADATA_REFRESH_INTERVAL:
                 devices = await self.client.async_get_devices()
                 for d in devices:
@@ -212,8 +235,61 @@ class DelonghiCoordinator(DataUpdateCoordinator[AylaProperties]):
         except Exception as err:
             raise UpdateFailed(f"Error fetching Delonghi data: {err}") from err
 
+    def _merge_poll_with_push(self, props: AylaProperties) -> AylaProperties:
+        """Do not let an eventually-consistent poll replace a newer DSS value."""
+        current = self.data or {}
+        for property_name, pushed in current.items():
+            polled = props.get(property_name)
+            if not isinstance(pushed, dict) or not isinstance(polled, dict):
+                continue
+            pushed_at = pushed.get("data_updated_at", pushed.get("dataUpdatedAt"))
+            polled_at = polled.get("data_updated_at", polled.get("dataUpdatedAt"))
+            if (
+                isinstance(pushed_at, str)
+                and isinstance(polled_at, str)
+                and pushed_at > polled_at
+            ):
+                props[property_name] = dict(pushed)
+        return props
+
+    async def _async_refresh_connection_info(self, now: float) -> None:
+        """Refresh privacy-safe Wi-Fi diagnostics without affecting availability."""
+        if self._connection_info_supported is False:
+            return
+        if now - self._last_connection_info_refresh < CONNECTION_INFO_REFRESH_INTERVAL:
+            return
+        self._last_connection_info_refresh = now
+        try:
+            raw = await self.client.async_get_connection_info(self.device.dsn)
+        except CloudError as err:
+            if err.http_status in {400, 403, 404}:
+                self._connection_info_supported = False
+                self.connection_info = {}
+            else:
+                _LOGGER.debug(
+                    "Ayla connection diagnostics temporarily unavailable "
+                    "for device_ref=%s (error_type=%s)",
+                    self._device_log_id,
+                    type(err).__name__,
+                )
+            return
+
+        self._connection_info_supported = True
+        connection_type = raw.get("connectivity_type", raw.get("connectivityType"))
+        rssi_raw = raw.get("rssi")
+        try:
+            rssi = int(rssi_raw)
+        except (TypeError, ValueError):
+            rssi = None
+        # Zero is the SDK's absent/default value; real Wi-Fi RSSI is negative.
+        self.connection_info = {
+            "connectivity_type": connection_type if isinstance(connection_type, str) else None,
+            "rssi": rssi if rssi is not None and -200 < rssi < 0 else None,
+        }
+
     def _update_monitor(self, props: AylaProperties) -> None:
         """Decode the machine monitor blob (diagnostic; must never break the poll)."""
+        previous_monitor = self.monitor
         try:
             self.monitor = {}
             first_error: dict[str, Any] | None = None
@@ -224,6 +300,18 @@ class DelonghiCoordinator(DataUpdateCoordinator[AylaProperties]):
                     continue
                 parsed = parse_monitor_b64(value)
                 if "error" not in parsed:
+                    ordering_token = monitor_ordering_token(value)
+                    if (
+                        ordering_token is not None
+                        and self._monitor_ordering_token is not None
+                        and ordering_token < self._monitor_ordering_token
+                    ):
+                        # Coffee Link performs the same comparison before
+                        # accepting a DSS monitor frame. Retain the newer state.
+                        self.monitor = previous_monitor
+                        return
+                    if ordering_token is not None:
+                        self._monitor_ordering_token = ordering_token
                     parsed["source_property"] = property_name
                     self.monitor = parsed
                     status = parsed.get("status")
@@ -259,6 +347,139 @@ class DelonghiCoordinator(DataUpdateCoordinator[AylaProperties]):
         except Exception:  # noqa: BLE001 - diagnostic must not break polling
             _LOGGER.debug("Monitor parse failed (non-fatal)", exc_info=True)
             self.monitor = {}
+
+    def set_dss_state(self, state: str, *, request_refresh: bool = False) -> None:
+        """Switch between push reconciliation and the polling safety fallback."""
+        previous = self.dss_state
+        self.dss_state = state
+        self.update_interval = timedelta(
+            seconds=(
+                DSS_FALLBACK_SCAN_INTERVAL
+                if state == "streaming"
+                else DEFAULT_SCAN_INTERVAL
+            )
+        )
+        if state == "streaming" and previous != "streaming":
+            # Sequence values can restart when Ayla issues a new stream.
+            self._dss_sequences.clear()
+        if request_refresh and self._dss_fallback_refresh_task is None:
+
+            async def _refresh_after_stream_loss() -> None:
+                try:
+                    await self.async_request_refresh()
+                finally:
+                    self._dss_fallback_refresh_task = None
+
+            self._dss_fallback_refresh_task = self._config_entry.async_create_background_task(
+                self.hass,
+                _refresh_after_stream_loss(),
+                f"{DOMAIN}_dss_fallback_{self._device_log_id}",
+            )
+        self.async_update_listeners()
+
+    @staticmethod
+    def _normalized_dss_sequence(value: str | None) -> int | str | None:
+        if value is None:
+            return None
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return value
+
+    def _accept_dss_sequence(self, event: DssEvent) -> bool:
+        """Reject duplicate or out-of-order events within the current stream."""
+        sequence = self._normalized_dss_sequence(event.sequence)
+        if sequence is None:
+            return True
+        key = (event.event_type, event.property_name or "")
+        previous = self._dss_sequences.get(key)
+        if isinstance(sequence, int) and isinstance(previous, int):
+            if sequence <= previous:
+                return False
+        elif sequence == previous:
+            return False
+        self._dss_sequences[key] = sequence
+        return True
+
+    def _remember_dss_ack(self, datapoint_id: str, status: int | None) -> None:
+        if datapoint_id not in self._recent_dss_acks:
+            if len(self._recent_dss_ack_order) == self._recent_dss_ack_order.maxlen:
+                self._recent_dss_acks.pop(self._recent_dss_ack_order[0], None)
+            self._recent_dss_ack_order.append(datapoint_id)
+        self._recent_dss_acks[datapoint_id] = status
+        waiter = self._dss_ack_waiters.get(datapoint_id)
+        if waiter is not None and not waiter.done():
+            waiter.set_result(status)
+
+    def handle_dss_event(self, event: DssEvent) -> bool:
+        """Apply one ordered DSS update and notify Home Assistant entities."""
+        if not self._accept_dss_sequence(event):
+            return False
+
+        handled = False
+        if event.event_type == "datapointack" and event.datapoint_id:
+            self._remember_dss_ack(event.datapoint_id, event.ack_status)
+            handled = True
+
+        property_name = event.property_name
+        if property_name is None or event.event_type == "connectivity":
+            return handled
+
+        data = self.data if isinstance(self.data, dict) else {}
+        current = data.get(property_name)
+        current = dict(current) if isinstance(current, dict) else {"name": property_name}
+        current_at = current.get("data_updated_at", current.get("dataUpdatedAt"))
+        if (
+            event.updated_at is not None
+            and isinstance(current_at, str)
+            and event.updated_at < current_at
+        ):
+            return handled
+
+        if event.event_type == "datapoint" or event.value is not None:
+            current["value"] = event.value
+        if event.updated_at is not None:
+            current["data_updated_at"] = event.updated_at
+        if event.acked_at is not None:
+            current["acked_at"] = event.acked_at
+        if event.ack_status is not None:
+            current["ack_status"] = event.ack_status
+        if event.ack_message is not None:
+            current["ack_message"] = event.ack_message
+        data[property_name] = current
+        self.data = data
+
+        if property_name in MONITOR_PROPERTY_CANDIDATES:
+            self._update_monitor(data)
+        if property_name in {
+            self.command_property,
+            self.response_property,
+        }:
+            self._sniff_app_traffic(data)
+        if property_name == APP_ID_PROPERTY:
+            self._update_session_from_props(data)
+        self.dss_events_received += 1
+        self.async_update_listeners()
+        return True
+
+    async def _async_wait_for_dss_ack(
+        self, datapoint_id: str
+    ) -> tuple[bool, int | None]:
+        """Wait briefly for an exact device ACK before using poll inference."""
+        if self.dss_state != "streaming":
+            return False, None
+        if datapoint_id in self._recent_dss_acks:
+            return True, self._recent_dss_acks.pop(datapoint_id)
+        waiter = asyncio.get_running_loop().create_future()
+        self._dss_ack_waiters[datapoint_id] = waiter
+        if datapoint_id in self._recent_dss_acks:
+            waiter.set_result(self._recent_dss_acks.pop(datapoint_id))
+        try:
+            return True, await asyncio.wait_for(waiter, DSS_ACK_GRACE_PERIOD)
+        except TimeoutError:
+            return False, None
+        finally:
+            self._dss_ack_waiters.pop(datapoint_id, None)
 
     def _detect_property(
         self,
@@ -567,6 +788,10 @@ class DelonghiCoordinator(DataUpdateCoordinator[AylaProperties]):
         response_marker, monitor = before
         deadline = time.monotonic() + timeout
         while time.monotonic() < deadline:
+            if self.response_property and self._last_resp_marker != response_marker:
+                return True
+            if self.monitor and self.monitor != monitor:
+                return True
             await self.async_request_refresh()
             if self.response_property and self._last_resp_marker != response_marker:
                 return True
@@ -587,10 +812,27 @@ class DelonghiCoordinator(DataUpdateCoordinator[AylaProperties]):
         before = self._command_confirmation_snapshot()
         self._record_sent(value)
         _LOGGER.info("Sending %s via %s (len=%d)", label, prop, len(value))
-        await self.client.async_set_property_value(self.device.dsn, prop, value)
+        result = await self.client.async_set_property_value(self.device.dsn, prop, value)
         self._set_last_command_result("sent")
         if not confirm:
             return
+
+        datapoint = result.get("datapoint", result) if isinstance(result, dict) else {}
+        datapoint_id = datapoint.get("id") if isinstance(datapoint, dict) else None
+        if datapoint_id is not None:
+            ack_received, ack_status = await self._async_wait_for_dss_ack(str(datapoint_id))
+            if ack_received and ack_status is not None:
+                if 200 <= ack_status < 300:
+                    if self.last_command is not None:
+                        self.last_command["confirmation_source"] = "dss_ack"
+                    self._set_last_command_result("acknowledged", completed=True)
+                    return
+                if ack_status >= 400:
+                    if self.last_command is not None:
+                        self.last_command["confirmation_source"] = "dss_ack"
+                    self._set_last_command_result("rejected", completed=True)
+                    raise translated_error("command_rejected_by_device")
+
         confirmed = (
             await self._wait_for_command_confirmation(before)
             if confirmation_timeout is None
@@ -599,6 +841,8 @@ class DelonghiCoordinator(DataUpdateCoordinator[AylaProperties]):
             )
         )
         if confirmed is True:
+            if self.last_command is not None:
+                self.last_command["confirmation_source"] = "cloud_state"
             self._set_last_command_result("acknowledged", completed=True)
         elif confirmed is False:
             self._set_last_command_result("timed_out", completed=True)

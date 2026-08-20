@@ -3,9 +3,18 @@
 ## Data path
 
 Home Assistant authenticates through De'Longhi's Gigya identity service, exchanges
-the resulting JWT for an Ayla token and polls the coffee maker's Ayla properties.
-Each discovered machine has a coordinator responsible for cloud state, monitor
-decoding, recipe learning and serialized command execution.
+the resulting JWT for an Ayla token and performs one initial read of the coffee
+maker's Ayla properties. One account-wide Ayla DSS WebSocket then distributes
+datapoint and acknowledgement events to the coordinator for each discovered
+machine. A five-minute full poll reconciles state while the stream is healthy. Any
+stream setup, transport or idle-timeout failure immediately restores the normal
+30-second polling interval and reconnects with bounded exponential backoff.
+
+Events are ordered independently by event type and property. Duplicate or older
+events are discarded, and an older poll cannot overwrite a newer timestamped push
+value. MonitorV2 frames additionally use the same signed ordering token found in
+Coffee Link. Each machine coordinator remains responsible for monitor decoding,
+recipe learning and serialized command execution.
 
 ## Command safety
 
@@ -16,6 +25,10 @@ device-specific signature. The timestamp is refreshed without modifying the
 checksummed recipe section.
 
 Commands are serialized, bounded by timeouts and preceded by machine-state checks.
+When DSS is available, the datapoint identifier returned by a command is matched
+to its exact device acknowledgement. Missing or unsupported acknowledgements use
+the existing state-confirmation path, so the push channel is an improvement rather
+than a new single point of failure.
 Temporary authentication infrastructure failures remain availability errors;
 only an actual credential rejection starts Home Assistant reauthentication.
 

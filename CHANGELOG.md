@@ -6,6 +6,29 @@ All notable user-visible changes are documented here. The project follows
 
 ## [Unreleased]
 
+### Added
+
+- Add an account-wide Ayla DSS cloud stream for near-real-time datapoint and
+  datapoint-ack updates, with immediate automatic fallback to polling.
+- Add exact command confirmation by matching the device acknowledgement to the
+  datapoint created by Home Assistant; an explicit device rejection is reported
+  separately from a timeout.
+- Add a disabled-by-default Wi-Fi signal diagnostic sensor when the vendor cloud
+  exposes connection information for the machine.
+
+### Changed
+
+- Protect cloud-push state from duplicate, out-of-order and older MonitorV2
+  events; retain a five-minute reconciliation poll while streaming and restore
+  the normal 30-second interval whenever the stream is unavailable.
+- Declare the integration as `cloud_push` and keep polling as a transparent
+  reliability fallback.
+
+### Security
+
+- Never retain or expose the DSS stream key or Wi-Fi network name. Diagnostics
+  include only sanitized stream health, connectivity type and optional RSSI.
+
 ### Documentation
 
 - Update the technical audit and English/Czech project status after publication

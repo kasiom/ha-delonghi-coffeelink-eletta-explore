@@ -31,6 +31,7 @@ from .const import (
     SERVICE_STOP_BEVERAGE,
 )
 from .coordinator import DelonghiCoordinator
+from .dss import AylaDssManager
 from .errors import translated_auth_error, translated_service_error
 
 _LOGGER = logging.getLogger(__name__)
@@ -63,6 +64,7 @@ class DelonghiRuntimeData:
 
     client: DelonghiAylaClient
     coordinators: list[DelonghiCoordinator]
+    dss_manager: AylaDssManager | None = None
 
 
 type DelonghiConfigEntry = ConfigEntry[DelonghiRuntimeData]
@@ -245,10 +247,20 @@ async def async_setup_entry(
         )
         raise
 
-    entry.runtime_data = DelonghiRuntimeData(client, coordinators)
+    dss_manager = AylaDssManager(hass, entry, client, coordinators)
+    entry.runtime_data = DelonghiRuntimeData(client, coordinators, dss_manager)
     _async_remove_stale_devices(hass, entry, active_dsns)
     _async_remove_retired_sensor_entities(hass, entry)
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    dss_manager.start()
+    try:
+        await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    except Exception:
+        await dss_manager.async_stop()
+        await asyncio.gather(
+            *(coordinator.async_shutdown() for coordinator in coordinators),
+            return_exceptions=True,
+        )
+        raise
     return True
 
 
@@ -258,6 +270,8 @@ async def async_unload_entry(
     """Unload platforms and stop coordinator work for one account."""
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok:
+        if entry.runtime_data.dss_manager is not None:
+            await entry.runtime_data.dss_manager.async_stop()
         await asyncio.gather(
             *(coordinator.async_shutdown() for coordinator in entry.runtime_data.coordinators),
             return_exceptions=True,

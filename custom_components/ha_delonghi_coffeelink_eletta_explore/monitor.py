@@ -36,6 +36,24 @@ _LOGGER = logging.getLogger(__name__)
 MONITOR_REQUEST_ID = 0x75
 
 
+def monitor_ordering_token(value_b64: str) -> int | None:
+    """Return the signed big-endian ordering token used by Coffee Link.
+
+    The official app compares the final four bytes of consecutive MonitorV2
+    values before accepting a DSS update.  Keeping this helper separate from
+    the user-facing parser preserves the existing sensor attributes.
+    """
+    if not isinstance(value_b64, str) or not value_b64.strip():
+        return None
+    try:
+        raw = base64.b64decode("".join(value_b64.split()), validate=True)
+    except (ValueError, binascii.Error):
+        return None
+    if len(raw) < 4:
+        return None
+    return int.from_bytes(raw[-4:], "big", signed=True)
+
+
 def _parse_ecam_packet(raw: bytes) -> tuple[bytes, bytes, bytes]:
     """Split an EcamPacket blob into (data, timestamp, extra). Raises ValueError."""
     if len(raw) < 4:

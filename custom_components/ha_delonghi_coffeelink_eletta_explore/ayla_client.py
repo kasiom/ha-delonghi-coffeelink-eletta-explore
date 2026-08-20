@@ -23,11 +23,16 @@ from .const import (
     APP_ID,
     APP_SECRET,
     AYLA_EU_ADS_URL,
+    AYLA_EU_MDSS_URL,
+    AYLA_EU_MSTREAM_URL,
     AYLA_EU_USER_URL,
     CLOUD_HTTP_RETRY_BACKOFF,
     CLOUD_HTTP_RETRY_COUNT,
     CLOUD_HTTP_TIMEOUT,
     CLOUD_TRANSIENT_HTTP_CODES,
+    DSS_SUBSCRIPTION_DESCRIPTION,
+    DSS_SUBSCRIPTION_NAME,
+    DSS_SUBSCRIPTION_TYPES,
     GIGYA_API_KEY,
     GIGYA_BASE_URL,
 )
@@ -417,6 +422,94 @@ class DelonghiAylaClient:
             if name:
                 props[name] = p
         return props
+
+    async def async_get_connection_info(self, dsn: str) -> dict[str, Any]:
+        """Return optional Ayla connectivity diagnostics for one device.
+
+        The caller is responsible for retaining only privacy-safe fields.  In
+        particular, ``network_name`` must never be exposed by diagnostics or
+        logs because it can contain the user's Wi-Fi SSID.
+        """
+        url = f"{AYLA_EU_ADS_URL}/apiv1/dsns/{dsn}/connection_info.json"
+        data = await self._request_json(
+            "GET", url, ok_status=frozenset({200}), op=f"connection info dsn={dsn}"
+        )
+        if not isinstance(data, dict):
+            raise CloudError("connection info: expected a JSON object")
+        info = data.get("connection_info", data.get("connectionInfo", data))
+        if not isinstance(info, dict):
+            raise CloudError("connection info: unexpected response")
+        return info
+
+    @staticmethod
+    def _unwrap_dss_subscription(value: Any) -> dict[str, Any] | None:
+        """Normalize the wrapper used by the Ayla subscription API."""
+        if not isinstance(value, dict):
+            return None
+        subscription = value.get("subscription", value)
+        return subscription if isinstance(subscription, dict) else None
+
+    @staticmethod
+    def dss_subscription_stream_key(subscription: dict[str, Any]) -> str | None:
+        """Return a stream key without ever logging or persisting it."""
+        value = subscription.get("stream_key", subscription.get("streamKey"))
+        return value if isinstance(value, str) and value else None
+
+    async def async_get_or_create_dss_subscription(self) -> dict[str, Any]:
+        """Reuse or create the integration-owned account DSS subscription.
+
+        Coffee Link subscribes to all account devices by sending a null DSN.
+        We use a distinct deterministic name and never inspect, modify or
+        delete the official application's ``ANDROID_DSS`` subscription.
+        """
+        url = f"{AYLA_EU_MDSS_URL}/api/v1/subscriptions"
+        data = await self._request_json(
+            "GET", url, ok_status=frozenset({200}), op="list DSS subscriptions"
+        )
+        if not isinstance(data, list):
+            raise CloudError("list DSS subscriptions: expected a JSON list")
+        for item in data:
+            subscription = self._unwrap_dss_subscription(item)
+            if not subscription or subscription.get("name") != DSS_SUBSCRIPTION_NAME:
+                continue
+            if self.dss_subscription_stream_key(subscription):
+                return subscription
+
+        body = {
+            "name": DSS_SUBSCRIPTION_NAME,
+            "description": DSS_SUBSCRIPTION_DESCRIPTION,
+            "dsn": None,
+            "property_name": "*",
+            "client_type": "mobile",
+            "batch_size": "1",
+            "subscription_type": DSS_SUBSCRIPTION_TYPES,
+        }
+        created = await self._request_json(
+            "POST",
+            url,
+            json_body=body,
+            ok_status=frozenset({200, 201}),
+            op="create DSS subscription",
+        )
+        subscription = self._unwrap_dss_subscription(created)
+        if not subscription or not self.dss_subscription_stream_key(subscription):
+            raise CloudError("create DSS subscription: stream key missing")
+        return subscription
+
+    async def async_open_dss_websocket(
+        self, stream_key: str
+    ) -> aiohttp.ClientWebSocketResponse:
+        """Open the Ayla DSS stream for a short-lived in-memory stream key."""
+        await self.async_ensure_auth()
+        query = urllib.parse.urlencode({"stream_key": stream_key})
+        url = f"{AYLA_EU_MSTREAM_URL.replace('https://', 'wss://')}/stream?{query}"
+        return await self._session.ws_connect(
+            url,
+            heartbeat=None,
+            autoclose=True,
+            autoping=True,
+            timeout=CLOUD_HTTP_TIMEOUT,
+        )
 
     async def async_set_property_value(
         self, dsn: str, property_name: str, value: Any

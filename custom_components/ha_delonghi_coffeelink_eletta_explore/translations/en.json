@@ -200,6 +200,9 @@
           "timed_out": "Timed out",
           "rejected": "Rejected"
         }
+      },
+      "wifi_signal_strength": {
+        "name": "Wi-Fi Signal Strength"
       }
     },
     "button": {
@@ -329,6 +332,7 @@
     "water_tank_missing": { "message": "The water tank is missing." },
     "grounds_container_missing": { "message": "The grounds container is missing." },
     "command_not_acknowledged": { "message": "The command was sent, but the coffee maker did not acknowledge it in time." },
+    "command_rejected_by_device": { "message": "The coffee machine explicitly rejected the command." },
     "cloud_session_in_use": { "message": "Another application is using the Coffee Link cloud session; close it or wait for the session to be released." },
     "cached_session_unverified": { "message": "The cached Coffee Link cloud session could not be verified." },
     "cloud_session_timeout": { "message": "Timed out while acquiring the Coffee Link cloud session." },
