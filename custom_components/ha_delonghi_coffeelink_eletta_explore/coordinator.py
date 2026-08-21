@@ -133,7 +133,7 @@ class DelonghiCoordinator(DataUpdateCoordinator[AylaProperties]):
         self.last_command_result: str | None = None
         self.last_command: dict[str, Any] | None = None
         self._last_device_metadata_refresh = 0.0
-        self._last_connection_info_refresh = 0.0
+        self._last_connection_info_refresh: float | None = None
         self._connection_info_supported: bool | None = None
         self.connection_info: dict[str, Any] = {}
         self._post_command_refresh_task: asyncio.Task[None] | None = None
@@ -269,7 +269,10 @@ class DelonghiCoordinator(DataUpdateCoordinator[AylaProperties]):
         """Refresh privacy-safe Wi-Fi diagnostics without affecting availability."""
         if self._connection_info_supported is False:
             return
-        if now - self._last_connection_info_refresh < CONNECTION_INFO_REFRESH_INTERVAL:
+        if (
+            self._last_connection_info_refresh is not None
+            and now - self._last_connection_info_refresh < CONNECTION_INFO_REFRESH_INTERVAL
+        ):
             return
         self._last_connection_info_refresh = now
         try:

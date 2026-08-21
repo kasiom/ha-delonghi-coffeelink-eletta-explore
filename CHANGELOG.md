@@ -27,6 +27,8 @@ All notable user-visible changes are documented here. The project follows
   coordinator so rate-limited updates are rescheduled correctly.
 - Prevent a raw device DSN from reaching request-debug details; operation names
   remain available for troubleshooting.
+- Always perform the first optional connection-diagnostics read, including on a
+  freshly booted host whose monotonic clock is below the hourly refresh interval.
 
 ### Tests
 

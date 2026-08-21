@@ -65,13 +65,15 @@ def test_poll_merge_and_connection_info_are_privacy_safe() -> None:
                 "networkName": "secret",
             }
         )
-        await coordinator._async_refresh_connection_info(4000)
+        # A freshly booted host can have a monotonic clock below the one-hour
+        # refresh interval. The first diagnostic read must still run.
+        await coordinator._async_refresh_connection_info(1)
         assert coordinator.connection_info == {
             "connectivity_type": "Wifi",
             "rssi": -57,
         }
         assert "secret" not in str(coordinator.connection_info)
-        await coordinator._async_refresh_connection_info(4001)
+        await coordinator._async_refresh_connection_info(2)
         assert client.async_get_connection_info.await_count == 1
 
         coordinator._last_connection_info_refresh = 0
