@@ -371,20 +371,30 @@ def test_beverage_sensor_names_correspond_to_czech_buttons() -> None:
     )
 
 
-def test_cloud_entities_are_distinct_and_plain_czech() -> None:
-    entities = _load(COMPONENT / "translations" / "cs.json")["entity"]
-    assert entities["binary_sensor"]["connection_status"]["name"] == (
+def test_cloud_entities_are_distinct_and_session_holder_is_neutral() -> None:
+    english = _load(COMPONENT / "translations" / "en.json")["entity"]
+    czech = _load(COMPONENT / "translations" / "cs.json")["entity"]
+    assert czech["binary_sensor"]["connection_status"]["name"] == (
         "Připojení ke cloudu"
     )
 
-    sensor = entities["sensor"]["cloud_session_app_id"]
+    czech_sensor = czech["sensor"]["cloud_session_app_id"]
+    english_sensor = english["sensor"]["cloud_session_app_id"]
 
-    assert sensor["name"] == "Relace Coffee Link"
-    assert sensor["state"] == {
+    assert czech_sensor["name"] == "Relace Coffee Link"
+    assert czech_sensor["state"] == {
         "unknown": "Neznámá",
         "free": "Volná",
-        "ha": "Home Assistant",
+        "ha": "Aktivní relace",
         "foreign": "Jiná aplikace",
+    }
+    assert english_sensor["state"] == {
+        "unknown": "Unknown",
+        "free": "Free",
+        # Keep the internal key for compatibility. The device-specific ID is
+        # shared with Coffee Link, so it cannot identify Home Assistant alone.
+        "ha": "Active session",
+        "foreign": "Another application",
     }
 
 

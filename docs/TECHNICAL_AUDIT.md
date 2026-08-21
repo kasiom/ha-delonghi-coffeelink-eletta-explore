@@ -72,8 +72,10 @@ tested Eletta Explore model and documented acceptance evidence.
   synchronization and privacy-safe diagnostic verification.
 - Post-restart command state: unknown, by design until Home Assistant issues a
   command.
-- Coffee Link session behavior: free after deployment and `ha` after the explicit
-  Home Assistant read-only statistics synchronization, as expected.
+- Coffee Link session behavior: free after deployment and the backward-compatible
+  internal `ha` state after the explicit Home Assistant read-only statistics
+  synchronization. The visible state is the neutral **Active session**, because
+  Coffee Link can use the same machine-derived identifier.
 
 ## Standards baseline
 

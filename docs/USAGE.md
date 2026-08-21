@@ -20,7 +20,9 @@ removed machines do not leave stale devices or entities behind.
 - **Machine Status** reports the verified MonitorV2 state and keeps raw status,
   step, progress, accessory and alarm values in attributes for diagnostics.
 - **Coffee Link Session** reports whether the exclusive command session is free,
-  held by this integration or held by another application.
+  active under the machine's shared Coffee Link identifier or uses a different
+  application identifier. The shared identifier cannot distinguish Home Assistant
+  from the official app.
 - **Last Command Status** tracks only commands issued by Home Assistant:
   pending, sent, acknowledged, timed out or rejected.
 - Beverage and maintenance sensors expose current counters and percentages with

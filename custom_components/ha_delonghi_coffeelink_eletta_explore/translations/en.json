@@ -184,7 +184,7 @@
         "state": {
           "unknown": "Unknown",
           "free": "Free",
-          "ha": "Home Assistant",
+          "ha": "Active session",
           "foreign": "Another application"
         }
       },

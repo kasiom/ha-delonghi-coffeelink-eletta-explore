@@ -67,10 +67,12 @@ experimental. See [Compatibility and known limitations](docs/COMPATIBILITY.md).
 - English/Czech entity, state, exception and Repairs translations with icons
   provided through Home Assistant's current icon-translation mechanism.
 
-The **Coffee Link Session** entity reports which application currently holds the
-exclusive command session. **Last Command Status** records only commands issued by
-Home Assistant; traffic observed from the official app is kept separate in
-diagnostics.
+The **Coffee Link Session** entity reports whether the exclusive command session
+is free, uses the machine's shared Coffee Link identifier or uses a different
+identifier. The shared identifier cannot distinguish this integration from the
+official app, so its neutral state is **Active session**. **Last Command Status**
+records only commands issued by Home Assistant; traffic observed from the official
+app is kept separate in diagnostics.
 
 Home Assistant applies an entity's enabled-by-default setting only when it is
 first registered. Updating to the beta does not disable counters that an existing

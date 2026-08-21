@@ -96,7 +96,7 @@
         "state": {
           "unknown": "Neznámá",
           "free": "Volná",
-          "ha": "Home Assistant",
+          "ha": "Aktivní relace",
           "foreign": "Jiná aplikace"
         }
       },

@@ -42,9 +42,10 @@ Do not bypass this state with the raw-command action.
 ## Coffee Link reports another active session
 
 Close Coffee Link completely and wait for the machine's session to become free.
-The **Coffee Link Session** entity distinguishes a free session, this integration's
-session and another application's session. Home Assistant will not take over a
-foreign active session.
+The **Coffee Link Session** entity distinguishes a free session, an active shared-ID
+session and a different application's session. An active shared-ID session can
+belong to either Home Assistant or the official app; the cloud value cannot identify
+which one. Home Assistant will not take over a foreign active session.
 
 ## Counters look stale
 

@@ -44,6 +44,9 @@ All notable user-visible changes are documented here. The project follows
   registrations, while making per-recipe and recipe-group counters available
   but disabled by default. Existing Home Assistant entity-registry choices are
   not changed.
+- Display the backward-compatible Coffee Link session state `ha` as the neutral
+  **Active session** / **Aktivní relace**. The machine-derived identifier is
+  shared with the official app and therefore cannot prove which client holds it.
 
 ### Security
 
