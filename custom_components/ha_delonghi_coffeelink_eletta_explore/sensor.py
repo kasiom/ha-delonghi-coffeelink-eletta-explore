@@ -1,4 +1,5 @@
 """Sensor platform for De'Longhi Coffee Link – Eletta Explore."""
+
 from __future__ import annotations
 
 import logging
@@ -65,7 +66,7 @@ LAST_COMMAND_RESULT_OPTIONS = (
 def _resolve_property(data: AylaProperties | None, candidates: list[str]) -> str | None:
     """Return the first candidate property name present on the device, else None.
 
-    Property names differ across DeLonghi models (e.g. d700_tot_bev_b on Soul vs
+    Property names differ across De'Longhi models (e.g. d700_tot_bev_b on Soul vs
     d701_tot_bev_b on Eletta Explore), so each sensor declares a candidate list.
     """
     data = data or {}
@@ -89,10 +90,8 @@ async def async_setup_entry(
         # semantic summaries. Unknown models deliberately get no d700-d703
         # aggregate: the command-channel fallback is not evidence of counter
         # semantics.
-        aggregate_definitions = COFFEE_LINK_AGGREGATE_SENSORS.get(
-            coord.profile.statistics_family,
-            (),
-        )
+        statistics_family = coord.profile.statistics_family
+        aggregate_definitions = COFFEE_LINK_AGGREGATE_SENSORS.get(statistics_family, ()) if statistics_family is not None else ()
         for key, translation_key in aggregate_definitions:
             entity = DelonghiCoffeeLinkAggregateSensor(
                 coord,
@@ -129,17 +128,12 @@ async def async_setup_entry(
             value = prop.get("value") if prop else None
             if prop_name is None or counter_breakdown_sum(value, breakdown_keys) is None:
                 _LOGGER.debug(
-                    "Skipping breakdown counter '%s': selected "
-                    "fields are absent from %s",
+                    "Skipping breakdown counter '%s': selected fields are absent from %s",
                     key,
                     candidates,
                 )
                 continue
-            entities.append(
-                DelonghiBreakdownCounterSensor(
-                    coord, prop_name, key, icon, breakdown_keys
-                )
-            )
+            entities.append(DelonghiBreakdownCounterSensor(coord, prop_name, key, icon, breakdown_keys))
         entities.append(DelonghiMachineStatusSensor(coord))
         entities.append(DelonghiLastCommandSensor(coord))
         if coord.connection_info.get("rssi") is not None:
@@ -150,7 +144,6 @@ async def async_setup_entry(
 
 
 class _Base(DelonghiCoordinatorEntity, SensorEntity):
-
     def __init__(
         self,
         coord: DelonghiCoordinator,
@@ -165,7 +158,7 @@ class _Base(DelonghiCoordinatorEntity, SensorEntity):
 class DelonghiCounterSensor(_Base):
     """Numeric counter, volume or percentage sensor."""
 
-    _attr_state_class = SensorStateClass.TOTAL_INCREASING
+    _attr_state_class: SensorStateClass | None = SensorStateClass.TOTAL_INCREASING
 
     def __init__(
         self,
@@ -198,9 +191,7 @@ class DelonghiCounterSensor(_Base):
             self._attr_native_unit_of_measurement = UnitOfVolume.LITERS
             self._attr_suggested_display_precision = 3
             self._attr_state_class = (
-                SensorStateClass.TOTAL
-                if key == "water_total_quantity"
-                else SensorStateClass.TOTAL_INCREASING
+                SensorStateClass.TOTAL if key == "water_total_quantity" else SensorStateClass.TOTAL_INCREASING
             )
         elif key in {"grounds_container_fill", "filter_usage", "descale_limit_usage"}:
             self._attr_native_unit_of_measurement = PERCENTAGE
@@ -287,26 +278,21 @@ class DelonghiCoffeeLinkAggregateSensor(_Base):
             iced_counters = self._value(data, "d733_tot_bev_counters")
             oem_model = self.coordinator.device.oem_model or ""
             include_milk_only = (
-                oem_model.lower().startswith("dl-striker-cb")
-                or coffee_link_cold_milk_total(iced_counters) is not None
+                oem_model.lower().startswith("dl-striker-cb") or coffee_link_cold_milk_total(iced_counters) is not None
             )
             return coffee_link_hot_milk_total(
                 self._value(data, "d702_tot_bev_other"),
                 include_milk_only=include_milk_only,
             )
         if family == "striker" and self._key == "total_cold_milk_drinks":
-            return coffee_link_cold_milk_total(
-                self._value(data, "d733_tot_bev_counters")
-            )
+            return coffee_link_cold_milk_total(self._value(data, "d733_tot_bev_counters"))
         if family == "striker" and self._key == "total_mug_bev":
             return coffee_link_mug_total(
                 self._value(data, "d731_tot_mug_hot"),
                 self._value(data, "d732_tot_mug_cold"),
             )
         if family == "legacy" and self._key == "total_beverages":
-            return coffee_link_legacy_black_coffee_total(
-                self._value(data, "d700_tot_bev_b")
-            )
+            return coffee_link_legacy_black_coffee_total(self._value(data, "d700_tot_bev_b"))
         if family == "legacy" and self._key == "total_milk_drinks":
             return coffee_link_legacy_hot_milk_total(
                 self._value(data, "d701_tot_bev_bw"),
@@ -364,19 +350,13 @@ class DelonghiMachineStatusSensor(_Base):
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         monitor = self.coordinator.monitor or {}
-        attributes = {
-            key: monitor[key]
-            for key in ("source_property", "error")
-            if key in monitor
-        }
+        attributes: dict[str, Any] = {key: monitor[key] for key in ("source_property", "error") if key in monitor}
         if "error" not in monitor:
             attributes.update(
                 {
                     "status_code": monitor.get("status"),
                     "step_code": monitor.get("step", monitor.get("action")),
-                    "progress_percentage": monitor.get(
-                        "progress_percentage", monitor.get("progress")
-                    ),
+                    "progress_percentage": monitor.get("progress_percentage", monitor.get("progress")),
                     "accessory_code": monitor.get("accessory"),
                 }
             )
@@ -392,7 +372,7 @@ def _parse_cloud_session_app_id(raw: Any) -> int | None:
         return None
     try:
         return normalize_signed_app_id(int(str(raw).strip()))
-    except (TypeError, ValueError):
+    except TypeError, ValueError:
         return None
 
 
@@ -402,9 +382,7 @@ class DelonghiCloudSessionAppIdSensor(_Base):
     _attr_entity_category = EntityCategory.DIAGNOSTIC
 
     def __init__(self, coord: DelonghiCoordinator) -> None:
-        super().__init__(
-            coord, "cloud_session_app_id"
-        )
+        super().__init__(coord, "cloud_session_app_id")
         self._attr_device_class = SensorDeviceClass.ENUM
         self._attr_options = list(CLOUD_SESSION_HOLDER_OPTIONS)
 
@@ -413,9 +391,7 @@ class DelonghiCloudSessionAppIdSensor(_Base):
         prop = (self.coordinator.data or {}).get(APP_ID_PROPERTY)
         if not isinstance(prop, dict):
             return "unknown"
-        return self.coordinator.cloud_session_holder(
-            _parse_cloud_session_app_id(prop.get("value"))
-        )
+        return self.coordinator.cloud_session_holder(_parse_cloud_session_app_id(prop.get("value")))
 
 
 class DelonghiLastCommandSensor(_Base):
@@ -459,4 +435,3 @@ class DelonghiWifiSignalSensor(_Base):
     def native_value(self) -> int | None:
         value = self.coordinator.connection_info.get("rssi")
         return value if isinstance(value, int) else None
-

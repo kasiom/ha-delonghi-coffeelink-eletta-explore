@@ -11,9 +11,9 @@ from homeassistant.exceptions import (
 from .const import DOMAIN
 
 ERROR_MESSAGES: dict[str, str] = {
-    "target_exactly_one": "Select exactly one DeLonghi coffee maker.",
+    "target_exactly_one": "Select exactly one De'Longhi coffee maker.",
     "target_missing": "The selected Home Assistant device no longer exists.",
-    "target_not_loaded": "The selected target does not resolve to exactly one loaded DeLonghi coffee maker.",
+    "target_not_loaded": "The selected target does not resolve to exactly one loaded De'Longhi coffee maker.",
     "credentials_invalid": "Coffee Link credentials are no longer valid.",
     "coffee_maker_not_connected": "The coffee maker is not connected to the cloud.",
     "state_unverified": "The coffee maker state could not be verified; refresh its data before starting a beverage.",
@@ -26,14 +26,12 @@ ERROR_MESSAGES: dict[str, str] = {
     "command_not_acknowledged": "The command was sent, but the coffee maker did not acknowledge it in time.",
     "command_rejected_by_device": "The coffee machine explicitly rejected the command.",
     "cloud_session_in_use": (
-        "Another application is using the Coffee Link cloud session; close it or wait "
-        "for the session to be released."
+        "Another application is using the Coffee Link cloud session; close it or wait for the session to be released."
     ),
     "cached_session_unverified": "The cached Coffee Link cloud session could not be verified.",
     "cloud_session_timeout": "Timed out while acquiring the Coffee Link cloud session.",
     "learned_command_invalid": (
-        "The learned beverage command failed its integrity check; prepare it once in "
-        "the official Coffee Link app to re-learn it."
+        "The learned beverage command failed its integrity check; prepare it once in the official Coffee Link app to re-learn it."
     ),
     "command_not_learned": "This command is unavailable until its frame has been learned from the official Coffee Link app.",
     "active_beverage_unknown": "The active beverage is unknown; start a drink before using Stop.",

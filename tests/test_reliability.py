@@ -209,9 +209,7 @@ def _install_homeassistant_stubs() -> None:
         def async_show_form(self, **kwargs):
             return {"type": "form", **kwargs}
 
-        def async_update_reload_and_abort(
-            self, entry, *, data_updates, reason="reauth_successful"
-        ):
+        def async_update_reload_and_abort(self, entry, *, data_updates, reason="reauth_successful"):
             return {
                 "type": "abort",
                 "reason": reason,
@@ -242,18 +240,14 @@ def _install_homeassistant_stubs() -> None:
     config_validation.ensure_list = lambda value: value if isinstance(value, list) else [value]
     config_validation.string = str
     device_registry.async_get = lambda hass: hass.device_registry
-    device_registry.async_entries_for_config_entry = (
-        lambda registry, entry_id: [
-            item for item in registry.entries if item.config_entry_id == entry_id
-        ]
-    )
+    device_registry.async_entries_for_config_entry = lambda registry, entry_id: [
+        item for item in registry.entries if item.config_entry_id == entry_id
+    ]
     device_registry.DeviceInfo = DeviceInfo
     entity_registry.async_get = lambda hass: hass.entity_registry
-    entity_registry.async_entries_for_config_entry = (
-        lambda registry, entry_id: [
-            item for item in registry.entries if item.config_entry_id == entry_id
-        ]
-    )
+    entity_registry.async_entries_for_config_entry = lambda registry, entry_id: [
+        item for item in registry.entries if item.config_entry_id == entry_id
+    ]
     issue_registry.IssueSeverity = IssueSeverity
     issue_registry.async_create_issue = lambda *args, **kwargs: None
     issue_registry.async_delete_issue = lambda *args, **kwargs: None
@@ -266,7 +260,13 @@ def _install_homeassistant_stubs() -> None:
     storage.Store = Store
     update.CoordinatorEntity = CoordinatorEntity
     update.DataUpdateCoordinator = DataUpdateCoordinator
-    update.UpdateFailed = RuntimeError
+
+    class UpdateFailed(RuntimeError):
+        def __init__(self, message: str, *, retry_after: float | None = None) -> None:
+            super().__init__(message)
+            self.retry_after = retry_after
+
+    update.UpdateFailed = UpdateFailed
     loader.async_get_integration = async_get_integration
     aiohttp_client.async_get_clientsession = lambda hass: object()
     homeassistant.config_entries = config_entries
@@ -437,12 +437,9 @@ def _coordinator(oem_model: str = "DL-millcore"):
         oem_model=oem_model,
         model="model",
         sw_version="1",
-        lan_ip="",
         connection_status="online",
     )
-    coordinator = coordinator_module.DelonghiCoordinator(
-        object(), client, device, FakeConfigEntry(), lambda _devices: None
-    )
+    coordinator = coordinator_module.DelonghiCoordinator(object(), client, device, FakeConfigEntry(), lambda _devices: None)
     coordinator.command_property = "data_request"
     return coordinator, client
 
@@ -463,9 +460,7 @@ def test_sensor_platform_reports_counters_machine_and_command_state():
         "alarms": 0,
     }
 
-    counter = sensor_module.DelonghiCounterSensor(
-        coordinator, "counter", "total_beverages", "mdi:counter"
-    )
+    counter = sensor_module.DelonghiCounterSensor(coordinator, "counter", "total_beverages", "mdi:counter")
     machine = sensor_module.DelonghiMachineStatusSensor(coordinator)
     session = sensor_module.DelonghiCloudSessionAppIdSensor(coordinator)
     command = sensor_module.DelonghiLastCommandSensor(coordinator)
@@ -490,16 +485,12 @@ def test_optional_wifi_signal_sensor_is_diagnostic_and_disabled_by_default():
     coordinator.connection_info = {"rssi": "invalid"}
     assert signal.native_value is None
 
-    entry = types.SimpleNamespace(
-        runtime_data=types.SimpleNamespace(coordinators=[coordinator])
-    )
+    entry = types.SimpleNamespace(runtime_data=types.SimpleNamespace(coordinators=[coordinator]))
     coordinator.connection_info = {"rssi": -60}
     coordinator.data = {}
     added = []
     asyncio.run(sensor_module.async_setup_entry(object(), entry, added.extend))
-    assert any(
-        isinstance(entity, sensor_module.DelonghiWifiSignalSensor) for entity in added
-    )
+    assert any(isinstance(entity, sensor_module.DelonghiWifiSignalSensor) for entity in added)
 
 
 def test_binary_sensor_platform_uses_stable_maintenance_snapshot():
@@ -528,9 +519,7 @@ def test_binary_sensor_platform_uses_stable_maintenance_snapshot():
 
 def test_button_platform_exposes_only_safe_learned_actions():
     coordinator, _client = _coordinator("DL-striker-cb")
-    start = button_module.DelonghiStartBeverageButton(
-        coordinator, 1, "espresso", "Espresso", "mdi:coffee"
-    )
+    start = button_module.DelonghiStartBeverageButton(coordinator, 1, "espresso", "Espresso", "mdi:coffee")
     stop = button_module.DelonghiStopButton(coordinator)
 
     assert start.available is False
@@ -585,9 +574,7 @@ def test_sensor_setup_entry_covers_supported_and_absent_properties(monkeypatch):
         ],
     )
     added = []
-    entry = types.SimpleNamespace(
-        runtime_data=types.SimpleNamespace(coordinators=[eletta, soul])
-    )
+    entry = types.SimpleNamespace(runtime_data=types.SimpleNamespace(coordinators=[eletta, soul]))
 
     asyncio.run(sensor_module.async_setup_entry(object(), entry, added.extend))
 
@@ -596,15 +583,10 @@ def test_sensor_setup_entry_covers_supported_and_absent_properties(monkeypatch):
     assert sum(isinstance(item, sensor_module.DelonghiMachineStatusSensor) for item in added) == 2
     assert sum(isinstance(item, sensor_module.DelonghiLastCommandSensor) for item in added) == 2
     assert sum(isinstance(item, sensor_module.DelonghiCloudSessionAppIdSensor) for item in added) == 1
-    assert any(
-        getattr(item, "_attr_translation_key", None) == "kept_counter"
-        for item in added
-    )
+    assert any(getattr(item, "_attr_translation_key", None) == "kept_counter" for item in added)
 
     empty = []
-    empty_entry = types.SimpleNamespace(
-        runtime_data=types.SimpleNamespace(coordinators=[])
-    )
+    empty_entry = types.SimpleNamespace(runtime_data=types.SimpleNamespace(coordinators=[]))
     asyncio.run(sensor_module.async_setup_entry(object(), empty_entry, empty.extend))
     assert empty == []
     assert sensor_module._resolve_property(None, []) is None
@@ -614,15 +596,8 @@ def test_sensor_setup_entry_builds_coffee_link_official_aggregates(monkeypatch):
     coordinator, _client = _coordinator("DL-striker-cb")
     coordinator.data = {
         "d701_tot_bev_b": {"value": 616},
-        "d702_tot_bev_other": {
-            "value": '{"tot_bev_bw":300,"tot_bev_w":8}'
-        },
-        "d733_tot_bev_counters": {
-            "value": (
-                '{"tot_bev_b_iced":23,"tot_bev_bw_iced":7,'
-                '"tot_bev_w_iced":3}'
-            )
-        },
+        "d702_tot_bev_other": {"value": '{"tot_bev_bw":300,"tot_bev_w":8}'},
+        "d733_tot_bev_counters": {"value": ('{"tot_bev_b_iced":23,"tot_bev_bw_iced":7,"tot_bev_w_iced":3}')},
         "d731_tot_mug_hot": {"value": 16},
         "d732_tot_mug_cold": {"value": 0},
         "d736_mug_bev": {"value": 16},
@@ -637,30 +612,23 @@ def test_sensor_setup_entry_builds_coffee_link_official_aggregates(monkeypatch):
         ],
     )
     monkeypatch.setattr(sensor_module, "BREAKDOWN_COUNTER_SENSORS", [])
-    entry = types.SimpleNamespace(
-        runtime_data=types.SimpleNamespace(coordinators=[coordinator])
-    )
+    entry = types.SimpleNamespace(runtime_data=types.SimpleNamespace(coordinators=[coordinator]))
     added = []
 
     asyncio.run(sensor_module.async_setup_entry(object(), entry, added.extend))
 
-    aggregates = [
-        entity
-        for entity in added
-        if isinstance(entity, sensor_module.DelonghiCoffeeLinkAggregateSensor)
-    ]
+    aggregates = [entity for entity in added if isinstance(entity, sensor_module.DelonghiCoffeeLinkAggregateSensor)]
     assert {entity._key: entity.native_value for entity in aggregates} == {
         "total_beverages": 639,
         "total_milk_drinks": 308,
         "total_cold_milk_drinks": 10,
         "total_mug_bev": 16,
     }
-    assert not any(
-        isinstance(entity, sensor_module.DelonghiCounterSensor) for entity in added
+    assert not any(isinstance(entity, sensor_module.DelonghiCounterSensor) for entity in added)
+    assert (
+        next(entity for entity in aggregates if entity._key == "total_beverages")._attr_translation_key
+        == "total_black_coffee_beverages"
     )
-    assert next(
-        entity for entity in aggregates if entity._key == "total_beverages"
-    )._attr_translation_key == "total_black_coffee_beverages"
 
 
 def test_sensor_setup_entry_builds_legacy_official_aggregates(monkeypatch):
@@ -672,50 +640,32 @@ def test_sensor_setup_entry_builds_legacy_official_aggregates(monkeypatch):
     }
     monkeypatch.setattr(sensor_module, "COUNTER_SENSORS", [])
     monkeypatch.setattr(sensor_module, "BREAKDOWN_COUNTER_SENSORS", [])
-    entry = types.SimpleNamespace(
-        runtime_data=types.SimpleNamespace(coordinators=[coordinator])
-    )
+    entry = types.SimpleNamespace(runtime_data=types.SimpleNamespace(coordinators=[coordinator]))
     added = []
 
     asyncio.run(sensor_module.async_setup_entry(object(), entry, added.extend))
 
-    aggregates = [
-        entity
-        for entity in added
-        if isinstance(entity, sensor_module.DelonghiCoffeeLinkAggregateSensor)
-    ]
+    aggregates = [entity for entity in added if isinstance(entity, sensor_module.DelonghiCoffeeLinkAggregateSensor)]
     assert {entity._key: entity.native_value for entity in aggregates} == {
         "total_beverages": 314,
         "total_milk_drinks": 267,
     }
-    assert all(
-        entity._attr_translation_key
-        in {"total_black_coffee_beverages", "total_milk_drinks"}
-        for entity in aggregates
-    )
+    assert all(entity._attr_translation_key in {"total_black_coffee_beverages", "total_milk_drinks"} for entity in aggregates)
 
 
 def test_non_cold_brew_striker_uses_its_official_hot_milk_formula(monkeypatch):
     coordinator, _client = _coordinator("DL-striker-base")
     coordinator.data = {
-        "d702_tot_bev_other": {
-            "value": '{"tot_bev_bw":40,"tot_bev_w":5}'
-        },
+        "d702_tot_bev_other": {"value": '{"tot_bev_bw":40,"tot_bev_w":5}'},
     }
     monkeypatch.setattr(sensor_module, "COUNTER_SENSORS", [])
     monkeypatch.setattr(sensor_module, "BREAKDOWN_COUNTER_SENSORS", [])
-    entry = types.SimpleNamespace(
-        runtime_data=types.SimpleNamespace(coordinators=[coordinator])
-    )
+    entry = types.SimpleNamespace(runtime_data=types.SimpleNamespace(coordinators=[coordinator]))
     added = []
 
     asyncio.run(sensor_module.async_setup_entry(object(), entry, added.extend))
 
-    aggregates = [
-        entity
-        for entity in added
-        if isinstance(entity, sensor_module.DelonghiCoffeeLinkAggregateSensor)
-    ]
+    aggregates = [entity for entity in added if isinstance(entity, sensor_module.DelonghiCoffeeLinkAggregateSensor)]
     assert {entity._key: entity.native_value for entity in aggregates} == {
         "total_milk_drinks": 40,
     }
@@ -723,9 +673,7 @@ def test_non_cold_brew_striker_uses_its_official_hot_milk_formula(monkeypatch):
 
 def test_unknown_model_does_not_guess_legacy_counter_semantics(monkeypatch):
     coordinator, _client = _coordinator("DL-future-xyz")
-    coordinator.profile = model_profiles.profile_for(
-        "DL-future-xyz", command_property="data_request"
-    )
+    coordinator.profile = model_profiles.profile_for("DL-future-xyz", command_property="data_request")
     coordinator.data = {
         "d700_tot_bev_b": {"value": 314},
         "d701_tot_bev_bw": {"value": 250},
@@ -733,17 +681,12 @@ def test_unknown_model_does_not_guess_legacy_counter_semantics(monkeypatch):
     }
     monkeypatch.setattr(sensor_module, "COUNTER_SENSORS", [])
     monkeypatch.setattr(sensor_module, "BREAKDOWN_COUNTER_SENSORS", [])
-    entry = types.SimpleNamespace(
-        runtime_data=types.SimpleNamespace(coordinators=[coordinator])
-    )
+    entry = types.SimpleNamespace(runtime_data=types.SimpleNamespace(coordinators=[coordinator]))
     added = []
 
     asyncio.run(sensor_module.async_setup_entry(object(), entry, added.extend))
 
-    assert not any(
-        isinstance(entity, sensor_module.DelonghiCoffeeLinkAggregateSensor)
-        for entity in added
-    )
+    assert not any(isinstance(entity, sensor_module.DelonghiCoffeeLinkAggregateSensor) for entity in added)
 
 
 @pytest.mark.parametrize(
@@ -761,9 +704,7 @@ def test_unknown_model_does_not_guess_legacy_counter_semantics(monkeypatch):
 def test_counter_sensor_uses_parser_selected_by_entity_key(key, raw, expected):
     coordinator, _client = _coordinator("DL-striker-cb")
     coordinator.data = {"property": {"value": raw}}
-    sensor = sensor_module.DelonghiCounterSensor(
-        coordinator, "property", key, "mdi:counter"
-    )
+    sensor = sensor_module.DelonghiCounterSensor(coordinator, "property", key, "mdi:counter")
     assert sensor.native_value == expected
 
 
@@ -781,15 +722,8 @@ def test_coffee_link_aggregate_sensor_matches_official_statistics(key, expected)
     coordinator, _client = _coordinator("DL-striker-cb")
     coordinator.data = {
         "d701_tot_bev_b": {"value": 616},
-        "d702_tot_bev_other": {
-            "value": '{"tot_bev_bw":300,"tot_bev_w":8}'
-        },
-        "d733_tot_bev_counters": {
-            "value": (
-                '{"tot_bev_b_iced":23,"tot_bev_bw_iced":7,'
-                '"tot_bev_w_iced":3}'
-            )
-        },
+        "d702_tot_bev_other": {"value": '{"tot_bev_bw":300,"tot_bev_w":8}'},
+        "d733_tot_bev_counters": {"value": ('{"tot_bev_b_iced":23,"tot_bev_bw_iced":7,"tot_bev_w_iced":3}')},
         "d731_tot_mug_hot": {"value": 16},
         "d732_tot_mug_cold": {"value": 0},
     }
@@ -800,24 +734,12 @@ def test_coffee_link_aggregate_sensor_matches_official_statistics(key, expected)
 def test_counter_sensor_metadata_missing_values_and_single_warning(caplog):
     coordinator, _client = _coordinator("DL-striker-cb")
 
-    diagnostic = sensor_module.DelonghiCounterSensor(
-        coordinator, "missing", "total_descales", "mdi:counter"
-    )
-    disabled = sensor_module.DelonghiCounterSensor(
-        coordinator, "missing", "descale_alert_count", "mdi:counter"
-    )
-    detailed = sensor_module.DelonghiCounterSensor(
-        coordinator, "missing", "total_espresso", "mdi:coffee"
-    )
-    filter_volume = sensor_module.DelonghiCounterSensor(
-        coordinator, "missing", "water_filter_quantity", "mdi:water"
-    )
-    percentage = sensor_module.DelonghiCounterSensor(
-        coordinator, "missing", "grounds_container_fill", "mdi:percent"
-    )
-    status = sensor_module.DelonghiCounterSensor(
-        coordinator, "missing", "descale_status", "mdi:state"
-    )
+    diagnostic = sensor_module.DelonghiCounterSensor(coordinator, "missing", "total_descales", "mdi:counter")
+    disabled = sensor_module.DelonghiCounterSensor(coordinator, "missing", "descale_alert_count", "mdi:counter")
+    detailed = sensor_module.DelonghiCounterSensor(coordinator, "missing", "total_espresso", "mdi:coffee")
+    filter_volume = sensor_module.DelonghiCounterSensor(coordinator, "missing", "water_filter_quantity", "mdi:water")
+    percentage = sensor_module.DelonghiCounterSensor(coordinator, "missing", "grounds_container_fill", "mdi:percent")
+    status = sensor_module.DelonghiCounterSensor(coordinator, "missing", "descale_status", "mdi:state")
 
     assert diagnostic._attr_entity_category == "diagnostic"
     assert disabled._attr_entity_registry_enabled_default is False
@@ -890,12 +812,11 @@ def test_breakdown_machine_and_cloud_session_sensor_edge_states():
     assert sensor_module._parse_cloud_session_app_id("-1") == -1
 
 
-def test_platform_device_info_fallbacks_and_configuration_url():
+def test_platform_device_info_fallbacks_are_privacy_safe_and_cloud_only():
     coordinator, _client = _coordinator("DL-striker-cb")
     coordinator.device.name = ""
     coordinator.device.oem_model = ""
     coordinator.device.model = "fallback-model"
-    coordinator.device.lan_ip = "192.0.2.10"
     coordinator.data = {"software_version": {"value": "Appliance 2.0"}}
 
     infos = [
@@ -904,19 +825,17 @@ def test_platform_device_info_fallbacks_and_configuration_url():
         button_module.DelonghiWakeButton(coordinator).device_info,
     ]
     for info in infos:
-        assert info["name"] == "DeLonghi private-device-id"
+        assert info["name"] == "De'Longhi coffee maker"
         assert info["model"] == "fallback-model"
         assert info["sw_version"] == "Appliance 2.0"
-        assert info["configuration_url"] == "http://192.0.2.10"
+        assert "configuration_url" not in info
 
 
 def test_binary_sensor_setup_property_parser_and_unavailable_states():
     soul, _client = _coordinator("DL-millcore")
     eletta, _client = _coordinator("DL-striker-cb")
     added = []
-    entry = types.SimpleNamespace(
-        runtime_data=types.SimpleNamespace(coordinators=[soul, eletta])
-    )
+    entry = types.SimpleNamespace(runtime_data=types.SimpleNamespace(coordinators=[soul, eletta]))
     asyncio.run(binary_sensor_module.async_setup_entry(object(), entry, added.extend))
     assert sum(isinstance(item, binary_sensor_module.DelonghiCloudConnectionBinarySensor) for item in added) == 2
     assert len(added) == 6
@@ -1068,10 +987,7 @@ def test_button_setup_adds_catalog_learned_and_dynamic_recipes(monkeypatch):
 
     eletta.learned_start_frames[140] = "mug"
     eletta.async_update_listeners()
-    assert any(
-        isinstance(item, button_module.DelonghiStartBeverageButton) and item._bev_id == 140
-        for item in batches[-1]
-    )
+    assert any(isinstance(item, button_module.DelonghiStartBeverageButton) and item._bev_id == 140 for item in batches[-1])
     batch_count = len(batches)
     eletta.async_update_listeners()
     assert len(batches) == batch_count
@@ -1098,9 +1014,7 @@ def test_button_actions_availability_and_metadata():
         coordinator.log_recipe_datapoints = lambda: calls.append("dump")
         coordinator.has_device_signature = lambda: signature_available[0]
 
-        translated = button_module.DelonghiStartBeverageButton(
-            coordinator, 1, "espresso", "Espresso", "mdi:coffee"
-        )
+        translated = button_module.DelonghiStartBeverageButton(coordinator, 1, "espresso", "Espresso", "mdi:coffee")
         custom = button_module.DelonghiStartBeverageButton(
             coordinator, 999, "recipe_999", "Recipe 999", "mdi:coffee", translated=False
         )
@@ -1198,13 +1112,17 @@ def test_monitor_falls_back_to_second_property_when_preferred_is_invalid(monkeyp
     coordinator, _client = _coordinator()
 
     def parse(value):
-        return {"error": "bad"} if value == "bad" else {
-            "status": 7,
-            "status_name": "ready",
-            "step": 0,
-            "progress_percentage": 0,
-            "accessory": 0,
-        }
+        return (
+            {"error": "bad"}
+            if value == "bad"
+            else {
+                "status": 7,
+                "status_name": "ready",
+                "step": 0,
+                "progress_percentage": 0,
+                "accessory": 0,
+            }
+        )
 
     monkeypatch.setattr(coordinator_module, "parse_monitor_b64", parse)
     coordinator._update_monitor(
@@ -1358,9 +1276,7 @@ def test_authentication_http_401_is_credential_error():
         def post(self, *args, **kwargs):
             return Response()
 
-    client = ayla_client.DelonghiAylaClient(
-        Session(), "user@example.com", "wrong-password"
-    )
+    client = ayla_client.DelonghiAylaClient(Session(), "user@example.com", "wrong-password")
 
     async def scenario():
         with pytest.raises(ayla_client.AuthError):
@@ -1610,9 +1526,7 @@ def test_foreign_cloud_session_is_not_adopted():
         coordinator.connected_property = "app_device_connected"
         coordinator.data = {const.APP_ID_PROPERTY: {"value": 123456}}
         coordinator.monitor = {"status": 7, "action": 0, "alarms": 0, "switches": 0}
-        coordinator.learned_start_frames[0x01] = (
-            "DRGD8AECAQAoAgQIABsBCn5oaiRo7xEiM0Q="
-        )
+        coordinator.learned_start_frames[0x01] = "DRGD8AECAQAoAgQIABsBCn5oaiRo7xEiM0Q="
 
         with pytest.raises(HomeAssistantError, match="Another application"):
             await coordinator.async_send_beverage(0x01, const.ACTION_START)
@@ -1642,7 +1556,10 @@ def test_downloaded_diagnostics_redact_credentials_and_identifiers():
         coordinator, _client = _coordinator("DL-striker-cb")
         coordinator.data = {
             "app_id": {"value": 12_944_929},
-            "data_request": {"value": "raw-secret-frame"},
+            "data_request": {
+                "value": "raw-secret-frame",
+                "ack_enabled": True,
+            },
         }
         coordinator.command_property = "data_request"
         entry = types.SimpleNamespace(
@@ -1651,9 +1568,7 @@ def test_downloaded_diagnostics_redact_credentials_and_identifiers():
             data={"email": "private@example.com", "password": "secret-password"},
         )
 
-        diagnostics = await diagnostics_module.async_get_config_entry_diagnostics(
-            object(), entry
-        )
+        diagnostics = await diagnostics_module.async_get_config_entry_diagnostics(object(), entry)
         rendered = json.dumps(diagnostics)
 
         for secret in (
@@ -1668,6 +1583,15 @@ def test_downloaded_diagnostics_redact_credentials_and_identifiers():
             "app_id",
             "data_request",
         ]
+        assert diagnostics["devices"][0]["detected_properties"]["command_ack_enabled"] is True
+
+        coordinator.data["data_request"] = "unexpected"
+        diagnostics = await diagnostics_module.async_get_config_entry_diagnostics(object(), entry)
+        assert diagnostics["devices"][0]["detected_properties"]["command_ack_enabled"] is None
+
+        coordinator.data["data_request"] = {"ackEnabled": "unexpected"}
+        diagnostics = await diagnostics_module.async_get_config_entry_diagnostics(object(), entry)
+        assert diagnostics["devices"][0]["detected_properties"]["command_ack_enabled"] is None
 
     asyncio.run(scenario())
 
@@ -1718,21 +1642,11 @@ def test_config_flow_user_step_form_error_and_success():
     assert initial["step_id"] == "user"
 
     flow._async_validate_account = AsyncMock(return_value=("cannot_connect", None))
-    failed = asyncio.run(
-        flow.async_step_user(
-            {const.CONF_EMAIL: " user@example.com ", const.CONF_PASSWORD: "pw"}
-        )
-    )
+    failed = asyncio.run(flow.async_step_user({const.CONF_EMAIL: " user@example.com ", const.CONF_PASSWORD: "pw"}))
     assert failed["errors"] == {"base": "cannot_connect"}
 
-    flow._async_validate_account = AsyncMock(
-        return_value=(None, [types.SimpleNamespace(name="Machine")])
-    )
-    created = asyncio.run(
-        flow.async_step_user(
-            {const.CONF_EMAIL: " User@Example.COM ", const.CONF_PASSWORD: "pw"}
-        )
-    )
+    flow._async_validate_account = AsyncMock(return_value=(None, [types.SimpleNamespace(name="Machine")]))
+    created = asyncio.run(flow.async_step_user({const.CONF_EMAIL: " User@Example.COM ", const.CONF_PASSWORD: "pw"}))
     assert created == {
         "type": "create_entry",
         "title": "De'Longhi Coffee Link – Eletta Explore",
@@ -1744,9 +1658,7 @@ def test_config_flow_user_step_form_error_and_success():
 
 def test_config_flow_reauth_and_reconfigure_forms_and_errors():
     flow = config_flow_module.DelonghiConfigFlow()
-    entry = types.SimpleNamespace(
-        data={const.CONF_EMAIL: "old@example.com", const.CONF_PASSWORD: "old"}
-    )
+    entry = types.SimpleNamespace(data={const.CONF_EMAIL: "old@example.com", const.CONF_PASSWORD: "old"})
     flow._reauth_entry = entry
     reauth = asyncio.run(flow.async_step_reauth(entry.data))
     assert reauth["step_id"] == "reauth_confirm"
@@ -1756,11 +1668,7 @@ def test_config_flow_reauth_and_reconfigure_forms_and_errors():
     initial = asyncio.run(flow.async_step_reconfigure())
     assert initial["step_id"] == "reconfigure"
     flow._async_validate_account = AsyncMock(return_value=("no_devices", None))
-    failed = asyncio.run(
-        flow.async_step_reconfigure(
-            {const.CONF_EMAIL: "new@example.com", const.CONF_PASSWORD: "new"}
-        )
-    )
+    failed = asyncio.run(flow.async_step_reconfigure({const.CONF_PASSWORD: "new"}))
     assert failed["errors"] == {"base": "no_devices"}
 
 
@@ -1768,24 +1676,18 @@ def test_coordinator_collection_and_target_resolution_failures():
     coordinator, _client = _coordinator()
     loaded = types.SimpleNamespace(
         state=integration_module.ConfigEntryState.LOADED,
-        runtime_data=integration_module.DelonghiRuntimeData(
-            client=object(), coordinators=[coordinator]
-        ),
+        runtime_data=integration_module.DelonghiRuntimeData(client=object(), coordinators=[coordinator]),
     )
     unloaded = types.SimpleNamespace(
         state="not_loaded",
-        runtime_data=integration_module.DelonghiRuntimeData(
-            client=object(), coordinators=[coordinator]
-        ),
+        runtime_data=integration_module.DelonghiRuntimeData(client=object(), coordinators=[coordinator]),
     )
     invalid_runtime = types.SimpleNamespace(
         state=integration_module.ConfigEntryState.LOADED,
         runtime_data=object(),
     )
     hass = types.SimpleNamespace(
-        config_entries=types.SimpleNamespace(
-            async_entries=lambda domain: [unloaded, invalid_runtime, loaded]
-        )
+        config_entries=types.SimpleNamespace(async_entries=lambda domain: [unloaded, invalid_runtime, loaded])
     )
     assert integration_module._coordinators(hass) == [coordinator]
 
@@ -1796,9 +1698,7 @@ def test_coordinator_collection_and_target_resolution_failures():
     assert missing.value.translation_key == "target_missing"
 
     hass.device_registry = types.SimpleNamespace(
-        async_get=lambda device_id: types.SimpleNamespace(
-            identifiers={(const.DOMAIN, "different-dsn")}
-        )
+        async_get=lambda device_id: types.SimpleNamespace(identifiers={(const.DOMAIN, "different-dsn")})
     )
     with pytest.raises(ServiceValidationError) as not_loaded:
         integration_module._target_coordinator(hass, call)
@@ -1826,9 +1726,7 @@ def test_async_setup_registers_and_executes_all_services(monkeypatch):
         admin[service] = (handler, schema)
 
     monkeypatch.setattr(integration_module, "async_register_admin_service", register_admin)
-    monkeypatch.setattr(
-        integration_module, "_target_coordinator", lambda hass_arg, call: coordinator
-    )
+    monkeypatch.setattr(integration_module, "_target_coordinator", lambda hass_arg, call: coordinator)
 
     assert asyncio.run(integration_module.async_setup(hass, {})) is True
     assert set(services.registered) == {
@@ -1840,23 +1738,13 @@ def test_async_setup_registers_and_executes_all_services(monkeypatch):
     start = services.registered[const.SERVICE_START_BEVERAGE][0]
     stop = services.registered[const.SERVICE_STOP_BEVERAGE][0]
     raw = admin[const.SERVICE_SEND_RAW_COMMAND][0]
-    asyncio.run(
-        start(types.SimpleNamespace(data={"device_id": ["one"], "beverage": "espresso"}))
-    )
-    asyncio.run(
-        stop(types.SimpleNamespace(data={"device_id": ["one"], "beverage": "espresso"}))
-    )
+    asyncio.run(start(types.SimpleNamespace(data={"device_id": ["one"], "beverage": "espresso"})))
+    asyncio.run(stop(types.SimpleNamespace(data={"device_id": ["one"], "beverage": "espresso"})))
     asyncio.run(stop(types.SimpleNamespace(data={"device_id": ["one"]})))
-    asyncio.run(
-        raw(types.SimpleNamespace(data={"device_id": ["one"], "value_base64": "frame"}))
-    )
+    asyncio.run(raw(types.SimpleNamespace(data={"device_id": ["one"], "value_base64": "frame"})))
 
-    coordinator.async_send_beverage.assert_any_await(
-        integration_module.BEVERAGE_IDS["espresso"], const.ACTION_START
-    )
-    coordinator.async_send_beverage.assert_any_await(
-        integration_module.BEVERAGE_IDS["espresso"], const.ACTION_STOP
-    )
+    coordinator.async_send_beverage.assert_any_await(integration_module.BEVERAGE_IDS["espresso"], const.ACTION_START)
+    coordinator.async_send_beverage.assert_any_await(integration_module.BEVERAGE_IDS["espresso"], const.ACTION_STOP)
     coordinator.async_stop_active_beverage.assert_awaited_once()
     coordinator.async_send_raw.assert_awaited_once_with("frame")
 
@@ -1911,9 +1799,7 @@ def _lifecycle_entry():
     return types.SimpleNamespace(
         entry_id="entry",
         data={const.CONF_EMAIL: "user@example.com", const.CONF_PASSWORD: "pw"},
-        async_create_background_task=lambda hass, target, name: asyncio.create_task(
-            target, name=name
-        ),
+        async_create_background_task=lambda hass, target, name: asyncio.create_task(target, name=name),
     )
 
 
@@ -1950,9 +1836,7 @@ def test_stale_devices_and_their_entities_are_removed_from_registries():
         ),
     ]
 
-    integration_module._async_remove_stale_devices(
-        hass, entry, frozenset({"active"})
-    )
+    integration_module._async_remove_stale_devices(hass, entry, frozenset({"active"}))
 
     assert hass.entity_registry.removed == ["sensor.stale"]
     assert hass.device_registry.removed == ["stale-device"]
@@ -1982,11 +1866,7 @@ def test_setup_entry_auth_cloud_and_empty_account_failures(monkeypatch):
     ):
         FailingClient.mode = mode
         with pytest.raises(exception):
-            asyncio.run(
-                integration_module.async_setup_entry(
-                    _lifecycle_hass(), _lifecycle_entry()
-                )
-            )
+            asyncio.run(integration_module.async_setup_entry(_lifecycle_hass(), _lifecycle_entry()))
 
 
 def test_setup_entry_success_and_partial_initialization_cleanup(monkeypatch):
@@ -2013,6 +1893,7 @@ def test_setup_entry_success_and_partial_initialization_cleanup(monkeypatch):
             self.device_list_callback = device_list_callback
             self.loaded = False
             self.refreshed = False
+            self.maintenance_confirmed = False
             self.shutdown = False
             self.__class__.instances.append(self)
 
@@ -2020,10 +1901,14 @@ def test_setup_entry_success_and_partial_initialization_cleanup(monkeypatch):
             self.loaded = True
 
         async def async_config_entry_first_refresh(self):
+            await self.async_load_learned()
             if self.fail_second and self.device.dsn == "second":
                 raise RuntimeError("second failed")
             self.device_list_callback(self.reported_devices)
             self.refreshed = True
+
+        async def async_confirm_initial_maintenance_snapshot(self):
+            self.maintenance_confirmed = True
 
         async def async_shutdown(self):
             self.shutdown = True
@@ -2050,7 +1935,7 @@ def test_setup_entry_success_and_partial_initialization_cleanup(monkeypatch):
     entry = _lifecycle_entry()
     assert asyncio.run(integration_module.async_setup_entry(hass, entry)) is True
     assert len(entry.runtime_data.coordinators) == 2
-    assert all(item.loaded and item.refreshed for item in entry.runtime_data.coordinators)
+    assert all(item.loaded and item.refreshed and item.maintenance_confirmed for item in entry.runtime_data.coordinators)
     assert entry.runtime_data.dss_manager.started is True
     assert hass.config_entries.forwarded == [(entry, integration_module.PLATFORMS)]
 
@@ -2059,39 +1944,29 @@ def test_setup_entry_success_and_partial_initialization_cleanup(monkeypatch):
         types.SimpleNamespace(dsn="third"),
     ]
     changed_hass = _lifecycle_hass()
-    assert asyncio.run(
-        integration_module.async_setup_entry(changed_hass, _lifecycle_entry())
-    ) is True
+    assert asyncio.run(integration_module.async_setup_entry(changed_hass, _lifecycle_entry())) is True
     assert changed_hass.config_entries.reloaded == ["entry"]
 
     Coordinator.instances = []
     Coordinator.reported_devices = devices
     Coordinator.fail_second = True
     with pytest.raises(RuntimeError, match="second failed"):
-        asyncio.run(
-            integration_module.async_setup_entry(
-                _lifecycle_hass(), _lifecycle_entry()
-            )
-        )
+        asyncio.run(integration_module.async_setup_entry(_lifecycle_hass(), _lifecycle_entry()))
     first, second = Coordinator.instances
     assert first.shutdown is True
-    assert second.shutdown is False
+    assert second.shutdown is True
 
     Coordinator.instances = []
     Coordinator.fail_second = False
     failing_hass = _lifecycle_hass()
-    failing_hass.config_entries.async_forward_entry_setups = AsyncMock(
-        side_effect=RuntimeError("forward failed")
-    )
+    failing_hass.config_entries.async_forward_entry_setups = AsyncMock(side_effect=RuntimeError("forward failed"))
     with pytest.raises(RuntimeError, match="forward failed"):
-        asyncio.run(
-            integration_module.async_setup_entry(failing_hass, _lifecycle_entry())
-        )
+        asyncio.run(integration_module.async_setup_entry(failing_hass, _lifecycle_entry()))
     assert DssManager.instances[-1].stopped is True
     assert all(item.shutdown for item in Coordinator.instances)
 
 
-def test_unload_entry_shuts_down_only_after_platform_success():
+def test_unload_entry_stops_dss_only_after_platform_success():
     first = types.SimpleNamespace(async_shutdown=AsyncMock())
     second = types.SimpleNamespace(async_shutdown=AsyncMock())
     dss_manager = types.SimpleNamespace(async_stop=AsyncMock())
@@ -2101,33 +1976,23 @@ def test_unload_entry_shuts_down_only_after_platform_success():
         )
     )
 
-    assert asyncio.run(
-        integration_module.async_unload_entry(_lifecycle_hass(unload_ok=True), entry)
-    ) is True
-    first.async_shutdown.assert_awaited_once()
-    second.async_shutdown.assert_awaited_once()
+    assert asyncio.run(integration_module.async_unload_entry(_lifecycle_hass(unload_ok=True), entry)) is True
+    first.async_shutdown.assert_not_awaited()
+    second.async_shutdown.assert_not_awaited()
     dss_manager.async_stop.assert_awaited_once()
 
     first.async_shutdown.reset_mock()
     second.async_shutdown.reset_mock()
     dss_manager.async_stop.reset_mock()
-    assert asyncio.run(
-        integration_module.async_unload_entry(_lifecycle_hass(unload_ok=False), entry)
-    ) is False
+    assert asyncio.run(integration_module.async_unload_entry(_lifecycle_hass(unload_ok=False), entry)) is False
     first.async_shutdown.assert_not_awaited()
     second.async_shutdown.assert_not_awaited()
     dss_manager.async_stop.assert_not_awaited()
 
     no_dss_entry = types.SimpleNamespace(
-        runtime_data=integration_module.DelonghiRuntimeData(
-            client=object(), coordinators=[first, second], dss_manager=None
-        )
+        runtime_data=integration_module.DelonghiRuntimeData(client=object(), coordinators=[first, second], dss_manager=None)
     )
-    assert asyncio.run(
-        integration_module.async_unload_entry(
-            _lifecycle_hass(unload_ok=True), no_dss_entry
-        )
-    ) is True
+    assert asyncio.run(integration_module.async_unload_entry(_lifecycle_hass(unload_ok=True), no_dss_entry)) is True
 
 
 def test_reauth_rejects_bad_password_then_updates_existing_entry(monkeypatch):
@@ -2144,30 +2009,28 @@ def test_reauth_rejects_bad_password_then_updates_existing_entry(monkeypatch):
 
     monkeypatch.setattr(config_flow_module, "DelonghiAylaClient", FakeAuthClient)
     flow = config_flow_module.DelonghiConfigFlow()
-    entry = types.SimpleNamespace(
-        data={const.CONF_EMAIL: "private@example.com", const.CONF_PASSWORD: "old"}
-    )
+    entry = types.SimpleNamespace(data={const.CONF_EMAIL: "private@example.com", const.CONF_PASSWORD: "old"})
     flow._reauth_entry = entry
 
-    bad = asyncio.run(
-        flow.async_step_reauth_confirm({const.CONF_PASSWORD: "wrong"})
-    )
+    bad = asyncio.run(flow.async_step_reauth_confirm({const.CONF_PASSWORD: "wrong"}))
     assert bad["type"] == "form"
     assert bad["errors"] == {"base": "invalid_auth"}
 
-    good = asyncio.run(
-        flow.async_step_reauth_confirm({const.CONF_PASSWORD: "replacement"})
-    )
+    good = asyncio.run(flow.async_step_reauth_confirm({const.CONF_PASSWORD: "replacement"}))
     assert good["type"] == "abort"
     assert good["reason"] == "reauth_successful"
     assert good["entry"] is entry
     assert good["data_updates"] == {const.CONF_PASSWORD: "replacement"}
+    assert flow.unique_id == "private@example.com"
 
 
-def test_reconfigure_validates_and_updates_account(monkeypatch):
+def test_reconfigure_validates_and_updates_existing_account(monkeypatch):
+    validated_emails = []
+
     class FakeAuthClient:
         def __init__(self, session, email, password):
             self.email = email
+            validated_emails.append(email)
 
         async def async_authenticate(self):
             return None
@@ -2177,26 +2040,15 @@ def test_reconfigure_validates_and_updates_account(monkeypatch):
 
     monkeypatch.setattr(config_flow_module, "DelonghiAylaClient", FakeAuthClient)
     flow = config_flow_module.DelonghiConfigFlow()
-    entry = types.SimpleNamespace(
-        data={const.CONF_EMAIL: "old@example.com", const.CONF_PASSWORD: "old"}
-    )
+    entry = types.SimpleNamespace(data={const.CONF_EMAIL: "old@example.com", const.CONF_PASSWORD: "old"})
     flow._reconfigure_entry = entry
 
-    result = asyncio.run(
-        flow.async_step_reconfigure(
-            {
-                const.CONF_EMAIL: "new@example.com",
-                const.CONF_PASSWORD: "new-password",
-            }
-        )
-    )
+    result = asyncio.run(flow.async_step_reconfigure({const.CONF_PASSWORD: "new-password"}))
 
     assert result["reason"] == "reconfigure_successful"
-    assert result["data_updates"] == {
-        const.CONF_EMAIL: "new@example.com",
-        const.CONF_PASSWORD: "new-password",
-    }
-    assert flow.unique_id == "new@example.com"
+    assert result["data_updates"] == {const.CONF_PASSWORD: "new-password"}
+    assert validated_emails == ["old@example.com"]
+    assert flow.unique_id == "old@example.com"
 
 
 def test_device_target_resolves_exactly_one_coordinator():
@@ -2204,9 +2056,7 @@ def test_device_target_resolves_exactly_one_coordinator():
     coordinator_b, _client_b = _coordinator()
     coordinator_a.device.dsn = "device-a"
     coordinator_b.device.dsn = "device-b"
-    runtime = integration_module.DelonghiRuntimeData(
-        client=object(), coordinators=[coordinator_a, coordinator_b]
-    )
+    runtime = integration_module.DelonghiRuntimeData(client=object(), coordinators=[coordinator_a, coordinator_b])
     entry = types.SimpleNamespace(
         state="loaded",
         runtime_data=runtime,
@@ -2233,4 +2083,3 @@ def test_device_target_resolves_exactly_one_coordinator():
     ambiguous = types.SimpleNamespace(data={"device_id": ["one", "two"]})
     with pytest.raises(HomeAssistantError, match="exactly one"):
         integration_module._target_coordinator(hass, ambiguous)
-

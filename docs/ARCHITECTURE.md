@@ -25,10 +25,13 @@ device-specific signature. The timestamp is refreshed without modifying the
 checksummed recipe section.
 
 Commands are serialized, bounded by timeouts and preceded by machine-state checks.
-When DSS is available, the datapoint identifier returned by a command is matched
-to its exact device acknowledgement. Missing or unsupported acknowledgements use
-the existing state-confirmation path, so the push channel is an improvement rather
-than a new single point of failure.
+For an ACK-enabled property, the datapoint identifier returned by a command is
+matched to its exact DSS device acknowledgement. Eletta's command property is
+not ACK-enabled, so ordered DSS machine-state changes provide the confirmation
+used by Coffee Link. A timeout triggers one authoritative reconciliation; when
+the stream is unavailable, the bounded polling confirmation path remains in
+place. The push channel is therefore an improvement rather than a new single
+point of failure.
 Temporary authentication infrastructure failures remain availability errors;
 only an actual credential rejection starts Home Assistant reauthentication.
 

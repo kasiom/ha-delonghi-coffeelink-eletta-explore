@@ -1,4 +1,5 @@
 """Tests for the De'Longhi grounds-container percentage parser."""
+
 from __future__ import annotations
 
 import importlib.util
@@ -7,11 +8,7 @@ from pathlib import Path
 
 import pytest
 
-PKG_DIR = (
-    Path(__file__).resolve().parents[1]
-    / "custom_components"
-    / "ha_delonghi_coffeelink_eletta_explore"
-)
+PKG_DIR = Path(__file__).resolve().parents[1] / "custom_components" / "ha_delonghi_coffeelink_eletta_explore"
 
 
 def _load_counters():
@@ -65,10 +62,7 @@ def test_parse_remaining_percentage(consumed, remaining):
 def test_undocumented_raw_ground_counter_is_not_exposed() -> None:
     """The raw d551 value must create neither an entity nor a state attribute."""
     const_source = (PKG_DIR / "const.py").read_text(encoding="utf-8")
-    binary_sensor_source = (PKG_DIR / "binary_sensor.py").read_text(
-        encoding="utf-8"
-    )
+    binary_sensor_source = (PKG_DIR / "binary_sensor.py").read_text(encoding="utf-8")
 
     assert "d551_cnt_coffee_fondi" not in const_source
     assert "grounds_counter" not in binary_sensor_source
-

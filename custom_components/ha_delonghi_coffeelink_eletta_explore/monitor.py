@@ -20,6 +20,7 @@ Matthieu Guerquin-Kern (https://framagit.org/mattgk/dlghiot).
 All helpers are pure and never raise - a malformed blob returns
 ``{"error": ...}`` so the poll loop is never at risk.
 """
+
 from __future__ import annotations
 
 import base64
@@ -47,7 +48,7 @@ def monitor_ordering_token(value_b64: str) -> int | None:
         return None
     try:
         raw = base64.b64decode("".join(value_b64.split()), validate=True)
-    except (ValueError, binascii.Error):
+    except ValueError, binascii.Error:
         return None
     if len(raw) < 4:
         return None
@@ -91,12 +92,7 @@ def _parse_monitor_contents(contents: bytes) -> dict[str, int]:
     }
     if len(contents) >= 13:
         fields["switches"] = contents[1] | (contents[2] << 8)
-        fields["alarms"] = (
-            contents[3]
-            | (contents[4] << 8)
-            | (contents[8] << 16)
-            | (contents[9] << 24)
-        )
+        fields["alarms"] = contents[3] | (contents[4] << 8) | (contents[8] << 16) | (contents[9] << 24)
     return fields
 
 
@@ -142,4 +138,3 @@ def parse_monitor_b64(value_b64: str) -> dict[str, Any]:
     except (ValueError, binascii.Error) as err:
         _LOGGER.debug("Failed to parse monitor blob: %s", err)
         return {"error": str(err)}
-

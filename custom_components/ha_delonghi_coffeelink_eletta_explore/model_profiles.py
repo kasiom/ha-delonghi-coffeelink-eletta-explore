@@ -15,6 +15,7 @@ To add first-class support for a new model, add a ``ModelProfile`` subclass with
 its ``matches()`` rule and (if it needs the learn-and-replay path) set
 ``learns_from_app = True``. Nothing else in the integration has to change.
 """
+
 from __future__ import annotations
 
 from .command_builder import (
@@ -49,9 +50,7 @@ class ModelProfile:
     def matches(cls, oem_model: str) -> bool:
         return False
 
-    def beverage_value(
-        self, beverage_id: int, action: int, learned_frame: str | None
-    ) -> str | None:
+    def beverage_value(self, beverage_id: int, action: int, learned_frame: str | None) -> str | None:
         """Return the base64 command value to send for a beverage.
 
         Returns ``None`` to signal "this profile needs a learned frame that is
@@ -114,9 +113,7 @@ class ElettaProfile(ModelProfile):
     def matches(cls, oem_model: str) -> bool:
         return oem_model.startswith(ELETTA_OEM_PREFIX)
 
-    def beverage_value(
-        self, beverage_id: int, action: int, learned_frame: str | None
-    ) -> str | None:
+    def beverage_value(self, beverage_id: int, action: int, learned_frame: str | None) -> str | None:
         if learned_frame is not None:
             return replay_with_timestamp(learned_frame)
         return None
@@ -153,12 +150,9 @@ def profile_for(oem_model: str | None, command_property: str | None = None) -> M
     for profile in PROFILES:
         if profile.matches(oem):
             return profile()
-    fallback = (
-        SoulProfile() if command_property == "data_request" else ElettaProfile()
-    )
+    fallback: ModelProfile = SoulProfile() if command_property == "data_request" else ElettaProfile()
     # The command channel is a useful safe fallback for command framing, but it
     # does not prove the semantics of d700-d703.  Unknown machines therefore do
     # not inherit a known model's statistics formula by accident.
     fallback.statistics_family = None
     return fallback
-

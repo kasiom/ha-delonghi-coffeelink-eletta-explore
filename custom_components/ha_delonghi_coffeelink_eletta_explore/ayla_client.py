@@ -3,6 +3,7 @@
 Auth chain: Gigya email/password login -> Gigya JWT (HMAC-SHA1 signed request)
  -> Ayla SSO sign-in -> Ayla access_token.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -14,7 +15,9 @@ import logging
 import random
 import time
 import urllib.parse
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+from math import isfinite
+from time import monotonic
 from typing import Any
 
 import aiohttp
@@ -29,6 +32,8 @@ from .const import (
     CLOUD_HTTP_RETRY_BACKOFF,
     CLOUD_HTTP_RETRY_COUNT,
     CLOUD_HTTP_TIMEOUT,
+    CLOUD_RETRY_AFTER_DEFAULT,
+    CLOUD_RETRY_AFTER_MAX,
     CLOUD_TRANSIENT_HTTP_CODES,
     DSS_SUBSCRIPTION_DESCRIPTION,
     DSS_SUBSCRIPTION_NAME,
@@ -55,7 +60,15 @@ class CloudError(Exception):
         self.http_status = http_status
 
 
-@dataclass
+class RateLimitError(CloudError):
+    """Raised when Ayla asks the client to defer further requests."""
+
+    def __init__(self, message: str, *, retry_after: float) -> None:
+        super().__init__(message, http_status=429)
+        self.retry_after = retry_after
+
+
+@dataclass(slots=True)
 class AylaDevice:
     """Minimal device info."""
 
@@ -64,9 +77,7 @@ class AylaDevice:
     oem_model: str
     model: str
     sw_version: str
-    lan_ip: str
     connection_status: str
-    properties: AylaProperties = field(default_factory=dict)
 
 
 class DelonghiAylaClient:
@@ -77,9 +88,10 @@ class DelonghiAylaClient:
         self._email = email
         self._password = password
         self._access_token: str | None = None
-        self._refresh_token: str | None = None
         self._expires_at: float = 0
         self._auth_lock = asyncio.Lock()
+        self._devices_lock = asyncio.Lock()
+        self._devices_cache: tuple[float, tuple[AylaDevice, ...]] | None = None
 
     @property
     def ads_url(self) -> str:
@@ -97,10 +109,10 @@ class DelonghiAylaClient:
 
     async def async_ensure_auth(self) -> None:
         """Refresh access_token if expired."""
-        if self._access_token and time.time() <= self._expires_at - 30:
+        if self._access_token and monotonic() <= self._expires_at - 30:
             return
         async with self._auth_lock:
-            if self._access_token and time.time() <= self._expires_at - 30:
+            if self._access_token and monotonic() <= self._expires_at - 30:
                 return
             await self._async_authenticate_locked()
 
@@ -127,14 +139,14 @@ class DelonghiAylaClient:
                     timeout=aiohttp.ClientTimeout(total=CLOUD_HTTP_TIMEOUT),
                 ) as resp:
                     text = await resp.text()
-                    if resp.status in {400, 401, 403}:
-                        raise AuthError(
-                            f"{operation} rejected the credentials (HTTP {resp.status})"
+                    if resp.status == 429:
+                        raise RateLimitError(
+                            f"{operation} was rate limited",
+                            retry_after=self._sanitized_retry_after(resp.headers.get("Retry-After")),
                         )
-                    if (
-                        resp.status in CLOUD_TRANSIENT_HTTP_CODES
-                        and attempt < CLOUD_HTTP_RETRY_COUNT
-                    ):
+                    if resp.status in {400, 401, 403}:
+                        raise AuthError(f"{operation} rejected the credentials (HTTP {resp.status})")
+                    if resp.status in CLOUD_TRANSIENT_HTTP_CODES and attempt < CLOUD_HTTP_RETRY_COUNT:
                         await asyncio.sleep(CLOUD_HTTP_RETRY_BACKOFF * (2**attempt))
                         continue
                     if resp.status not in ok_status:
@@ -157,19 +169,16 @@ class DelonghiAylaClient:
                     return body
             except AuthError:
                 raise
+            except RateLimitError:
+                raise
             except CloudError as err:
                 last_error = err
-                if (
-                    err.http_status in CLOUD_TRANSIENT_HTTP_CODES
-                    and attempt < CLOUD_HTTP_RETRY_COUNT
-                ):
+                if err.http_status in CLOUD_TRANSIENT_HTTP_CODES and attempt < CLOUD_HTTP_RETRY_COUNT:
                     await asyncio.sleep(CLOUD_HTTP_RETRY_BACKOFF * (2**attempt))
                     continue
                 raise
             except (TimeoutError, aiohttp.ClientError) as err:
-                last_error = CloudError(
-                    f"{operation} network error ({type(err).__name__})"
-                )
+                last_error = CloudError(f"{operation} network error ({type(err).__name__})")
                 if attempt < CLOUD_HTTP_RETRY_COUNT:
                     await asyncio.sleep(CLOUD_HTTP_RETRY_BACKOFF * (2**attempt))
                     continue
@@ -178,6 +187,17 @@ class DelonghiAylaClient:
 
     def _auth_headers(self) -> dict[str, str]:
         return {"Authorization": f"auth_token {self._access_token}"}
+
+    @staticmethod
+    def _sanitized_retry_after(raw: str | None) -> float:
+        """Return a bounded delay for an untrusted Retry-After header."""
+        try:
+            delay = float(raw) if raw is not None else CLOUD_RETRY_AFTER_DEFAULT
+        except TypeError, ValueError:
+            delay = CLOUD_RETRY_AFTER_DEFAULT
+        if not isfinite(delay):
+            delay = CLOUD_RETRY_AFTER_DEFAULT
+        return min(max(delay, 0.0), CLOUD_RETRY_AFTER_MAX)
 
     @staticmethod
     def _value_hint(value: Any) -> str:
@@ -208,6 +228,7 @@ class DelonghiAylaClient:
         *,
         json_body: dict[str, Any] | None = None,
         data: dict[str, str] | None = None,
+        extra_headers: dict[str, str] | None = None,
         ok_status: frozenset[int] | set[int] | None = None,
         op: str = "",
     ) -> Any:
@@ -223,14 +244,14 @@ class DelonghiAylaClient:
                 async with self._session.request(
                     method,
                     url,
-                    headers=self._auth_headers(),
+                    headers={**self._auth_headers(), **(extra_headers or {})},
                     json=json_body,
                     data=data,
                     timeout=aiohttp.ClientTimeout(total=CLOUD_HTTP_TIMEOUT),
                 ) as resp:
                     elapsed_ms = (time.monotonic() - started) * 1000
                     text = await resp.text()
-                    detail = f" [{op}]" if op else ""
+                    detail = f" [{safe_operation}]" if op else ""
                     if json_body and "datapoint" in json_body:
                         prop_val = json_body["datapoint"].get("value")
                         detail += f" value={self._value_hint(prop_val)}"
@@ -245,19 +266,24 @@ class DelonghiAylaClient:
                     if resp.status in (401, 403):
                         self._access_token = None
                         self._expires_at = 0
-                        raise AuthError(
-                            f"{safe_operation} rejected the cloud credentials "
-                            f"(HTTP {resp.status})"
+                        raise AuthError(f"{safe_operation} rejected the cloud credentials (HTTP {resp.status})")
+
+                    if resp.status == 429:
+                        raise RateLimitError(
+                            f"{safe_operation} was rate limited",
+                            retry_after=self._sanitized_retry_after(resp.headers.get("Retry-After")),
                         )
 
                     if resp.status in CLOUD_TRANSIENT_HTTP_CODES and attempt < CLOUD_HTTP_RETRY_COUNT:
                         retry_after = resp.headers.get("Retry-After")
                         try:
-                            retry_delay = float(retry_after) if retry_after else 0.0
-                        except ValueError:
-                            retry_delay = 0.0
+                            retry_hint = float(retry_after) if retry_after is not None else 0.0
+                        except TypeError, ValueError:
+                            retry_hint = 0.0
+                        if not isfinite(retry_hint):
+                            retry_hint = 0.0
                         retry_delay = max(
-                            retry_delay,
+                            min(max(retry_hint, 0.0), CLOUD_RETRY_AFTER_MAX),
                             CLOUD_HTTP_RETRY_BACKOFF * (2**attempt) + random.uniform(0, 0.4),
                         )
                         _LOGGER.debug(
@@ -274,8 +300,7 @@ class DelonghiAylaClient:
 
                     if resp.status not in ok_status:
                         raise CloudError(
-                            f"{safe_operation} failed "
-                            f"(HTTP {resp.status})",
+                            f"{safe_operation} failed (HTTP {resp.status})",
                             http_status=resp.status,
                         )
 
@@ -285,16 +310,12 @@ class DelonghiAylaClient:
                         return json.loads(text)
                     except json.JSONDecodeError as err:
                         raise CloudError(
-                            f"{safe_operation}: expected JSON, "
-                            f"got {resp.content_type!r} ({len(text)} bytes)",
+                            f"{safe_operation}: expected JSON, got {resp.content_type!r} ({len(text)} bytes)",
                             http_status=resp.status,
                         ) from err
             except (TimeoutError, aiohttp.ClientError) as err:
                 elapsed_ms = (time.monotonic() - started) * 1000
-                last_error = CloudError(
-                    f"{safe_operation} network error after {elapsed_ms:.0f}ms "
-                    f"({type(err).__name__})"
-                )
+                last_error = CloudError(f"{safe_operation} network error after {elapsed_ms:.0f}ms ({type(err).__name__})")
                 if attempt < CLOUD_HTTP_RETRY_COUNT:
                     _LOGGER.debug(
                         "Ayla network error on %s %s; retry %d/%d (error_type=%s)",
@@ -304,9 +325,7 @@ class DelonghiAylaClient:
                         CLOUD_HTTP_RETRY_COUNT,
                         type(err).__name__,
                     )
-                    await asyncio.sleep(
-                        CLOUD_HTTP_RETRY_BACKOFF * (2**attempt) + random.uniform(0, 0.4)
-                    )
+                    await asyncio.sleep(CLOUD_HTTP_RETRY_BACKOFF * (2**attempt) + random.uniform(0, 0.4))
                     continue
                 raise last_error from err
 
@@ -348,13 +367,9 @@ class DelonghiAylaClient:
             "timestamp": timestamp,
             "nonce": nonce,
         }
-        sorted_params = "&".join(
-            f"{k}={urllib.parse.quote(str(v), safe='')}" for k, v in sorted(params.items())
-        )
+        sorted_params = "&".join(f"{k}={urllib.parse.quote(str(v), safe='')}" for k, v in sorted(params.items()))
         base_str = f"POST&{urllib.parse.quote(url, safe='')}&{urllib.parse.quote(sorted_params, safe='')}"
-        sig = base64.b64encode(
-            hmac.new(base64.b64decode(session_secret), base_str.encode(), hashlib.sha1).digest()
-        ).decode()
+        sig = base64.b64encode(hmac.new(base64.b64decode(session_secret), base_str.encode(), hashlib.sha1).digest()).decode()
         params["sig"] = sig
         jwt_body = await self._authentication_request(
             url,
@@ -362,10 +377,10 @@ class DelonghiAylaClient:
             operation="Gigya JWT request",
         )
         if jwt_body.get("errorCode") != 0:
-            raise CloudError(
-                f"Gigya getJWT failed (code {jwt_body.get('errorCode', 'unknown')})"
-            )
-        return jwt_body["id_token"]
+            raise CloudError(f"Gigya getJWT failed (code {jwt_body.get('errorCode', 'unknown')})")
+        if not isinstance(id_token := jwt_body.get("id_token"), str):
+            raise CloudError("Gigya getJWT response did not contain an ID token")
+        return id_token
 
     async def _ayla_sso_sign_in(self, jwt_token: str) -> None:
         """Exchange JWT for Ayla access_token (form-urlencoded)."""
@@ -380,39 +395,45 @@ class DelonghiAylaClient:
         if "access_token" not in body:
             raise AuthError("Ayla SSO response did not contain an access token")
         self._access_token = body["access_token"]
-        self._refresh_token = body.get("refresh_token")
-        self._expires_at = time.time() + body.get("expires_in", 3600)
+        self._expires_at = monotonic() + body.get("expires_in", 3600)
 
-    async def async_get_devices(self) -> list[AylaDevice]:
-        """List all Ayla devices tied to this account."""
-        url = f"{AYLA_EU_ADS_URL}/apiv1/devices.json"
-        data = await self._request_json(
-            "GET", url, ok_status=frozenset({200}), op="list devices"
-        )
-        if not isinstance(data, list):
-            raise CloudError("list devices: expected a JSON list")
-        devices: list[AylaDevice] = []
-        for wrap in data:
-            d = wrap.get("device", wrap)
-            devices.append(
-                AylaDevice(
-                    dsn=d.get("dsn", ""),
-                    name=d.get("product_name") or d.get("dsn", ""),
-                    oem_model=d.get("oem_model", ""),
-                    model=d.get("model", ""),
-                    sw_version=d.get("sw_version", ""),
-                    lan_ip=d.get("lan_ip", ""),
-                    connection_status=d.get("connection_status", "Unknown"),
+    async def async_get_devices(self, *, max_age: float = 0) -> list[AylaDevice]:
+        """List account devices, optionally sharing a bounded account-wide cache."""
+        now = time.monotonic()
+        cached = self._devices_cache
+        if cached is not None and max_age > 0 and now - cached[0] < max_age:
+            return list(cached[1])
+
+        async with self._devices_lock:
+            now = time.monotonic()
+            cached = self._devices_cache
+            if cached is not None and max_age > 0 and now - cached[0] < max_age:
+                return list(cached[1])
+
+            url = f"{AYLA_EU_ADS_URL}/apiv1/devices.json"
+            data = await self._request_json("GET", url, ok_status=frozenset({200}), op="list devices")
+            if not isinstance(data, list):
+                raise CloudError("list devices: expected a JSON list")
+            devices: list[AylaDevice] = []
+            for wrap in data:
+                d = wrap.get("device", wrap)
+                devices.append(
+                    AylaDevice(
+                        dsn=d.get("dsn", ""),
+                        name=d.get("product_name") or d.get("dsn", ""),
+                        oem_model=d.get("oem_model", ""),
+                        model=d.get("model", ""),
+                        sw_version=d.get("sw_version", ""),
+                        connection_status=d.get("connection_status", "Unknown"),
+                    )
                 )
-            )
-        return devices
+            self._devices_cache = (now, tuple(devices))
+            return list(devices)
 
     async def async_get_properties(self, dsn: str) -> AylaProperties:
         """Fetch all properties of a device, keyed by property name."""
         url = f"{AYLA_EU_ADS_URL}/apiv1/dsns/{dsn}/properties.json"
-        data = await self._request_json(
-            "GET", url, ok_status=frozenset({200}), op=f"list properties dsn={dsn}"
-        )
+        data = await self._request_json("GET", url, ok_status=frozenset({200}), op=f"list properties dsn={dsn}")
         if not isinstance(data, list):
             raise CloudError("list properties: expected a JSON list")
         props: AylaProperties = {}
@@ -431,9 +452,7 @@ class DelonghiAylaClient:
         logs because it can contain the user's Wi-Fi SSID.
         """
         url = f"{AYLA_EU_ADS_URL}/apiv1/dsns/{dsn}/connection_info.json"
-        data = await self._request_json(
-            "GET", url, ok_status=frozenset({200}), op=f"connection info dsn={dsn}"
-        )
+        data = await self._request_json("GET", url, ok_status=frozenset({200}), op=f"connection info dsn={dsn}")
         if not isinstance(data, dict):
             raise CloudError("connection info: expected a JSON object")
         info = data.get("connection_info", data.get("connectionInfo", data))
@@ -487,9 +506,7 @@ class DelonghiAylaClient:
             raise CloudError("create DSS subscription: stream key missing")
         return subscription
 
-    async def async_open_dss_websocket(
-        self, stream_key: str
-    ) -> aiohttp.ClientWebSocketResponse:
+    async def async_open_dss_websocket(self, stream_key: str) -> aiohttp.ClientWebSocketResponse:
         """Open the Ayla DSS stream for a short-lived in-memory stream key."""
         await self.async_ensure_auth()
         query = urllib.parse.urlencode({"stream_key": stream_key})
@@ -499,18 +516,17 @@ class DelonghiAylaClient:
             heartbeat=None,
             autoclose=True,
             autoping=True,
-            timeout=CLOUD_HTTP_TIMEOUT,
+            timeout=aiohttp.ClientWSTimeout(ws_receive=CLOUD_HTTP_TIMEOUT),
         )
 
-    async def async_set_property_value(
-        self, dsn: str, property_name: str, value: Any
-    ) -> dict[str, Any]:
+    async def async_set_property_value(self, dsn: str, property_name: str, value: Any) -> dict[str, Any]:
         """Write a value to a device property (e.g. data_request)."""
         url = f"{AYLA_EU_ADS_URL}/apiv1/dsns/{dsn}/properties/{property_name}/datapoints.json"
         result = await self._request_json(
             "POST",
             url,
             json_body={"datapoint": {"value": value}},
+            extra_headers={"x-ayla-source": "Mobile"},
             ok_status=frozenset({200, 201}),
             op=f"set {property_name} dsn={dsn}",
         )
@@ -519,17 +535,13 @@ class DelonghiAylaClient:
     async def async_get_property(self, dsn: str, property_name: str) -> AylaProperty:
         """Fetch a single device property (fallback when coordinator.data is empty)."""
         url = f"{AYLA_EU_ADS_URL}/apiv1/dsns/{dsn}/properties/{property_name}.json"
-        data = await self._request_json(
-            "GET", url, ok_status=frozenset({200}), op=f"get {property_name} dsn={dsn}"
-        )
+        data = await self._request_json("GET", url, ok_status=frozenset({200}), op=f"get {property_name} dsn={dsn}")
         prop = data.get("property")
         if not isinstance(prop, dict):
             raise CloudError(f"get_property {property_name}: unexpected response type")
         return prop
 
-    async def async_get_property_resilient(
-        self, dsn: str, property_name: str
-    ) -> AylaProperty:
+    async def async_get_property_resilient(self, dsn: str, property_name: str) -> AylaProperty:
         """Eletta-only: GET with retry (confirm loop live app_id polling)."""
         url = f"{AYLA_EU_ADS_URL}/apiv1/dsns/{dsn}/properties/{property_name}.json"
         data = await self._request_json(
@@ -549,31 +561,26 @@ class DelonghiAylaClient:
         )
         return prop
 
-    async def async_post_cloud_session(
-        self, dsn: str, connected_property: str, integration_app_id: int
-    ) -> dict[str, Any]:
+    async def async_post_cloud_session(self, dsn: str, connected_property: str, integration_app_id: int) -> dict[str, Any]:
         """Register a cloud app session (app_device_connected / device_connected).
 
         Payload: base64(timestamp_4bytes + signed_app_id_4bytes), per DlghIoT.
         """
         now_s = int(time.time())
         payload = base64.b64encode(
-            now_s.to_bytes(4, "big", signed=False)
-            + integration_app_id_to_bytes(integration_app_id)
+            now_s.to_bytes(4, "big", signed=False) + integration_app_id_to_bytes(integration_app_id)
         ).decode("utf-8")
         _LOGGER.debug(
             "POST cloud session connect property=%s payload_len=%d",
             connected_property,
             len(payload),
         )
-        url = (
-            f"{AYLA_EU_ADS_URL}/apiv1/dsns/{dsn}/properties/"
-            f"{connected_property}/datapoints.json"
-        )
+        url = f"{AYLA_EU_ADS_URL}/apiv1/dsns/{dsn}/properties/{connected_property}/datapoints.json"
         result = await self._request_json(
             "POST",
             url,
             json_body={"datapoint": {"value": payload}},
+            extra_headers={"x-ayla-source": "Mobile"},
             ok_status=frozenset({200, 201}),
             op=f"set {connected_property} dsn={dsn}",
         )
@@ -588,4 +595,3 @@ def normalize_signed_app_id(app_id: int) -> int:
 def integration_app_id_to_bytes(app_id: int) -> bytes:
     """Encode app id as signed int32 big-endian (DlghIoT convention)."""
     return normalize_signed_app_id(app_id).to_bytes(4, "big", signed=True)
-

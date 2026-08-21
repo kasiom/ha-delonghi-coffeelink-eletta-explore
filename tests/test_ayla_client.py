@@ -3,6 +3,7 @@
 No request in this module leaves the process.  The fake transport models the
 small part of aiohttp's async context-manager API used by the integration.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -21,11 +22,7 @@ from unittest.mock import AsyncMock
 import aiohttp
 import pytest
 
-PKG_DIR = (
-    Path(__file__).resolve().parents[1]
-    / "custom_components"
-    / "ha_delonghi_coffeelink_eletta_explore"
-)
+PKG_DIR = Path(__file__).resolve().parents[1] / "custom_components" / "ha_delonghi_coffeelink_eletta_explore"
 
 
 def _load(modname: str, filename: str):
@@ -174,9 +171,7 @@ async def test_connection_info_normalizes_wrappers_and_rejects_bad_shapes() -> N
 def test_dss_subscription_small_helpers() -> None:
     assert ac.DelonghiAylaClient._unwrap_dss_subscription(None) is None
     assert ac.DelonghiAylaClient._unwrap_dss_subscription({"subscription": []}) is None
-    assert ac.DelonghiAylaClient._unwrap_dss_subscription({"id": "one"}) == {
-        "id": "one"
-    }
+    assert ac.DelonghiAylaClient._unwrap_dss_subscription({"id": "one"}) == {"id": "one"}
     assert ac.DelonghiAylaClient.dss_subscription_stream_key({}) is None
     assert ac.DelonghiAylaClient.dss_subscription_stream_key({"streamKey": "camel"}) == "camel"
     assert ac.DelonghiAylaClient.dss_subscription_stream_key({"stream_key": 3}) is None
@@ -185,9 +180,7 @@ def test_dss_subscription_small_helpers() -> None:
 @async_test
 async def test_dss_subscription_always_creates_fresh_stream_key() -> None:
     client = make_client()
-    client._request_json = AsyncMock(
-        return_value={"subscription": {"stream_key": "created"}}
-    )
+    client._request_json = AsyncMock(return_value={"subscription": {"stream_key": "created"}})
     subscription = await client.async_create_dss_subscription()
     assert subscription["stream_key"] == "created"
     assert client._request_json.await_count == 1
@@ -238,8 +231,8 @@ def test_cloud_error_device_and_small_helpers(caplog: pytest.LogCaptureFixture) 
     assert str(error) == "offline"
     assert error.http_status == 503
 
-    device = ac.AylaDevice("dsn", "name", "oem", "model", "sw", "ip", "Online")
-    assert device.properties == {}
+    device = ac.AylaDevice("dsn", "name", "oem", "model", "sw", "Online")
+    assert device.dsn == "dsn"
 
     client = make_client()
     assert client.ads_url == const.AYLA_EU_ADS_URL
@@ -281,7 +274,7 @@ async def test_ensure_auth_fresh_expired_and_refreshed_by_waiter(monkeypatch: py
     client = make_client()
     authenticate = AsyncMock()
     monkeypatch.setattr(client, "_async_authenticate_locked", authenticate)
-    monkeypatch.setattr(ac.time, "time", lambda: 100.0)
+    monkeypatch.setattr(ac, "monotonic", lambda: 100.0)
 
     client._access_token = "fresh"
     client._expires_at = 131
@@ -318,21 +311,15 @@ async def test_authentication_request_success_and_rejections() -> None:
         ]
     )
     client = make_client(session)
-    result = await client._authentication_request(
-        "https://auth.test/login", data={"x": "y"}, operation="Login"
-    )
+    result = await client._authentication_request("https://auth.test/login", data={"x": "y"}, operation="Login")
     assert result == {"ok": True}
     assert session.post_calls[0][1]["data"] == {"x": "y"}
     assert isinstance(session.post_calls[0][1]["timeout"], aiohttp.ClientTimeout)
 
     with pytest.raises(ac.AuthError, match="HTTP 401"):
-        await client._authentication_request(
-            "https://auth.test/login", data={}, operation="Login"
-        )
+        await client._authentication_request("https://auth.test/login", data={}, operation="Login")
     with pytest.raises(ac.CloudError, match="HTTP 418") as err:
-        await client._authentication_request(
-            "https://auth.test/login", data={}, operation="Login"
-        )
+        await client._authentication_request("https://auth.test/login", data={}, operation="Login")
     assert err.value.http_status == 418
 
 
@@ -372,15 +359,9 @@ async def test_authentication_request_retries_http_cloud_and_network(
         ]
     )
     client = make_client(session)
-    assert await client._authentication_request("https://a", data={}, operation="A") == {
-        "after_http": True
-    }
-    assert await client._authentication_request("https://b", data={}, operation="B") == {
-        "after_cloud_error": True
-    }
-    assert await client._authentication_request("https://c", data={}, operation="C") == {
-        "after_timeout": True
-    }
+    assert await client._authentication_request("https://a", data={}, operation="A") == {"after_http": True}
+    assert await client._authentication_request("https://b", data={}, operation="B") == {"after_cloud_error": True}
+    assert await client._authentication_request("https://c", data={}, operation="C") == {"after_timeout": True}
     with pytest.raises(ac.CloudError, match="network error.*ClientConnectionError"):
         await client._authentication_request("https://d", data={}, operation="D")
     assert no_delays.await_count == 5
@@ -388,13 +369,31 @@ async def test_authentication_request_retries_http_cloud_and_network(
 
 @async_test
 async def test_authentication_request_transient_exhaustion(no_delays: AsyncMock) -> None:
-    client = make_client(
-        FakeSession(posts=[FakeResponse(status=503, body={}) for _ in range(3)])
-    )
+    client = make_client(FakeSession(posts=[FakeResponse(status=503, body={}) for _ in range(3)]))
     with pytest.raises(ac.CloudError, match="HTTP 503") as err:
         await client._authentication_request("https://auth.test", data={}, operation="Auth")
     assert err.value.http_status == 503
     assert no_delays.await_count == 2
+
+
+@async_test
+async def test_authentication_request_preserves_bounded_rate_limit() -> None:
+    client = make_client(
+        FakeSession(
+            posts=[
+                FakeResponse(
+                    status=429,
+                    body={},
+                    headers={"Retry-After": "999999"},
+                )
+            ]
+        )
+    )
+
+    with pytest.raises(ac.RateLimitError) as error:
+        await client._authentication_request("https://auth.test", data={}, operation="Auth")
+
+    assert error.value.retry_after == ac.CLOUD_RETRY_AFTER_MAX
 
 
 @async_test
@@ -409,9 +408,7 @@ async def test_authentication_request_defensive_fallbacks(monkeypatch: pytest.Mo
     def increase_retry_count() -> None:
         ac.CLOUD_HTTP_RETRY_COUNT = 1
 
-    client._session.posts = [
-        FakeRequestContext(TimeoutError("late"), on_enter=increase_retry_count)
-    ]
+    client._session.posts = [FakeRequestContext(TimeoutError("late"), on_enter=increase_retry_count)]
     monkeypatch.setattr(ac, "CLOUD_HTTP_RETRY_COUNT", 0)
     monkeypatch.setattr(ac.asyncio, "sleep", AsyncMock())
     with pytest.raises(ac.CloudError, match="network error.*TimeoutError"):
@@ -445,14 +442,36 @@ async def test_request_json_success_blank_and_datapoint_detail(
         op="write",
     ) == {"written": True}
     assert "[write] value=len=14" in captured[-1][-1]["detail"]
-    assert await client._request_json(
-        "DELETE",
-        "https://api.test/value",
-        ok_status=frozenset({204}),
-    ) is None
+    assert (
+        await client._request_json(
+            "DELETE",
+            "https://api.test/value",
+            ok_status=frozenset({204}),
+        )
+        is None
+    )
     request_kwargs = session.request_calls[-2][2]
     assert request_kwargs["headers"] == {"Authorization": "auth_token None"}
     assert request_kwargs["data"] == {"form": "value"}
+
+
+@async_test
+async def test_request_json_redacts_dsn_from_debug_details(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client = make_client(FakeSession(requests=[FakeResponse(body={"ok": True})]))
+    monkeypatch.setattr(client, "async_ensure_auth", AsyncMock())
+    captured: list[tuple[Any, ...]] = []
+    monkeypatch.setattr(client, "_log_http", lambda *args, **kwargs: captured.append((*args, kwargs)))
+
+    await client._request_json(
+        "GET",
+        "https://api.test/value",
+        op="read properties dsn=private-device-identifier",
+    )
+
+    assert "private-device-identifier" not in repr(captured)
+    assert "read properties" in captured[0][-1]["detail"]
 
 
 @async_test
@@ -483,26 +502,41 @@ async def test_request_json_retries_retry_after_and_invalid_header(
     session = FakeSession(
         requests=[
             FakeResponse(status=429, body={}, headers={"Retry-After": "2.5"}),
-            FakeResponse(body={"first": True}),
             FakeResponse(status=503, body={}, headers={"Retry-After": "later"}),
             FakeResponse(body={"second": True}),
         ]
     )
     client = make_client(session)
     monkeypatch.setattr(client, "async_ensure_auth", AsyncMock())
-    assert await client._request_json("GET", "https://api.test/one", op="one") == {
-        "first": True
-    }
+    with pytest.raises(ac.RateLimitError) as rate_limit:
+        await client._request_json("GET", "https://api.test/one", op="one")
+    assert rate_limit.value.retry_after == 2.5
     assert await client._request_json("GET", "https://api.test/two") == {"second": True}
-    assert no_delays.await_args_list[0].args == (2.5,)
-    assert no_delays.await_args_list[1].args == (ac.CLOUD_HTTP_RETRY_BACKOFF,)
+    assert no_delays.await_args_list[0].args == (ac.CLOUD_HTTP_RETRY_BACKOFF,)
+
+    client = make_client(
+        FakeSession(
+            requests=[
+                FakeResponse(status=503, body={}, headers={"Retry-After": "nan"}),
+                FakeResponse(body={"finite": True}),
+            ]
+        )
+    )
+    monkeypatch.setattr(client, "async_ensure_auth", AsyncMock())
+    assert await client._request_json("GET", "https://api.test/nan") == {"finite": True}
+
+
+def test_retry_after_is_sanitized() -> None:
+    assert ac.DelonghiAylaClient._sanitized_retry_after(None) == 60
+    assert ac.DelonghiAylaClient._sanitized_retry_after("invalid") == 60
+    assert ac.DelonghiAylaClient._sanitized_retry_after("nan") == 60
+    assert ac.DelonghiAylaClient._sanitized_retry_after("-5") == 0
+    assert ac.DelonghiAylaClient._sanitized_retry_after("9999") == 300
 
 
 @async_test
 async def test_request_json_invalid_json(monkeypatch: pytest.MonkeyPatch) -> None:
-    client = make_client(
-        FakeSession(requests=[FakeResponse(raw_text="<html>", content_type="text/html")])
-    )
+    client = make_client(FakeSession(requests=[FakeResponse(raw_text="<html>", content_type="text/html")]))
     monkeypatch.setattr(client, "async_ensure_auth", AsyncMock())
     with pytest.raises(ac.CloudError, match="expected JSON.*text/html") as err:
         await client._request_json("GET", "https://api.test", op="read")
@@ -525,13 +559,9 @@ async def test_request_json_network_retry_and_exhaustion(
     )
     client = make_client(session)
     monkeypatch.setattr(client, "async_ensure_auth", AsyncMock())
-    assert await client._request_json("GET", "https://api.test/one", op="read") == {
-        "recovered": True
-    }
+    assert await client._request_json("GET", "https://api.test/one", op="read") == {"recovered": True}
     with pytest.raises(ac.CloudError, match="network error.*ClientConnectionError") as error:
-        await client._request_json(
-            "GET", "https://api.test/two", op="read properties dsn=private-device"
-        )
+        await client._request_json("GET", "https://api.test/two", op="read properties dsn=private-device")
     assert "private-device" not in str(error.value)
     assert no_delays.await_count == 3
 
@@ -550,9 +580,7 @@ async def test_request_json_defensive_fallbacks(monkeypatch: pytest.MonkeyPatch)
     def increase_retry_count() -> None:
         ac.CLOUD_HTTP_RETRY_COUNT = 1
 
-    client._session.requests = [
-        FakeRequestContext(TimeoutError("late"), on_enter=increase_retry_count)
-    ]
+    client._session.requests = [FakeRequestContext(TimeoutError("late"), on_enter=increase_retry_count)]
     monkeypatch.setattr(ac, "CLOUD_HTTP_RETRY_COUNT", 0)
     monkeypatch.setattr(ac.asyncio, "sleep", AsyncMock())
     with pytest.raises(ac.CloudError, match="network error.*TimeoutError"):
@@ -636,18 +664,38 @@ async def test_ayla_sso_success_and_missing_token(monkeypatch: pytest.MonkeyPatc
         ]
     )
     monkeypatch.setattr(client, "_authentication_request", request)
-    monkeypatch.setattr(ac.time, "time", lambda: 1000)
+    monkeypatch.setattr(ac, "monotonic", lambda: 1000)
     await client._ayla_sso_sign_in("jwt")
-    assert (client._access_token, client._refresh_token, client._expires_at) == (
-        "access",
-        "refresh",
-        1090,
-    )
+    assert (client._access_token, client._expires_at) == ("access", 1090)
     await client._ayla_sso_sign_in("jwt-2")
     assert client._expires_at == 4600
-    assert client._refresh_token is None
     with pytest.raises(ac.AuthError, match="did not contain an access token"):
         await client._ayla_sso_sign_in("jwt-3")
+
+
+@async_test
+async def test_gigya_jwt_rejects_missing_id_token(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client = make_client()
+    monkeypatch.setattr(
+        client,
+        "_authentication_request",
+        AsyncMock(
+            side_effect=[
+                {
+                    "errorCode": 0,
+                    "sessionInfo": {
+                        "sessionToken": "token",
+                        "sessionSecret": base64.b64encode(b"secret").decode(),
+                    },
+                },
+                {"errorCode": 0},
+            ]
+        ),
+    )
+    with pytest.raises(ac.CloudError, match="did not contain an ID token"):
+        await client._gigya_login_and_jwt()
 
 
 @async_test
@@ -676,9 +724,28 @@ async def test_get_devices_maps_wrapped_direct_and_defaults(monkeypatch: pytest.
     devices = await client.async_get_devices()
     assert devices[0].name == "Kitchen"
     assert devices[0].connection_status == "Online"
-    assert devices[1] == ac.AylaDevice("dsn-2", "dsn-2", "", "", "", "", "Unknown")
+    assert not hasattr(devices[0], "lan_ip")
+    assert devices[1] == ac.AylaDevice("dsn-2", "dsn-2", "", "", "", "Unknown")
+    assert await client.async_get_devices(max_age=60) == devices
+    assert request.await_count == 1
     with pytest.raises(ac.CloudError, match="expected a JSON list"):
         await client.async_get_devices()
+
+
+@async_test
+async def test_get_devices_rechecks_cache_after_lock_wait() -> None:
+    client = make_client()
+    cached_device = ac.AylaDevice("cached", "Cached", "oem", "model", "sw", "Online")
+
+    class CacheFillingLock:
+        async def __aenter__(self) -> None:
+            client._devices_cache = (ac.time.monotonic(), (cached_device,))
+
+        async def __aexit__(self, *_args: Any) -> None:
+            return None
+
+    client._devices_lock = CacheFillingLock()
+    assert await client.async_get_devices(max_age=60) == [cached_device]
 
 
 @async_test
@@ -698,9 +765,7 @@ async def test_get_properties_filters_unnamed_and_validates(monkeypatch: pytest.
             ]
         ),
     )
-    assert await client.async_get_properties("dsn") == {
-        "status": {"name": "status", "value": "Ready"}
-    }
+    assert await client.async_get_properties("dsn") == {"status": {"name": "status", "value": "Ready"}}
     with pytest.raises(ac.CloudError, match="expected a JSON list"):
         await client.async_get_properties("dsn")
 
@@ -710,13 +775,10 @@ async def test_set_property_result_and_empty(monkeypatch: pytest.MonkeyPatch) ->
     client = make_client()
     request = AsyncMock(side_effect=[{"datapoint": {"id": 1}}, None])
     monkeypatch.setattr(client, "_request_json", request)
-    assert await client.async_set_property_value("dsn", "request", "value") == {
-        "datapoint": {"id": 1}
-    }
+    assert await client.async_set_property_value("dsn", "request", "value") == {"datapoint": {"id": 1}}
     assert await client.async_set_property_value("dsn", "request", 2) == {}
-    assert request.await_args_list[0].kwargs["json_body"] == {
-        "datapoint": {"value": "value"}
-    }
+    assert request.await_args_list[0].kwargs["json_body"] == {"datapoint": {"value": "value"}}
+    assert request.await_args_list[0].kwargs["extra_headers"] == {"x-ayla-source": "Mobile"}
 
 
 @async_test

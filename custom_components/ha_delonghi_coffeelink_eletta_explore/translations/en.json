@@ -18,41 +18,40 @@
       },
       "reconfigure": {
         "title": "Reconfigure De'Longhi Coffee Link – Eletta Explore",
-        "description": "Enter and validate the Coffee Link account credentials that should replace {email}.",
+        "description": "Enter and validate a new password for the existing Coffee Link account {email}.",
         "data": {
-          "email": "Email",
           "password": "Password"
         }
       }
     },
     "error": {
       "invalid_auth": "Invalid email or password.",
-      "cannot_connect": "Failed to connect to DeLonghi cloud.",
-      "no_devices": "No DeLonghi devices found on this account.",
+      "cannot_connect": "Failed to connect to the De'Longhi cloud.",
+      "no_devices": "No De'Longhi devices found on this account.",
       "unknown": "Unexpected error."
     },
     "abort": {
       "already_configured": "This account is already configured.",
       "reauth_successful": "Reauthentication was successful.",
-      "reconfigure_successful": "The Coffee Link account was updated successfully."
+      "reconfigure_successful": "The Coffee Link credentials were updated successfully."
     }
   },
   "entity": {
     "sensor": {
       "total_black_coffee_beverages": {
-        "name": "Total Black Coffee Beverages"
+        "name": "Total black coffee beverages"
       },
       "total_espresso": {
-        "name": "Total Espresso Beverages"
+        "name": "Total espresso beverages"
       },
       "total_milk_drinks": {
-        "name": "Total Milk Drinks"
+        "name": "Total milk drinks"
       },
       "total_cold_milk_drinks": {
-        "name": "Total Cold Milk Drinks"
+        "name": "Total cold milk drinks"
       },
       "total_espresso_alt": {
-        "name": "Total Espresso"
+        "name": "Total espresso"
       },
       "total_coffee": {
         "name": "Total Coffee"
@@ -82,7 +81,7 @@
         "name": "Total Espresso Macchiato"
       },
       "total_hot_milk": {
-        "name": "Total Hot Milk"
+        "name": "Total hot milk"
       },
       "total_cappuccino_doppio": {
         "name": "Total Cappuccino Doppio+"
@@ -91,10 +90,10 @@
         "name": "Total Cappuccino Reverse"
       },
       "total_hot_water": {
-        "name": "Total Hot Water"
+        "name": "Total hot water"
       },
       "total_tea": {
-        "name": "Total Tea"
+        "name": "Total tea"
       },
       "total_coffee_pot": {
         "name": "Total Coffee Pot"
@@ -103,64 +102,64 @@
         "name": "Total Brew Over Ice"
       },
       "total_mug_hot": {
-        "name": "Total Hot Mug to Go Beverages"
+        "name": "Total hot Mug to Go beverages"
       },
       "total_mug_cold": {
-        "name": "Total Cold Mug to Go Beverages"
+        "name": "Total cold Mug to Go beverages"
       },
       "total_iced_bev": {
-        "name": "Total Iced Beverages"
+        "name": "Total iced beverages"
       },
       "total_mug_bev": {
         "name": "Total Mug to Go"
       },
       "total_mug_iced_bev": {
-        "name": "Total Iced Mug to Go Beverages"
+        "name": "Total iced Mug to Go beverages"
       },
       "total_cold_brew_bev": {
-        "name": "Total Cold Coffee Beverages"
+        "name": "Total cold coffee beverages"
       },
       "total_over_ice_espresso": {
         "name": "Total Over Ice Espresso"
       },
       "total_cold_brew": {
-        "name": "Total Cold Brew Beverages"
+        "name": "Total Cold Brew beverages"
       },
       "grounds_container_fill": {
-        "name": "Grounds Container Fill"
+        "name": "Grounds container fill"
       },
       "filter_usage": {
-        "name": "Water Filter Usage"
+        "name": "Water filter usage"
       },
       "descale_limit_usage": {
-        "name": "Remaining Until Descale"
+        "name": "Remaining until descale"
       },
       "total_descales": {
-        "name": "Total Descales"
+        "name": "Total descales"
       },
       "water_total_quantity": {
-        "name": "Water Total Quantity"
+        "name": "Total water volume"
       },
       "total_filters_used": {
-        "name": "Total Filters Used"
+        "name": "Total filters used"
       },
       "water_filter_quantity": {
-        "name": "Water Filter Quantity"
+        "name": "Water volume through installed filter"
       },
       "descale_status": {
-        "name": "Descale Status"
+        "name": "Descale status"
       },
       "water_hardness": {
-        "name": "Water Hardness"
+        "name": "Water hardness"
       },
       "beverages_since_descale_warning": {
-        "name": "Beverages Since Descale Warning"
+        "name": "Beverages since descale warning"
       },
       "descale_alert_count": {
-        "name": "Descale Alert Count"
+        "name": "Descale alert count"
       },
       "machine_status": {
-        "name": "Machine Status",
+        "name": "Machine status",
         "state": {
           "standby": "Standby",
           "waking_up": "Waking up",
@@ -180,7 +179,7 @@
         }
       },
       "cloud_session_app_id": {
-        "name": "Coffee Link Session",
+        "name": "Coffee Link session",
         "state": {
           "unknown": "Unknown",
           "free": "Free",
@@ -189,7 +188,7 @@
         }
       },
       "last_command_status": {
-        "name": "Last Command Status",
+        "name": "Last command status",
         "state": {
           "pending": "In progress",
           "sent": "Sent",
@@ -199,7 +198,7 @@
         }
       },
       "wifi_signal_strength": {
-        "name": "Wi-Fi Signal Strength"
+        "name": "Wi-Fi signal strength"
       }
     },
     "button": {
@@ -288,18 +287,18 @@
         "name": "Stop"
       },
       "synchronize": {
-        "name": "Synchronize Data"
+        "name": "Synchronize data"
       },
       "start_recipe": {
         "name": "Recipe {recipe_id}"
       },
       "dump_recipes": {
-        "name": "Dump Recipe Datapoints"
+        "name": "Dump recipe datapoints"
       }
     },
     "binary_sensor": {
       "connection_status": {
-        "name": "Cloud Connection"
+        "name": "Cloud connection"
       },
       "water_tank_empty": {
         "name": "Water tank empty"
@@ -316,9 +315,9 @@
     }
   },
   "exceptions": {
-    "target_exactly_one": { "message": "Select exactly one DeLonghi coffee maker." },
+    "target_exactly_one": { "message": "Select exactly one De'Longhi coffee maker." },
     "target_missing": { "message": "The selected Home Assistant device no longer exists." },
-    "target_not_loaded": { "message": "The selected target does not resolve to exactly one loaded DeLonghi coffee maker." },
+    "target_not_loaded": { "message": "The selected target does not resolve to exactly one loaded De'Longhi coffee maker." },
     "credentials_invalid": { "message": "Coffee Link credentials are no longer valid." },
     "coffee_maker_not_connected": { "message": "The coffee maker is not connected to the cloud." },
     "state_unverified": { "message": "The coffee maker state could not be verified; refresh its data before starting a beverage." },

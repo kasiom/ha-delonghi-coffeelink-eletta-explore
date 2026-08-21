@@ -1,4 +1,5 @@
 """Deterministic tests for the Ayla cloud push transport."""
+
 from __future__ import annotations
 
 import asyncio
@@ -12,11 +13,7 @@ from unittest.mock import AsyncMock
 import aiohttp
 import pytest
 
-PKG_DIR = (
-    Path(__file__).resolve().parents[1]
-    / "custom_components"
-    / "ha_delonghi_coffeelink_eletta_explore"
-)
+PKG_DIR = Path(__file__).resolve().parents[1] / "custom_components" / "ha_delonghi_coffeelink_eletta_explore"
 PKG_NAME = "delonghi_dss_tests"
 
 
@@ -120,9 +117,7 @@ def test_parser_normalizes_snake_and_camel_case_events():
     assert camel.ack_status is None
     assert camel.ack_message == "message"
 
-    no_datapoint = json.dumps(
-        {"metadata": {"event_type": "connectivity", "dsn": "dsn"}, "datapoint": []}
-    )
+    no_datapoint = json.dumps({"metadata": {"event_type": "connectivity", "dsn": "dsn"}, "datapoint": []})
     event = dss.parse_dss_message(f"2|{no_datapoint}")
     assert event is not None
     assert event.property_name is None
@@ -226,14 +221,17 @@ def test_receive_routes_events_and_handles_heartbeat_and_close():
             _message(aiohttp.WSMsgType.CLOSE),
         ]
         websocket = FakeWebSocket(messages)
-        manager = dss.AylaDssManager(
-            object(), FakeEntry(), FakeClient(websocket), [coordinator, ignored]
-        )
+        manager = dss.AylaDssManager(object(), FakeEntry(), FakeClient(websocket), [coordinator, ignored])
         manager._websocket = websocket
         with pytest.raises(dss.CloudError, match="ended"):
             await manager._async_receive()
         assert websocket.sent == ["1|Z"]
         assert manager.events_received == 1
+        assert manager.event_type_counts == {
+            "datapoint": 1,
+            "datapointack": 0,
+            "connectivity": 0,
+        }
         assert manager.last_event_at is not None
         assert len(coordinator.events) == 1
         assert len(ignored.events) == 1
@@ -274,9 +272,7 @@ def test_supervisor_closes_stream_and_contains_unexpected_failure(monkeypatch):
     async def scenario():
         coordinator = FakeCoordinator()
         websocket = FakeWebSocket()
-        manager = dss.AylaDssManager(
-            object(), FakeEntry(), FakeClient(websocket), [coordinator]
-        )
+        manager = dss.AylaDssManager(object(), FakeEntry(), FakeClient(websocket), [coordinator])
 
         async def stop_receive():
             manager._stopping = True
@@ -287,9 +283,7 @@ def test_supervisor_closes_stream_and_contains_unexpected_failure(monkeypatch):
         assert manager.state == "streaming"
 
         manager = dss.AylaDssManager(object(), FakeEntry(), FakeClient(), [coordinator])
-        manager._client.async_create_dss_subscription = AsyncMock(
-            side_effect=ValueError("unexpected")
-        )
+        manager._client.async_create_dss_subscription = AsyncMock(side_effect=ValueError("unexpected"))
 
         async def stop_after_delay(_delay):
             manager._stopping = True
@@ -299,17 +293,13 @@ def test_supervisor_closes_stream_and_contains_unexpected_failure(monkeypatch):
         assert manager.last_error_type == "ValueError"
 
         manager = dss.AylaDssManager(object(), FakeEntry(), FakeClient(), [coordinator])
-        manager._client.async_create_dss_subscription = AsyncMock(
-            side_effect=asyncio.CancelledError
-        )
+        manager._client.async_create_dss_subscription = AsyncMock(side_effect=asyncio.CancelledError)
         with pytest.raises(asyncio.CancelledError):
             await manager._async_run()
 
         missing_key_client = FakeClient()
         missing_key_client.subscription = {}
-        manager = dss.AylaDssManager(
-            object(), FakeEntry(), missing_key_client, [coordinator]
-        )
+        manager = dss.AylaDssManager(object(), FakeEntry(), missing_key_client, [coordinator])
 
         async def stop_missing_key_retry(_delay):
             manager._stopping = True
@@ -319,9 +309,7 @@ def test_supervisor_closes_stream_and_contains_unexpected_failure(monkeypatch):
         assert manager.last_error_type == "CloudError"
 
         websocket = FakeWebSocket()
-        manager = dss.AylaDssManager(
-            object(), FakeEntry(), FakeClient(websocket), [coordinator]
-        )
+        manager = dss.AylaDssManager(object(), FakeEntry(), FakeClient(websocket), [coordinator])
         manager._async_receive = AsyncMock(return_value=None)
 
         async def stop_closed_stream_retry(_delay):
@@ -338,12 +326,8 @@ def test_supervisor_creates_fresh_subscription_after_stream_loss(monkeypatch):
     async def scenario():
         coordinator = FakeCoordinator()
         client = FakeClient(FakeWebSocket())
-        client.async_create_dss_subscription = AsyncMock(
-            side_effect=[{"stream_key": "first"}, {"stream_key": "second"}]
-        )
-        client.async_open_dss_websocket = AsyncMock(
-            side_effect=[FakeWebSocket(), FakeWebSocket()]
-        )
+        client.async_create_dss_subscription = AsyncMock(side_effect=[{"stream_key": "first"}, {"stream_key": "second"}])
+        client.async_open_dss_websocket = AsyncMock(side_effect=[FakeWebSocket(), FakeWebSocket()])
         manager = dss.AylaDssManager(object(), FakeEntry(), client, [coordinator])
         receive_count = 0
 

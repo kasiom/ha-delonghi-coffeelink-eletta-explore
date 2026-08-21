@@ -6,6 +6,7 @@ Frames contain one changed datapoint or one datapoint acknowledgement.  This
 module mirrors only that cloud mechanism; it has no LAN code and never persists
 or logs the stream key.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -42,7 +43,7 @@ _DSS_KEEP_ALIVE = "1|X"
 def _optional_int(value: Any) -> int | None:
     try:
         return int(value) if value is not None else None
-    except (TypeError, ValueError):
+    except TypeError, ValueError:
         return None
 
 
@@ -138,6 +139,11 @@ class AylaDssManager:
         self._stopping = False
         self.state = "polling"
         self.events_received = 0
+        self.event_type_counts = {
+            "datapoint": 0,
+            "datapointack": 0,
+            "connectivity": 0,
+        }
         self.reconnect_count = 0
         self.last_event_at: str | None = None
         self.last_error_type: str | None = None
@@ -243,6 +249,7 @@ class AylaDssManager:
                     continue
                 if coordinator.handle_dss_event(event):
                     self.events_received += 1
+                    self.event_type_counts[event.event_type] += 1
                     self.last_event_at = datetime.now(UTC).isoformat()
             elif message.type in {
                 aiohttp.WSMsgType.CLOSE,

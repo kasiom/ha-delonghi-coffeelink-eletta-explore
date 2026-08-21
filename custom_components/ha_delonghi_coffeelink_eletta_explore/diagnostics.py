@@ -14,9 +14,7 @@ if TYPE_CHECKING:
     from . import DelonghiConfigEntry
 
 
-async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, entry: DelonghiConfigEntry
-) -> dict[str, Any]:
+async def async_get_config_entry_diagnostics(hass: HomeAssistant, entry: DelonghiConfigEntry) -> dict[str, Any]:
     """Return diagnostics without credentials, identifiers, values or raw frames."""
     integration = await async_get_integration(hass, DOMAIN)
     devices: list[dict[str, Any]] = []
@@ -26,21 +24,18 @@ async def async_get_config_entry_diagnostics(
             {
                 "model": coordinator.device.model,
                 "oem_model": coordinator.device.oem_model,
-                "appliance_software_version": appliance_software_version(
-                    coordinator.data, coordinator.device.sw_version
-                ),
+                "appliance_software_version": appliance_software_version(coordinator.data, coordinator.device.sw_version),
                 "connectivity_firmware_version": coordinator.device.sw_version,
                 "profile": coordinator.profile.key,
                 "connection_status": coordinator.device.connection_status,
                 "connection_info": {
                     "supported": coordinator._connection_info_supported,
-                    "connectivity_type": coordinator.connection_info.get(
-                        "connectivity_type"
-                    ),
+                    "connectivity_type": coordinator.connection_info.get("connectivity_type"),
                     "wifi_signal_dbm": coordinator.connection_info.get("rssi"),
                 },
                 "detected_properties": {
                     "command": coordinator.command_property,
+                    "command_ack_enabled": coordinator.command_ack_enabled,
                     "response": coordinator.response_property,
                     "connected": coordinator.connected_property,
                 },
@@ -56,20 +51,10 @@ async def async_get_config_entry_diagnostics(
                         "status": monitor.get("status_name"),
                         "status_code": monitor.get("status"),
                         "step_code": monitor.get("step", monitor.get("action")),
-                        "progress_percentage": monitor.get(
-                            "progress_percentage", monitor.get("progress")
-                        ),
+                        "progress_percentage": monitor.get("progress_percentage", monitor.get("progress")),
                         "accessory_code": monitor.get("accessory"),
-                        "switches": (
-                            f"0x{monitor['switches']:04X}"
-                            if isinstance(monitor.get("switches"), int)
-                            else None
-                        ),
-                        "alarms": (
-                            f"0x{monitor['alarms']:08X}"
-                            if isinstance(monitor.get("alarms"), int)
-                            else None
-                        ),
+                        "switches": (f"0x{monitor['switches']:04X}" if isinstance(monitor.get("switches"), int) else None),
+                        "alarms": (f"0x{monitor['alarms']:08X}" if isinstance(monitor.get("alarms"), int) else None),
                         "error": monitor.get("error"),
                     },
                     "learned_recipe_ids": sorted(coordinator.learned_start_frames),
@@ -89,6 +74,7 @@ async def async_get_config_entry_diagnostics(
             {
                 "state": dss_manager.state,
                 "events_received": dss_manager.events_received,
+                "event_type_counts": dict(dss_manager.event_type_counts),
                 "reconnect_count": dss_manager.reconnect_count,
                 "last_event_at": dss_manager.last_event_at,
                 "last_error_type": dss_manager.last_error_type,
@@ -98,4 +84,3 @@ async def async_get_config_entry_diagnostics(
         ),
         "devices": devices,
     }
-

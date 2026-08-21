@@ -8,6 +8,7 @@ Eletta Explore) - so the PrimaDonna Soul gets no binary sensors and is untouched
 
 Bit layout derived from the DlghIoT client (TischenkoArseny, PR #9 / issue #7).
 """
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
@@ -44,7 +45,7 @@ def _prop_int(data: AylaProperties | None, prop_name: str) -> int | None:
         return None
     try:
         return int(str(val).strip())
-    except (TypeError, ValueError):
+    except TypeError, ValueError:
         return None
 
 
@@ -186,25 +187,17 @@ class DelonghiDecalcificationBinarySensor(_Base):
             return None
         descale_alarm = bool((monitor["alarms"] >> 2) & 1)
         decalc_percent = _prop_int(self.coordinator.data, _DECALC_PERCENT_PROPERTY)
-        return descale_alarm or (
-            decalc_percent is not None and decalc_percent >= 90
-        )
+        return descale_alarm or (decalc_percent is not None and decalc_percent >= 90)
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         monitor = self._monitor()
         if "alarms" not in monitor:
             return {}
-        decalc_percentage = _prop_int(
-            self.coordinator.data, _DECALC_PERCENT_PROPERTY
-        )
+        decalc_percentage = _prop_int(self.coordinator.data, _DECALC_PERCENT_PROPERTY)
         return {
             "descale_alarm": bool((monitor["alarms"] >> 2) & 1),
-            **(
-                {"decalc_percentage": decalc_percentage}
-                if decalc_percentage is not None
-                else {}
-            ),
+            **({"decalc_percentage": decalc_percentage} if decalc_percentage is not None else {}),
         }
 
 
@@ -229,4 +222,3 @@ class DelonghiFilterBinarySensor(_Base):
         return {
             "filter_alarm": bool((monitor["alarms"] >> 3) & 1),
         }
-

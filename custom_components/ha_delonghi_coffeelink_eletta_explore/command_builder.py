@@ -1,9 +1,11 @@
 """Binary command builder for De'Longhi Coffee Link – Eletta Explore (Ayla transport)."""
+
 from __future__ import annotations
 
 import base64
 import binascii
 import time
+from typing import Any
 
 from .const import (
     BEVERAGES,
@@ -61,25 +63,21 @@ def build_beverage_command(
     """
     if timestamp is None:
         timestamp = int(time.time())
-    header = bytes(
-        [CMD_PREFIX, CMD_LENGTH, CMD_FAMILY_BREW[0], CMD_FAMILY_BREW[1], beverage_id, action]
-    ) + params
+    header = bytes([CMD_PREFIX, CMD_LENGTH, CMD_FAMILY_BREW[0], CMD_FAMILY_BREW[1], beverage_id, action]) + params
     if len(header) != 12:
         raise ValueError(f"Header must be 12 bytes, got {len(header)}")
     crc = crc16_aug_ccitt(header)
     return header + crc.to_bytes(2, "big") + timestamp.to_bytes(4, "big")
 
 
-def serialize_learned_frames(
-    start: dict[int, str], stop: dict[int, str], wake: str | None = None
-) -> dict:
+def serialize_learned_frames(start: dict[int, str], stop: dict[int, str], wake: str | None = None) -> dict[str, Any]:
     """Serialize the learned Eletta frames for persistence (HA Store / JSON).
 
     Beverage ids become hex strings (JSON keys must be strings); values are the
     captured base64 frames, replayed as-is later with a fresh timestamp. The
     optional power-on (``wake``) frame is a single captured frame.
     """
-    data: dict = {
+    data: dict[str, Any] = {
         "start": {f"0x{bev:02x}": frame for bev, frame in start.items()},
         "stop": {f"0x{bev:02x}": frame for bev, frame in stop.items()},
     }
@@ -89,9 +87,10 @@ def serialize_learned_frames(
 
 
 def deserialize_learned_frames(
-    data: dict | None,
+    data: dict[str, Any] | None,
 ) -> tuple[dict[int, str], dict[int, str], str | None]:
     """Inverse of :func:`serialize_learned_frames`; tolerant of missing/odd data."""
+
     def _section(name: str) -> dict[int, str]:
         out: dict[int, str] = {}
         section = (data or {}).get(name) or {}
@@ -102,7 +101,7 @@ def deserialize_learned_frames(
                 continue
             try:
                 out[int(key, 16)] = frame
-            except (ValueError, TypeError):
+            except ValueError, TypeError:
                 continue
         return out
 
@@ -112,7 +111,7 @@ def deserialize_learned_frames(
     return _section("start"), _section("stop"), wake
 
 
-def recipe_dump_lines(props: dict) -> list[str]:
+def recipe_dump_lines(props: dict[str, Any]) -> list[str]:
     """Render the machine's stored recipe datapoints for a read-only diagnostic.
 
     Returns ``name = <hex>`` lines for every property whose name contains
@@ -131,7 +130,7 @@ def recipe_dump_lines(props: dict) -> list[str]:
         if isinstance(value, str) and value.strip():
             try:
                 rendered = base64.b64decode("".join(value.split()), validate=True).hex(" ")
-            except (ValueError, binascii.Error):
+            except ValueError, binascii.Error:
                 rendered = value
         else:
             rendered = repr(value)
@@ -169,9 +168,7 @@ def build_and_encode(beverage_id: int, action: int, params: bytes = DEFAULT_RECI
     return encode_command(build_beverage_command(beverage_id, action, params))
 
 
-def build_power_command(
-    params: bytes, timestamp: int | None = None, signature: bytes | None = None
-) -> bytes:
+def build_power_command(params: bytes, timestamp: int | None = None, signature: bytes | None = None) -> bytes:
     """
     Build a power-family command (0x84 0x0f): wake, standby, ...
 
@@ -204,9 +201,7 @@ def build_wake_encoded() -> str:
 
 def build_wake_with_session_tail(app_id: int, timestamp: int | None = None) -> bytes:
     """Wake/power-on with the cloud session id in the 4-byte tail (DlghIoT resume)."""
-    return build_power_command(
-        POWER_WAKE_PARAMS, timestamp, _session_id_to_tail_bytes(app_id)
-    )
+    return build_power_command(POWER_WAKE_PARAMS, timestamp, _session_id_to_tail_bytes(app_id))
 
 
 def build_wake_with_session_tail_encoded(app_id: int) -> str:
@@ -215,9 +210,7 @@ def build_wake_with_session_tail_encoded(app_id: int) -> str:
 
 def build_standby_with_session_tail(app_id: int, timestamp: int | None = None) -> bytes:
     """Standby with the cloud session id in the 4-byte tail (DlghIoT standby)."""
-    return build_power_command(
-        POWER_STANDBY_PARAMS, timestamp, _session_id_to_tail_bytes(app_id)
-    )
+    return build_power_command(POWER_STANDBY_PARAMS, timestamp, _session_id_to_tail_bytes(app_id))
 
 
 def build_standby_with_session_tail_encoded(app_id: int) -> str:
@@ -226,9 +219,7 @@ def build_standby_with_session_tail_encoded(app_id: int) -> str:
 
 def build_session_refresh_command(app_id: int, timestamp: int | None = None) -> bytes:
     """Deep-standby session nudge (DlghIoT refresh(), params 03 02)."""
-    return build_power_command(
-        POWER_SESSION_REFRESH_PARAMS, timestamp, _session_id_to_tail_bytes(app_id)
-    )
+    return build_power_command(POWER_SESSION_REFRESH_PARAMS, timestamp, _session_id_to_tail_bytes(app_id))
 
 
 def build_session_refresh_encoded(app_id: int) -> str:
@@ -239,9 +230,7 @@ def validate_power_frame_b64(value_b64: str, expected_params: bytes) -> bool:
     """True if a base64 frame is a valid power command with the expected params."""
     decoded = decode_command(value_b64)
     return (
-        decoded.get("type") == "power"
-        and decoded.get("params") == expected_params.hex(" ")
-        and decoded.get("crc_valid") is True
+        decoded.get("type") == "power" and decoded.get("params") == expected_params.hex(" ") and decoded.get("crc_valid") is True
     )
 
 
@@ -250,9 +239,7 @@ def validate_replayed_wake_frame(value_b64: str) -> bool:
     return validate_power_frame_b64(value_b64, POWER_WAKE_PARAMS)
 
 
-def build_standby_command(
-    timestamp: int | None = None, signature: bytes | None = None
-) -> bytes:
+def build_standby_command(timestamp: int | None = None, signature: bytes | None = None) -> bytes:
     """Build the STANDBY / power-off command (0d 07 84 0f 01 01 00 41 <ts>).
 
     Reported on Eletta Explore (issue #1) and validated live on the reference
@@ -279,7 +266,7 @@ def device_signature_from_frame(frame_b64: str | None) -> bytes | None:
         return None
     try:
         raw = base64.b64decode(frame_b64.strip(), validate=True)
-    except (binascii.Error, ValueError, AttributeError):
+    except binascii.Error, ValueError, AttributeError:
         return None
     if len(raw) < 2:
         return None
@@ -306,9 +293,7 @@ def validate_replayed_beverage_frame(
     """
     decoded = decode_command(value_b64)
     wire_action = decoded.get("action")
-    action_matches = (
-        wire_action == 0x02 if action == 0x02 else wire_action in {0x01, 0x02, 0x03}
-    )
+    action_matches = wire_action == 0x02 if action == 0x02 else wire_action in {0x01, 0x02, 0x03}
     if (
         "error" in decoded
         or decoded.get("type") != "beverage"
@@ -324,7 +309,7 @@ def validate_replayed_beverage_frame(
     return expected_signature is None or signature == expected_signature
 
 
-def is_wake_power_frame(decoded: dict) -> bool:
+def is_wake_power_frame(decoded: dict[str, Any]) -> bool:
     """True if a decoded frame is a real wake/power-on command (params 02 01).
 
     The app also emits 0x84 0x0f frames that are NOT a power-on (e.g.
@@ -332,10 +317,7 @@ def is_wake_power_frame(decoded: dict) -> bool:
     those must never be learned as the wake frame or they would overwrite
     the learned power-on frame.
     """
-    return (
-        decoded.get("type") == "power"
-        and decoded.get("params") == POWER_WAKE_PARAMS.hex(" ")
-    )
+    return decoded.get("type") == "power" and decoded.get("params") == POWER_WAKE_PARAMS.hex(" ")
 
 
 # ---------------------------------------------------------------------------
@@ -347,7 +329,7 @@ def is_wake_power_frame(decoded: dict) -> bool:
 # ---------------------------------------------------------------------------
 
 
-def decode_command(value_b64: str) -> dict:
+def decode_command(value_b64: str) -> dict[str, Any]:
     """Decode a base64 command/response payload into a human-readable dict.
 
     Recognises the two app->machine frame families this integration emits
@@ -359,10 +341,10 @@ def decode_command(value_b64: str) -> dict:
     # Ayla returns string datapoints with surrounding whitespace (commonly a
     # trailing newline); normalise it so the frame decodes and round-trips.
     value_b64 = "".join(value_b64.split())
-    out: dict = {"raw_b64": value_b64}
+    out: dict[str, Any] = {"raw_b64": value_b64}
     try:
         raw = base64.b64decode(value_b64, validate=True)
-    except (ValueError, binascii.Error):
+    except ValueError, binascii.Error:
         out["error"] = "not valid base64"
         return out
 
@@ -389,9 +371,7 @@ def decode_command(value_b64: str) -> dict:
             return out
         crc_bytes = raw[frame_len - 2 : frame_len]
         out["crc"] = crc_bytes.hex(" ")
-        out["crc_valid"] = (
-            crc16_aug_ccitt(raw[0 : frame_len - 2]) == int.from_bytes(crc_bytes, "big")
-        )
+        out["crc_valid"] = crc16_aug_ccitt(raw[0 : frame_len - 2]) == int.from_bytes(crc_bytes, "big")
         # Some Eletta recipes (for example Espresso) terminate the recipe block
         # with 0x01 0x0a, while other valid Eletta recipes observed on the same
         # machine (Cappuccino and Cold Brew) omit that trailer. Eletta app frames
@@ -399,9 +379,7 @@ def decode_command(value_b64: str) -> dict:
         # Soul frames do not. Treat either marker as authoritative instead of
         # rejecting valid signed recipes solely because the optional trailer is
         # absent.
-        has_eletta_trailer = (
-            raw[frame_len - 4 : frame_len - 2] == ELETTA_RECIPE_TRAILER
-        )
+        has_eletta_trailer = raw[frame_len - 4 : frame_len - 2] == ELETTA_RECIPE_TRAILER
         has_device_signature = len(raw) >= frame_len + 8
         eletta = has_eletta_trailer or has_device_signature
         out["style"] = "eletta" if eletta else "soul"
@@ -422,4 +400,3 @@ def decode_command(value_b64: str) -> dict:
     else:
         out["type"] = "unknown"
     return out
-

@@ -1,4 +1,5 @@
 """Tests for stable beverage-button identity and legacy migration helpers."""
+
 from __future__ import annotations
 
 import importlib.util
@@ -6,12 +7,7 @@ from pathlib import Path
 
 import pytest
 
-MODULE_PATH = (
-    Path(__file__).parents[1]
-    / "custom_components"
-    / "ha_delonghi_coffeelink_eletta_explore"
-    / "button_migration.py"
-)
+MODULE_PATH = Path(__file__).parents[1] / "custom_components" / "ha_delonghi_coffeelink_eletta_explore" / "button_migration.py"
 SPEC = importlib.util.spec_from_file_location("button_migration", MODULE_PATH)
 assert SPEC and SPEC.loader
 MODULE = importlib.util.module_from_spec(SPEC)

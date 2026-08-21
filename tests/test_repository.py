@@ -27,7 +27,7 @@ def test_release_metadata_quality_scale_and_workflows_are_consistent() -> None:
         "&category=integration"
     )
 
-    assert manifest["version"] == "1.3.0-beta.4"
+    assert manifest["version"] == "1.3.0-beta.6"
     assert hacs["homeassistant"] == "2026.8.2"
     assert all(hacs_link in document for document in (readme, readme_cs, installation))
     assert "Private acceptance testing" not in readme
@@ -39,9 +39,7 @@ def test_release_metadata_quality_scale_and_workflows_are_consistent() -> None:
     assert not (COMPONENT / "strings.json").exists()
     assert len([path for path in (ROOT / "custom_components").iterdir() if path.is_dir()]) == 1
 
-    quality = yaml.safe_load(
-        (COMPONENT / "quality_scale.yaml").read_text(encoding="utf-8")
-    )["rules"]
+    quality = yaml.safe_load((COMPONENT / "quality_scale.yaml").read_text(encoding="utf-8"))["rules"]
     assert {
         "runtime-data",
         "parallel-updates",
@@ -50,6 +48,9 @@ def test_release_metadata_quality_scale_and_workflows_are_consistent() -> None:
         "repair-issues",
         "icon-translations",
         "test-coverage",
+        "async-dependency",
+        "inject-websession",
+        "strict-typing",
     } <= quality.keys()
 
     pinned_action = re.compile(r"^\s*uses:\s+[^@\s]+@[0-9a-f]{40}(?:\s+#.*)?$")
@@ -62,10 +63,7 @@ def test_release_metadata_quality_scale_and_workflows_are_consistent() -> None:
     assert uses_lines
     assert all(pinned_action.fullmatch(line) for line in uses_lines)
 
-    workflows = [
-        workflow.read_text(encoding="utf-8")
-        for workflow in (ROOT / ".github" / "workflows").glob("*.yml")
-    ]
+    workflows = [workflow.read_text(encoding="utf-8") for workflow in (ROOT / ".github" / "workflows").glob("*.yml")]
     assert workflows
     assert all("  public:" in workflow for workflow in workflows)
 
@@ -78,9 +76,7 @@ def test_local_markdown_links_resolve() -> None:
     for document in ROOT.rglob("*.md"):
         if ".git" in document.parts:
             continue
-        for raw_target in markdown_link.findall(
-            document.read_text(encoding="utf-8")
-        ):
+        for raw_target in markdown_link.findall(document.read_text(encoding="utf-8")):
             target = raw_target.strip().strip("<>").split(maxsplit=1)[0]
             if target.startswith(("http://", "https://", "mailto:", "#")):
                 continue

@@ -2,7 +2,7 @@
 
 Audit date: 2026-08-21
 
-Audited release: 1.2.1 stable; installed 1.3.0-beta.4 addendum
+Audited release: 1.2.1 stable; 1.3.0-beta.6 prerelease
 
 ## Verdict
 
@@ -43,7 +43,35 @@ read-only statistics synchronization and loaded English/Czech resources passed.
 The machine stayed in standby, DSS received three real events, all maintenance
 sensors became available and diagnostics reported no current stream error.
 
-The beta isolated suite covers every executable line and branch in all 18 Python
+Release candidate 1.3.0-beta.5 retains the beta.4 protocol behavior and live
+evidence while tightening the public boundary: the vendor LAN address is neither
+retained nor exposed, device links cannot disclose it, and account
+reconfiguration can change only the password for the existing account. English
+entity names now follow sentence case, Czech/English resources remain in parity,
+and De'Longhi branding is consistent. It also confirms a pending standby
+maintenance snapshot during setup, avoiding five minutes of unavailable
+maintenance entities after restart while retaining transient-frame protection.
+The isolated suite and three actual Home Assistant runtime tests pass. Beta.5
+completed backed-up deployments, configuration validation, clean restarts,
+read-only acceptance and a supervised Wake, Cold Brew Start/Stop and Standby
+cycle on the target Eletta. Live diagnostics proved that its command property is
+not ACK-enabled, matching the absence of datapoint-ACK events; commands were
+correctly confirmed from resulting machine state. Beta.5 was not published and
+was superseded by beta.6.
+
+Prerelease 1.3.0-beta.6 retains the physically verified protocol and model
+semantics while simplifying the runtime and strengthening cloud reliability.
+It confirms non-ACK commands directly from ordered DSS state changes, keeps one
+authoritative reconciliation after a timeout, shares account-device discovery
+through a lock-protected cache, forwards bounded vendor rate-limit delays and
+removes duplicate lifecycle work and unused state. The candidate completed a
+backed-up deployment, configuration validation, clean restart, read-only cloud
+synchronization and a supervised Wake, Cold Brew Start/Stop and Standby cycle.
+The stream recovered to `streaming`, received 40 datapoint events through the
+physical cycle, the machine returned to standby and the Home Assistant system
+log contained no integration error.
+
+The beta isolated suite covers every executable line and branch in all 19 Python
 modules. A second suite loads the integration through actual Home Assistant
 2026.8.2 interfaces. These results establish strong software confidence, but
 they do not prove every vendor-cloud response, model or physical beverage path.
@@ -54,8 +82,8 @@ tested Eletta Explore model and documented acceptance evidence.
 
 - Published and installed release: 1.2.1; physical command-acceptance baseline:
   1.2.0.
-- Locally installed beta: 1.3.0-beta.4 on branch `feature/cloud-dss-hybrid`; not
-  pushed to GitHub or published.
+- Installed release candidate: 1.3.0-beta.6 on branch
+  `feature/cloud-dss-hybrid`; not pushed to GitHub or published.
 - Home Assistant: 2026.8.2.
 - Python: 3.14.6.
 - Home Assistant OS: 18.2.
@@ -69,7 +97,15 @@ tested Eletta Explore model and documented acceptance evidence.
   All deployed text files were verified with SHA-256 hashes and the previous
   component tree was backed up locally. Beta.4 subsequently passed the same
   configuration and backup safeguards, a clean restart, a read-only statistics
-  synchronization and privacy-safe diagnostic verification.
+  synchronization and privacy-safe diagnostic verification. Beta.5 then passed
+  backed-up deployments, configuration checks and clean restarts; all maintenance
+  conditions were available immediately, DSS was streaming and no relevant
+  integration error was present. A supervised beta.5 cycle then verified Wake,
+  Cold Brew Start/Stop, context-aware Stop, friendly command naming and Standby.
+  Beta.6 was subsequently deployed with the same backup, hash, configuration
+  and clean-restart safeguards. Its read-only synchronization restored DSS
+  streaming after restart, and its supervised command cycle completed without
+  an integration error before returning the machine to standby.
 - Post-restart command state: unknown, by design until Home Assistant issues a
   command.
 - Coffee Link session behavior: free after deployment and the backward-compatible
@@ -90,8 +126,10 @@ Assistant quality certification.
 Repository layout, manifest metadata, brand assets and release guidance were
 checked against the current
 [HACS integration publishing requirements](https://www.hacs.xyz/docs/publish/integration/).
-The repository is public. Its release validation completed successfully for
-HACS, hassfest and the full test suite. A request for inclusion in the default
+The repository is public. Release 1.2.1 completed HACS, hassfest and full-suite
+validation. Beta.6 has completed the local checks listed below; its public CI
+checks remain pending until the candidate branch is pushed. A request for
+inclusion in the default
 HACS catalog is open as
 [hacs/default#10136](https://github.com/hacs/default/pull/10136); custom-repository
 installation is already available and does not depend on that review.
@@ -103,20 +141,22 @@ shipped.
 
 | Check | Result |
 |---|---|
-| Unit and integration-isolation tests | 362 passed |
-| Actual Home Assistant runtime tests | 2 passed |
-| Python modules measured | 18 |
-| Statements | 2,562 / 2,562 |
-| Branches | 828 / 828 |
+| Unit and integration-isolation tests | 373 passed |
+| Actual Home Assistant runtime tests | 3 passed |
+| Python modules measured | 19 |
+| Statements | 2,665 / 2,665 |
+| Branches | 860 / 860 |
 | Line coverage | 100% |
 | Branch coverage | 100% |
 | Ruff | passed |
+| Ruff format | passed |
+| mypy strict | passed |
 | Python compilation | passed |
 | English/Czech leaf-key parity | 189 / 189 |
 | Translation placeholders | synchronized |
-| Public HACS repository validation | passed |
-| Home Assistant hassfest | passed |
-| Manifest version | 1.3.0-beta.4 (installed local beta) |
+| Public HACS repository validation | 1.2.1 passed; beta.6 pending public CI |
+| Home Assistant hassfest | 1.2.1 passed; beta.6 pending public CI |
+| Manifest version | 1.3.0-beta.6 (installed prerelease candidate) |
 
 Tests use deterministic local doubles and make no calls to a real account or
 vendor endpoint. Covered behavior includes authentication refresh and failure
@@ -135,15 +175,15 @@ fails validation.
 
 | Area | Evidence | Status |
 |---|---|---|
-| Installation and restart | 1.2.0 passed clean restart; 1.2.1 installed through HACS; 1.3.0-beta.4 backed up, installed and loaded locally | verified |
-| Hybrid cloud updates | Beta.4 DSS was streaming and received three real events during read-only synchronization; fallback covered deterministically | read-only live + automated |
-| Exact DSS command ACK | datapoint matching, rejection and fallback covered deterministically | physical command pending |
-| Wake | 1.2.0 changed standby → waking up → ready | verified on Eletta |
-| Standby | 1.2.0 changed ready → standby | verified on Eletta |
+| Installation and restart | 1.2.0 passed clean restart; 1.2.1 installed through HACS; beta.4, beta.5 and beta.6 backed up, installed and loaded locally | verified through beta.6 |
+| Hybrid cloud updates | Beta.4 through beta.6 DSS streamed; beta.6 received 40 live datapoint events through the physical cycle; fallback covered deterministically | live + automated |
+| Command confirmation capability | Eletta cloud declared `ack_enabled: false`; live stream produced datapoints and zero datapoint ACKs; ACK-enabled matching/rejection remains covered deterministically | live on Eletta + automated |
+| Wake | beta.6 changed standby → waking up → ready; cloud-state confirmation completed in 4.5 s and ready was reached in 43.2 s | verified on Eletta |
+| Standby | beta.6 changed ready → going to sleep → standby; cloud-state confirmation completed in 5.4 s and standby was reached in 11.6 s | verified on Eletta |
 | Recipe learning | Espresso, Cappuccino and Cold Brew frames observed | verified |
-| Cold Brew start | 1.2.0 entered preparation and enabled context-aware Stop | verified on Eletta |
-| Cold Brew Stop | 1.2.0 returned to ready and disabled Stop | verified on Eletta |
-| Last Command Status | unknown after restart; app traffic kept separate | verified |
+| Cold Brew start | beta.6 entered preparation, enabled context-aware Stop, reported the friendly Cold Brew name and confirmed in 6.0 s | verified on Eletta |
+| Cold Brew Stop | beta.6 confirmed Stop in 1.5 s, returned to ready and disabled Stop | verified on Eletta |
+| Last Command Status | pending → sent → acknowledged; unknown after restart by design; app traffic kept separate | verified |
 | Coffee Link Session | free after deployment; history retained | verified |
 | Other beverage recipes | automated protocol paths only | physical matrix incomplete |
 | Foreign-session conflict | deterministic automated coverage | controlled live conflict pending |
@@ -151,18 +191,24 @@ fails validation.
 | PrimaDonna Soul | profile and automated compatibility paths | experimental |
 
 The beta.4 Eletta formulas, translations and runtime entity availability passed
-live read-only acceptance. PrimaDonna Soul formulas, unknown-model behavior and
+live read-only acceptance. Beta.5 preserved those formulas and added the privacy,
+reconfiguration, startup-availability, capability-aware confirmation and naming
+changes described above; deployment, read-only acceptance and the supervised
+physical cycle passed. Beta.6 retained those semantics and repeated the backed-up
+deployment, read-only synchronization and physical command cycle. PrimaDonna
+Soul formulas, unknown-model behavior and
 the default policy for newly registered entities remain covered deterministically;
 they require a matching physical model or a fresh registry to verify live. No
 appliance command was sent during beta.4 acceptance.
 
 Wake, Cold Brew Start, Cold Brew Stop and Standby were physically repeated after
-deploying 1.2.0. Last Command Status recorded `pending`, `sent` and
-`acknowledged` for every operation. Its earlier return to `unknown` followed a
-config-entry reload and is the documented runtime-only behavior, while Recorder
-retained the transitions. Release 1.2.1 does not alter the associated runtime
-paths, but the physical cycle was not repeated merely for its documentation and
-packaging changes. The table does not imply that every beverage was physically
+deploying beta.6. Last Command Status recorded `pending`, `sent` and
+`acknowledged` for every operation, and both beverage operations used the
+friendly Cold Brew name. Diagnostics showed `ack_enabled: false`, 0 datapoint-ACK
+events and healthy datapoint streaming, so state-based confirmation is the
+correct Coffee Link behavior for this Eletta property. The return to `unknown`
+after a config-entry reload is documented runtime-only behavior, while Recorder
+retains transitions. The table does not imply that every beverage was physically
 prepared.
 
 ## Security and privacy review
@@ -233,9 +279,11 @@ Completed:
 
 Open follow-up:
 
-1. Monitor the HACS catalog review and respond only when a maintainer requests a
+1. Push the reviewed beta.6 candidate, require Validate, HACS and hassfest to
+   pass, then create a GitHub prerelease from the exact tested commit.
+2. Monitor the HACS catalog review and respond only when a maintainer requests a
    change or when material new information is required.
-2. After catalog acceptance, replace the temporary custom-repository-first
+3. After catalog acceptance, replace the temporary custom-repository-first
    installation wording with the normal catalog search flow.
-3. Never rewrite a published release tag. If a release needs correction, publish
+4. Never rewrite a published release tag. If a release needs correction, publish
    a new patch version and retain the previous release history.

@@ -1,4 +1,4 @@
-"""Pure counter-value parsing for DeLonghi datapoints.
+"""Pure counter-value parsing for De'Longhi datapoints.
 
 Kept free of Home Assistant imports so the parsing logic is unit-testable on its
 own (see tests/test_counters.py). Two value shapes exist across models:
@@ -9,6 +9,7 @@ own (see tests/test_counters.py). Two value shapes exist across models:
   the sensor ``unknown`` before #7. For those, the sensor state is the sum of
   the integer sub-values and the raw object is exposed as attributes.
 """
+
 from __future__ import annotations
 
 import json
@@ -45,7 +46,7 @@ def parse_counter_value(val: Any) -> int | None:
         return total
     try:
         return int(val_str)
-    except (TypeError, ValueError):
+    except TypeError, ValueError:
         return None
 
 
@@ -107,7 +108,7 @@ def parse_water_hardness_level(val: Any) -> int | None:
     return cloud_level + 1
 
 
-def counter_breakdown(val: Any) -> dict | None:
+def counter_breakdown(val: Any) -> dict[str, Any] | None:
     """Return the per-recipe JSON breakdown of a counter value, else ``None``.
 
     Only JSON-object values (Eletta aggregated counters) have a breakdown; plain
@@ -147,15 +148,13 @@ def counter_breakdown_sum(val: Any, keys: Collection[str]) -> int | None:
             continue
         try:
             total += int(sub_value)
-        except (TypeError, ValueError):
+        except TypeError, ValueError:
             continue
         found = True
     return total if found else None
 
 
-def _required_breakdown_sum(
-    val: Any, required_key: str, keys: Collection[str]
-) -> int | None:
+def _required_breakdown_sum(val: Any, required_key: str, keys: Collection[str]) -> int | None:
     """Sum JSON fields only when Coffee Link's required discriminator exists."""
     data = counter_breakdown(val)
     if data is None or required_key not in data:
@@ -165,7 +164,7 @@ def _required_breakdown_sum(
         return None
     try:
         int(required_value)
-    except (TypeError, ValueError):
+    except TypeError, ValueError:
         return None
     return counter_breakdown_sum(val, keys)
 
@@ -183,20 +182,14 @@ def coffee_link_black_coffee_total(black: Any, iced_counters: Any) -> int | None
     return hot_black + (iced_black or 0)
 
 
-def coffee_link_hot_milk_total(
-    other_counters: Any, *, include_milk_only: bool = True
-) -> int | None:
+def coffee_link_hot_milk_total(other_counters: Any, *, include_milk_only: bool = True) -> int | None:
     """Return Coffee Link's Striker hot-milk beverage count.
 
     Cold-Brew-capable Striker machines add the milk-only field. Other Striker
     variants use only ``tot_bev_bw``; this mirrors Coffee Link's capability
     branch instead of assuming that every Striker has the same recipe set.
     """
-    keys = (
-        ("tot_bev_bw", "tot_bev_w")
-        if include_milk_only
-        else ("tot_bev_bw",)
-    )
+    keys = ("tot_bev_bw", "tot_bev_w") if include_milk_only else ("tot_bev_bw",)
     return _required_breakdown_sum(
         other_counters,
         "tot_bev_bw",
@@ -227,9 +220,7 @@ def coffee_link_legacy_black_coffee_total(black: Any) -> int | None:
     return parse_counter_value(black)
 
 
-def coffee_link_legacy_hot_milk_total(
-    coffee_and_milk: Any, milk_only: Any
-) -> int | None:
+def coffee_link_legacy_hot_milk_total(coffee_and_milk: Any, milk_only: Any) -> int | None:
     """Return the legacy Coffee Link hot-milk aggregate.
 
     Coffee Link 4.9.6 displays this statistic only when
@@ -241,4 +232,3 @@ def coffee_link_legacy_hot_milk_total(
         return None
     milk = parse_counter_value(milk_only)
     return combined + (milk or 0)
-

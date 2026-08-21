@@ -33,6 +33,7 @@ Use Python 3.14 and run the same checks as CI:
 python -m pip install --requirement requirements_test.txt
 python -m compileall -q custom_components tests tests_ha
 python -m ruff check custom_components tests tests_ha
+python -m ruff format --check custom_components tests tests_ha
 python -m pytest -q \
   --cov=custom_components/ha_delonghi_coffeelink_eletta_explore \
   --cov-report=term-missing \
@@ -46,6 +47,7 @@ suite. On supported Unix-like development systems, run:
 
 ```shell
 python -m pip install --requirement requirements_ha_test.txt
+python -m mypy custom_components/ha_delonghi_coffeelink_eletta_explore
 python -m pytest -q -c pytest_ha.ini
 ```
 

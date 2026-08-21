@@ -23,12 +23,12 @@ platform. It combines near-real-time cloud push with an automatic polling fallba
 | Item | Status |
 |---|---|
 | Current release | 1.2.1; installed through HACS and verified to load on the target Home Assistant |
-| Local beta | 1.3.0-beta.4; installed locally on the target Home Assistant; read-only runtime and localization acceptance passed; not published |
-| Physical command acceptance | 1.2.0; supervised Wake, Cold Brew Start/Stop and Standby passed; the beta.4 command cycle is pending |
+| Prerelease | 1.3.0-beta.6; automated, actual-HA runtime, backed-up deployment and read-only validation passed |
+| Physical command acceptance | 1.3.0-beta.6; supervised Wake, Cold Brew Start/Stop and Standby passed on the verified Eletta |
 | Verified machine | Eletta Explore ECAM450.65.G (`DL-striker-cb`, EU region) |
 | Home Assistant | 2026.8.2 or newer |
 | Languages | English and Czech |
-| Automated tests | 362 isolated tests at 100% line/branch coverage + real HA runtime tests |
+| Automated tests | 373 isolated tests at 100% line/branch coverage + 3 actual Home Assistant runtime tests |
 | Distribution | HACS custom repository or manual installation from a GitHub release; default-catalog review is pending |
 
 The PrimaDonna Soul profile remains available for compatibility testing, but it
@@ -42,8 +42,10 @@ experimental. See [Compatibility and known limitations](docs/COMPATIBILITY.md).
 - Automatic reload when a coffee maker is added to or removed from the Coffee
   Link account, including cleanup of stale entity and device registry entries.
 - Machine state, cloud connectivity and maintenance-condition entities.
-- Near-real-time Ayla DSS state and device acknowledgements, protected by event
-  ordering and an automatic 30-second polling fallback.
+- Near-real-time Ayla DSS state updates and, on cloud properties that declare
+  ACK support, exact datapoint acknowledgements; protected by event ordering and
+  an automatic 30-second polling fallback. Eletta's non-ACK command channel is
+  confirmed from the resulting machine state, matching Coffee Link behavior.
 - Beverage, water, filter, descaling and grounds-container statistics with
   appropriate Home Assistant units and state classes.
 - Model-aware Coffee Link summary formulas: Eletta/Striker and the legacy

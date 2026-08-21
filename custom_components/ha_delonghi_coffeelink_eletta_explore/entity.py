@@ -21,13 +21,8 @@ class DelonghiCoordinatorEntity(CoordinatorEntity[DelonghiCoordinator]):
         device = self.coordinator.device
         return DeviceInfo(
             identifiers={(DOMAIN, device.dsn)},
-            name=device.name or f"DeLonghi {device.dsn}",
+            name=device.name or f"{MANUFACTURER} coffee maker",
             manufacturer=MANUFACTURER,
             model=device.oem_model or device.model,
-            sw_version=device_firmware_version(
-                self.coordinator.data, device.sw_version
-            ),
-            configuration_url=(
-                f"http://{device.lan_ip}" if device.lan_ip else None
-            ),
+            sw_version=device_firmware_version(self.coordinator.data, device.sw_version),
         )

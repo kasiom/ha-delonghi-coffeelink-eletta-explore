@@ -1,4 +1,5 @@
 """Coordinator coverage for hybrid DSS updates and diagnostics."""
+
 from __future__ import annotations
 
 import asyncio
@@ -74,9 +75,7 @@ def test_poll_merge_and_connection_info_are_privacy_safe() -> None:
         assert client.async_get_connection_info.await_count == 1
 
         coordinator._last_connection_info_refresh = 0
-        client.async_get_connection_info = AsyncMock(
-            return_value={"connectivity_type": 3, "rssi": "invalid"}
-        )
+        client.async_get_connection_info = AsyncMock(return_value={"connectivity_type": 3, "rssi": "invalid"})
         await coordinator._async_refresh_connection_info(8000)
         assert coordinator.connection_info == {
             "connectivity_type": None,
@@ -84,18 +83,14 @@ def test_poll_merge_and_connection_info_are_privacy_safe() -> None:
         }
 
         coordinator._last_connection_info_refresh = 0
-        client.async_get_connection_info = AsyncMock(
-            side_effect=ayla_client.CloudError("missing", http_status=404)
-        )
+        client.async_get_connection_info = AsyncMock(side_effect=ayla_client.CloudError("missing", http_status=404))
         await coordinator._async_refresh_connection_info(12000)
         assert coordinator._connection_info_supported is False
         await coordinator._async_refresh_connection_info(16000)
 
         coordinator._connection_info_supported = None
         coordinator._last_connection_info_refresh = 0
-        client.async_get_connection_info = AsyncMock(
-            side_effect=ayla_client.CloudError("temporary", http_status=503)
-        )
+        client.async_get_connection_info = AsyncMock(side_effect=ayla_client.CloudError("temporary", http_status=503))
         await coordinator._async_refresh_connection_info(20000)
         assert coordinator._connection_info_supported is None
 
@@ -128,10 +123,7 @@ def test_dss_state_switches_polling_interval_and_refreshes_on_loss() -> None:
         coordinator._dss_sequences[("datapoint", "counter")] = 5
         coordinator.async_request_refresh = AsyncMock()
         coordinator.set_dss_state("streaming")
-        assert (
-            coordinator.update_interval.total_seconds()
-            == const.DSS_FALLBACK_SCAN_INTERVAL
-        )
+        assert coordinator.update_interval.total_seconds() == const.DSS_FALLBACK_SCAN_INTERVAL
         assert coordinator._dss_sequences == {}
         coordinator.set_dss_state("polling", request_refresh=True)
         task = coordinator._dss_fallback_refresh_task
@@ -187,29 +179,27 @@ def test_dss_sequence_ack_cache_and_event_application(
     )
     assert coordinator._recent_dss_acks["dp-1"] == 200
 
-    assert coordinator.handle_dss_event(
-        _dss_event(
-            sequence="2",
-            event_type="datapointack",
-            value=None,
-            updated_at=None,
-            acked_at="2026-08-20T12:00:01Z",
-            ack_status=202,
-            ack_message="accepted",
+    assert (
+        coordinator.handle_dss_event(
+            _dss_event(
+                sequence="2",
+                event_type="datapointack",
+                value=None,
+                updated_at=None,
+                acked_at="2026-08-20T12:00:01Z",
+                ack_status=202,
+                ack_message="accepted",
+            )
         )
-    ) is True
+        is True
+    )
     assert coordinator.data["counter"]["acked_at"] == "2026-08-20T12:00:01Z"
     assert coordinator.data["counter"]["ack_status"] == 202
     assert coordinator.data["counter"]["ack_message"] == "accepted"
 
     coordinator.data["counter"]["data_updated_at"] = "2026-08-20T12:00:05Z"
     coordinator._dss_sequences.clear()
-    assert (
-        coordinator.handle_dss_event(
-            _dss_event(updated_at="2026-08-20T12:00:04Z")
-        )
-        is False
-    )
+    assert coordinator.handle_dss_event(_dss_event(updated_at="2026-08-20T12:00:04Z")) is False
 
     monitor = Mock()
     sniff = Mock()
@@ -220,20 +210,16 @@ def test_dss_sequence_ack_cache_and_event_application(
     coordinator.command_property = "command"
     coordinator.response_property = "response"
     coordinator._dss_sequences.clear()
-    coordinator.handle_dss_event(
-        _dss_event(
-            sequence="3", property_name="d302_monitor_machine", value="frame"
-        )
-    )
-    coordinator.handle_dss_event(
-        _dss_event(sequence="4", property_name="command", value="frame")
-    )
-    coordinator.handle_dss_event(
-        _dss_event(sequence="5", property_name=const.APP_ID_PROPERTY, value=0)
-    )
+    coordinator.handle_dss_event(_dss_event(sequence="3", property_name="d302_monitor_machine", value="frame"))
+    coordinator.handle_dss_event(_dss_event(sequence="4", property_name="command", value="frame"))
+    coordinator.handle_dss_event(_dss_event(sequence="5", property_name=const.APP_ID_PROPERTY, value=0))
+    notify = Mock()
+    monkeypatch.setattr(coordinator, "_notify_command_state_waiters", notify)
+    coordinator.handle_dss_event(_dss_event(sequence="6", property_name="response", value="ack"))
     monitor.assert_called_once()
-    sniff.assert_called_once()
+    assert sniff.call_count == 2
     session.assert_called_once()
+    notify.assert_called_once()
 
     async def waiter_scenario() -> None:
         loop = asyncio.get_running_loop()
@@ -251,6 +237,9 @@ def test_dss_sequence_ack_cache_and_event_application(
 
 
 def test_exact_dss_ack_wait_paths(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Match the default acknowledgement window in Coffee Link's bundled Ayla SDK.
+    assert const.DSS_ACK_GRACE_PERIOD == 10
+
     async def scenario() -> None:
         coordinator, _client = _coordinator()
         assert await coordinator._async_wait_for_dss_ack("one") == (False, None)
@@ -283,9 +272,8 @@ def test_exact_dss_ack_wait_paths(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_send_property_command_prefers_exact_ack_and_handles_rejection() -> None:
     async def scenario() -> None:
         coordinator, client = _coordinator()
-        client.async_set_property_value = AsyncMock(
-            return_value={"datapoint": {"id": "exact"}}
-        )
+        client.async_set_property_value = AsyncMock(return_value={"datapoint": {"id": "exact"}})
+        coordinator.data = {coordinator.command_property: {"ack_enabled": True}}
         coordinator._begin_command({"command_type": "test"})
         coordinator._async_wait_for_dss_ack = AsyncMock(return_value=(True, 200))
         await coordinator._send_property_command("frame", "test")
@@ -303,9 +291,7 @@ def test_send_property_command_prefers_exact_ack_and_handles_rejection() -> None
         coordinator._begin_command({"command_type": "test"})
         coordinator._async_wait_for_dss_ack = AsyncMock(return_value=(True, 0))
         coordinator._wait_for_command_confirmation = AsyncMock(return_value=True)
-        await coordinator._send_property_command(
-            "frame", "test", confirmation_timeout=1
-        )
+        await coordinator._send_property_command("frame", "test", confirmation_timeout=1)
         assert coordinator.last_command["confirmation_source"] == "cloud_state"
 
         coordinator._begin_command({"command_type": "test"})
@@ -326,6 +312,32 @@ def test_send_property_command_prefers_exact_ack_and_handles_rejection() -> None
     run(scenario())
 
 
+def test_command_ack_capability_and_disabled_fallback() -> None:
+    async def scenario() -> None:
+        coordinator, client = _coordinator()
+        coordinator.command_property = None
+        assert coordinator.command_ack_enabled is None
+        coordinator.command_property = "data_request"
+        coordinator.data = None
+        assert coordinator.command_ack_enabled is None
+        coordinator.data = {coordinator.command_property: "unexpected"}
+        assert coordinator.command_ack_enabled is None
+        coordinator.data = {coordinator.command_property: {"ackEnabled": "unknown"}}
+        assert coordinator.command_ack_enabled is None
+        coordinator.data = {coordinator.command_property: {"ackEnabled": False}}
+        assert coordinator.command_ack_enabled is False
+
+        client.async_set_property_value = AsyncMock(return_value={"datapoint": {"id": "not-ack-enabled"}})
+        coordinator._begin_command({"command_type": "test"})
+        coordinator._async_wait_for_dss_ack = AsyncMock()
+        coordinator._wait_for_command_confirmation = AsyncMock(return_value=True)
+        await coordinator._send_property_command("frame", "test")
+        coordinator._async_wait_for_dss_ack.assert_not_awaited()
+        assert coordinator.last_command["confirmation_source"] == "cloud_state"
+
+    run(scenario())
+
+
 def test_confirmation_checks_push_state_before_poll() -> None:
     async def scenario() -> None:
         coordinator, _client = _coordinator()
@@ -337,10 +349,7 @@ def test_confirmation_checks_push_state_before_poll() -> None:
 
         coordinator.response_property = None
         coordinator.monitor = {"status": 7}
-        assert (
-            await coordinator._wait_for_command_confirmation((None, {"status": 0}))
-            is True
-        )
+        assert await coordinator._wait_for_command_confirmation((None, {"status": 0})) is True
 
     run(scenario())
 
