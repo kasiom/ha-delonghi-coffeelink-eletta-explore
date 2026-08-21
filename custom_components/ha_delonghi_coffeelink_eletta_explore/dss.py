@@ -1,9 +1,10 @@
 """Ayla Data Stream Service (DSS) with a polling safety fallback.
 
-Coffee Link 4.9.6 creates one account-wide subscription and connects to the
-returned stream key over WebSocket.  Frames contain one changed datapoint or
-one datapoint acknowledgement.  This module mirrors only that cloud mechanism;
-it has no LAN code and never persists or logs the stream key.
+Coffee Link 4.9.6 creates a fresh account-wide subscription for each stream
+connection and discards the returned stream key after the WebSocket opens.
+Frames contain one changed datapoint or one datapoint acknowledgement.  This
+module mirrors only that cloud mechanism; it has no LAN code and never persists
+or logs the stream key.
 """
 from __future__ import annotations
 
@@ -153,7 +154,7 @@ class AylaDssManager:
         )
 
     async def async_stop(self) -> None:
-        """Stop the stream without deleting the reusable server subscription."""
+        """Stop the stream and discard its short-lived in-memory credential."""
         self._stopping = True
         if self._websocket is not None and not self._websocket.closed:
             await self._websocket.close()
@@ -177,7 +178,7 @@ class AylaDssManager:
         while not self._stopping:
             try:
                 self._set_state("connecting")
-                subscription = await self._client.async_get_or_create_dss_subscription()
+                subscription = await self._client.async_create_dss_subscription()
                 stream_key = self._client.dss_subscription_stream_key(subscription)
                 if not stream_key:
                     raise CloudError("DSS subscription did not contain a stream key")

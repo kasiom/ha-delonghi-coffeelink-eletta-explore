@@ -51,6 +51,9 @@
       "total_milk_drinks": {
         "name": "Total Milk Drinks"
       },
+      "total_cold_milk_drinks": {
+        "name": "Total Cold Milk Drinks"
+      },
       "total_water": {
         "name": "Total Water"
       },

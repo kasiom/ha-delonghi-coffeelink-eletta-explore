@@ -455,26 +455,17 @@ class DelonghiAylaClient:
         value = subscription.get("stream_key", subscription.get("streamKey"))
         return value if isinstance(value, str) and value else None
 
-    async def async_get_or_create_dss_subscription(self) -> dict[str, Any]:
-        """Reuse or create the integration-owned account DSS subscription.
+    async def async_create_dss_subscription(self) -> dict[str, Any]:
+        """Create one fresh, account-wide DSS stream subscription.
 
-        Coffee Link subscribes to all account devices by sending a null DSN.
-        We use a distinct deterministic name and never inspect, modify or
-        delete the official application's ``ANDROID_DSS`` subscription.
+        Coffee Link creates a new subscription whenever it needs a new stream
+        and discards the saved stream key as soon as the WebSocket opens.  A
+        key therefore remains an in-memory, single-connection credential; it
+        is never recovered from the subscription list or persisted by this
+        integration.  The integration uses its own name and never inspects,
+        modifies or deletes Coffee Link's ``ANDROID_DSS`` subscription.
         """
         url = f"{AYLA_EU_MDSS_URL}/api/v1/subscriptions"
-        data = await self._request_json(
-            "GET", url, ok_status=frozenset({200}), op="list DSS subscriptions"
-        )
-        if not isinstance(data, list):
-            raise CloudError("list DSS subscriptions: expected a JSON list")
-        for item in data:
-            subscription = self._unwrap_dss_subscription(item)
-            if not subscription or subscription.get("name") != DSS_SUBSCRIPTION_NAME:
-                continue
-            if self.dss_subscription_stream_key(subscription):
-                return subscription
-
         body = {
             "name": DSS_SUBSCRIPTION_NAME,
             "description": DSS_SUBSCRIPTION_DESCRIPTION,

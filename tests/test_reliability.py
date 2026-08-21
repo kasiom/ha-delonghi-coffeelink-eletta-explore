@@ -612,10 +612,63 @@ def test_sensor_setup_entry_covers_supported_and_absent_properties(monkeypatch):
     assert sensor_module._resolve_property(None, []) is None
 
 
+def test_sensor_setup_entry_builds_coffee_link_official_aggregates(monkeypatch):
+    coordinator, _client = _coordinator("DL-striker-cb")
+    coordinator.data = {
+        "d701_tot_bev_b": {"value": 616},
+        "d702_tot_bev_other": {
+            "value": '{"tot_bev_bw":300,"tot_bev_w":8}'
+        },
+        "d733_tot_bev_counters": {
+            "value": (
+                '{"tot_bev_b_iced":23,"tot_bev_bw_iced":7,'
+                '"tot_bev_w_iced":3}'
+            )
+        },
+        "d731_tot_mug_hot": {"value": 16},
+        "d732_tot_mug_cold": {"value": 0},
+        "d736_mug_bev": {"value": 16},
+    }
+    monkeypatch.setattr(
+        sensor_module,
+        "COUNTER_SENSORS",
+        [
+            (["d701_tot_bev_b"], "total_beverages", "Black", "mdi:counter"),
+            (["d702_tot_bev_other"], "total_milk_drinks", "Milk", "mdi:cup"),
+            (["d736_mug_bev"], "total_mug_bev", "Mug", "mdi:coffee-to-go"),
+        ],
+    )
+    monkeypatch.setattr(sensor_module, "BREAKDOWN_COUNTER_SENSORS", [])
+    entry = types.SimpleNamespace(
+        runtime_data=types.SimpleNamespace(coordinators=[coordinator])
+    )
+    added = []
+
+    asyncio.run(sensor_module.async_setup_entry(object(), entry, added.extend))
+
+    aggregates = [
+        entity
+        for entity in added
+        if isinstance(entity, sensor_module.DelonghiCoffeeLinkAggregateSensor)
+    ]
+    assert {entity._key: entity.native_value for entity in aggregates} == {
+        "total_beverages": 639,
+        "total_milk_drinks": 308,
+        "total_cold_milk_drinks": 10,
+        "total_mug_bev": 16,
+    }
+    assert not any(
+        isinstance(entity, sensor_module.DelonghiCounterSensor) for entity in added
+    )
+    assert next(
+        entity for entity in aggregates if entity._key == "total_beverages"
+    )._attr_translation_key == "total_black_coffee_beverages"
+
+
 @pytest.mark.parametrize(
     ("key", "raw", "expected"),
     [
-        ("water_total_quantity", "1234", 1.234),
+        ("water_total_quantity", "1234", 0.617),
         ("water_filter_quantity", "2500", 2.5),
         ("water_hardness", "2", 3),
         ("descale_limit_usage", "21", 79),
@@ -631,6 +684,36 @@ def test_counter_sensor_uses_parser_selected_by_entity_key(key, raw, expected):
         coordinator, "property", key, "mdi:counter"
     )
     assert sensor.native_value == expected
+
+
+@pytest.mark.parametrize(
+    ("key", "expected"),
+    [
+        ("total_beverages", 639),
+        ("total_milk_drinks", 308),
+        ("total_cold_milk_drinks", 10),
+        ("total_mug_bev", 16),
+        ("unsupported", None),
+    ],
+)
+def test_coffee_link_aggregate_sensor_matches_official_statistics(key, expected):
+    coordinator, _client = _coordinator("DL-striker-cb")
+    coordinator.data = {
+        "d701_tot_bev_b": {"value": 616},
+        "d702_tot_bev_other": {
+            "value": '{"tot_bev_bw":300,"tot_bev_w":8}'
+        },
+        "d733_tot_bev_counters": {
+            "value": (
+                '{"tot_bev_b_iced":23,"tot_bev_bw_iced":7,'
+                '"tot_bev_w_iced":3}'
+            )
+        },
+        "d731_tot_mug_hot": {"value": 16},
+        "d732_tot_mug_cold": {"value": 0},
+    }
+    aggregate = sensor_module.DelonghiCoffeeLinkAggregateSensor(coordinator, key)
+    assert aggregate.native_value == expected
 
 
 def test_counter_sensor_metadata_missing_values_and_single_warning(caplog):

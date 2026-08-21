@@ -170,7 +170,7 @@ class FakeClient:
         self.websocket = websocket
         self.subscription = subscription or {"stream_key": "secret"}
 
-    async def async_get_or_create_dss_subscription(self):
+    async def async_create_dss_subscription(self):
         return self.subscription
 
     @staticmethod
@@ -287,7 +287,7 @@ def test_supervisor_closes_stream_and_contains_unexpected_failure(monkeypatch):
         assert manager.state == "streaming"
 
         manager = dss.AylaDssManager(object(), FakeEntry(), FakeClient(), [coordinator])
-        manager._client.async_get_or_create_dss_subscription = AsyncMock(
+        manager._client.async_create_dss_subscription = AsyncMock(
             side_effect=ValueError("unexpected")
         )
 
@@ -299,7 +299,7 @@ def test_supervisor_closes_stream_and_contains_unexpected_failure(monkeypatch):
         assert manager.last_error_type == "ValueError"
 
         manager = dss.AylaDssManager(object(), FakeEntry(), FakeClient(), [coordinator])
-        manager._client.async_get_or_create_dss_subscription = AsyncMock(
+        manager._client.async_create_dss_subscription = AsyncMock(
             side_effect=asyncio.CancelledError
         )
         with pytest.raises(asyncio.CancelledError):
@@ -330,5 +330,40 @@ def test_supervisor_closes_stream_and_contains_unexpected_failure(monkeypatch):
         monkeypatch.setattr(dss.asyncio, "sleep", stop_closed_stream_retry)
         await manager._async_run()
         assert manager.last_error_type == "CloudError"
+
+    run(scenario())
+
+
+def test_supervisor_creates_fresh_subscription_after_stream_loss(monkeypatch):
+    async def scenario():
+        coordinator = FakeCoordinator()
+        client = FakeClient(FakeWebSocket())
+        client.async_create_dss_subscription = AsyncMock(
+            side_effect=[{"stream_key": "first"}, {"stream_key": "second"}]
+        )
+        client.async_open_dss_websocket = AsyncMock(
+            side_effect=[FakeWebSocket(), FakeWebSocket()]
+        )
+        manager = dss.AylaDssManager(object(), FakeEntry(), client, [coordinator])
+        receive_count = 0
+
+        async def receive_then_stop():
+            nonlocal receive_count
+            receive_count += 1
+            if receive_count == 1:
+                raise dss.CloudError("first stream ended")
+            manager._stopping = True
+
+        manager._async_receive = receive_then_stop
+        monkeypatch.setattr(dss.asyncio, "sleep", AsyncMock())
+        monkeypatch.setattr(dss.random, "uniform", lambda _start, _end: 0)
+
+        await manager._async_run()
+
+        assert client.async_create_dss_subscription.await_count == 2
+        assert [call.args[0] for call in client.async_open_dss_websocket.await_args_list] == [
+            "first",
+            "second",
+        ]
 
     run(scenario())

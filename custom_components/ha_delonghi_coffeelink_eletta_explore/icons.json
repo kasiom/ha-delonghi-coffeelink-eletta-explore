@@ -5,6 +5,7 @@
       "total_black_coffee_beverages": { "default": "mdi:counter" },
       "total_espresso": { "default": "mdi:coffee" },
       "total_milk_drinks": { "default": "mdi:cup" },
+      "total_cold_milk_drinks": { "default": "mdi:cup" },
       "total_water": { "default": "mdi:water" },
       "total_espresso_alt": { "default": "mdi:coffee" },
       "total_coffee": { "default": "mdi:coffee" },

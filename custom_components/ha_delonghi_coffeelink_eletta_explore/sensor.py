@@ -28,10 +28,15 @@ from .const import (
 )
 from .coordinator import DelonghiCoordinator
 from .counters import (
+    coffee_link_black_coffee_total,
+    coffee_link_cold_milk_total,
+    coffee_link_hot_milk_total,
+    coffee_link_mug_total,
     counter_breakdown_sum,
     parse_counter_value,
     parse_percentage_value,
     parse_remaining_percentage,
+    parse_total_water_volume_liters,
     parse_water_hardness_level,
     parse_water_volume_liters,
 )
@@ -75,7 +80,47 @@ async def async_setup_entry(
     coordinators = entry.runtime_data.coordinators
     entities: list[SensorEntity] = []
     for coord in coordinators:
+        data = coord.data or {}
+        aggregate_keys: set[str] = set()
+
+        # Coffee Link builds these Eletta statistics in the app from multiple
+        # cloud values.  Keep the historical unique IDs where an older direct
+        # sensor existed, while matching the official aggregate semantics.
+        if "d701_tot_bev_b" in data and "d700_tot_bev_b" not in data:
+            entities.append(
+                DelonghiCoffeeLinkAggregateSensor(
+                    coord,
+                    "total_beverages",
+                    "total_black_coffee_beverages",
+                )
+            )
+            aggregate_keys.add("total_beverages")
+
+        other_value = (data.get("d702_tot_bev_other") or {}).get("value")
+        if coffee_link_hot_milk_total(other_value) is not None:
+            entities.append(
+                DelonghiCoffeeLinkAggregateSensor(coord, "total_milk_drinks")
+            )
+            aggregate_keys.add("total_milk_drinks")
+
+        iced_value = (data.get("d733_tot_bev_counters") or {}).get("value")
+        if coffee_link_cold_milk_total(iced_value) is not None:
+            entities.append(
+                DelonghiCoffeeLinkAggregateSensor(coord, "total_cold_milk_drinks")
+            )
+            aggregate_keys.add("total_cold_milk_drinks")
+
+        hot_mug = (data.get("d731_tot_mug_hot") or {}).get("value")
+        cold_mug = (data.get("d732_tot_mug_cold") or {}).get("value")
+        if coffee_link_mug_total(hot_mug, cold_mug) is not None:
+            entities.append(
+                DelonghiCoffeeLinkAggregateSensor(coord, "total_mug_bev")
+            )
+            aggregate_keys.add("total_mug_bev")
+
         for candidates, key, _friendly, icon in COUNTER_SENSORS:
+            if key in aggregate_keys:
+                continue
             prop_name = _resolve_property(coord.data, candidates)
             if prop_name is None:
                 _LOGGER.debug(
@@ -191,7 +236,9 @@ class DelonghiCounterSensor(_Base):
         # some as a JSON object of per-recipe sub-counts. parse_counter_value
         # handles both; an unparseable scalar yields None and is logged once so
         # the format can be reported and the parser extended.
-        if self._key in {"water_total_quantity", "water_filter_quantity"}:
+        if self._key == "water_total_quantity":
+            result = parse_total_water_volume_liters(val)
+        elif self._key == "water_filter_quantity":
             result = parse_water_volume_liters(val)
         elif self._key == "water_hardness":
             result = parse_water_hardness_level(val)
@@ -218,6 +265,49 @@ class DelonghiCounterSensor(_Base):
     def extra_state_attributes(self) -> dict[str, Any] | None:
         # Large JSON breakdowns change often and unnecessarily grow Recorder.
         # Selected useful totals are exposed as their own sensors instead.
+        return None
+
+
+class DelonghiCoffeeLinkAggregateSensor(_Base):
+    """Official Eletta statistic assembled from multiple cloud counters."""
+
+    _attr_state_class = SensorStateClass.TOTAL_INCREASING
+
+    def __init__(
+        self,
+        coord: DelonghiCoordinator,
+        key: str,
+        translation_key: str | None = None,
+    ) -> None:
+        super().__init__(coord, key, translation_key)
+        self._key = key
+
+    @staticmethod
+    def _value(data: AylaProperties, property_name: str) -> Any:
+        prop = data.get(property_name)
+        return prop.get("value") if isinstance(prop, dict) else None
+
+    @property
+    def native_value(self) -> int | None:
+        data = self.coordinator.data or {}
+        if self._key == "total_beverages":
+            return coffee_link_black_coffee_total(
+                self._value(data, "d701_tot_bev_b"),
+                self._value(data, "d733_tot_bev_counters"),
+            )
+        if self._key == "total_milk_drinks":
+            return coffee_link_hot_milk_total(
+                self._value(data, "d702_tot_bev_other")
+            )
+        if self._key == "total_cold_milk_drinks":
+            return coffee_link_cold_milk_total(
+                self._value(data, "d733_tot_bev_counters")
+            )
+        if self._key == "total_mug_bev":
+            return coffee_link_mug_total(
+                self._value(data, "d731_tot_mug_hot"),
+                self._value(data, "d732_tot_mug_cold"),
+            )
         return None
 
 

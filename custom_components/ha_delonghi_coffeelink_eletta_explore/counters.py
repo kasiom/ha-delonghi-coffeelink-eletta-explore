@@ -50,11 +50,31 @@ def parse_counter_value(val: Any) -> int | None:
 
 
 def parse_water_volume_liters(val: Any) -> float | None:
-    """Convert a De'Longhi water-volume counter from millilitres to litres."""
+    """Convert a legacy/filter water-volume counter from millilitres to litres.
+
+    This conversion is intentionally kept separate from
+    :func:`parse_total_water_volume_liters`.  Coffee Link 4.9.6 proves the
+    half-millilitre scale only for ``d553_water_tot_qty``; applying it to the
+    filter counter without equivalent evidence would silently change an
+    unrelated sensor.
+    """
     milliliters = parse_counter_value(val)
     if milliliters is None:
         return None
     return round(milliliters / 1000, 3)
+
+
+def parse_total_water_volume_liters(val: Any) -> float | None:
+    """Convert ``d553_water_tot_qty`` half-millilitre ticks to litres.
+
+    The Eletta Coffee Link statistics screen calculates this property as
+    ``raw / 2000`` (the app truncates the displayed number to whole litres).
+    Home Assistant retains the available three-decimal precision.
+    """
+    half_milliliter_ticks = parse_counter_value(val)
+    if half_milliliter_ticks is None:
+        return None
+    return round(half_milliliter_ticks / 2000, 3)
 
 
 def parse_percentage_value(val: Any) -> int | None:
@@ -131,4 +151,61 @@ def counter_breakdown_sum(val: Any, keys: Collection[str]) -> int | None:
             continue
         found = True
     return total if found else None
+
+
+def _required_breakdown_sum(
+    val: Any, required_key: str, keys: Collection[str]
+) -> int | None:
+    """Sum JSON fields only when Coffee Link's required discriminator exists."""
+    data = counter_breakdown(val)
+    if data is None or required_key not in data:
+        return None
+    required_value = data[required_key]
+    if isinstance(required_value, bool):
+        return None
+    try:
+        int(required_value)
+    except (TypeError, ValueError):
+        return None
+    return counter_breakdown_sum(val, keys)
+
+
+def coffee_link_black_coffee_total(black: Any, iced_counters: Any) -> int | None:
+    """Return Coffee Link's black-coffee total for Eletta Explore.
+
+    Coffee Link adds the scalar ``d701_tot_bev_b`` and the optional
+    ``tot_bev_b_iced`` field from ``d733_tot_bev_counters``.
+    """
+    hot_black = parse_counter_value(black)
+    if hot_black is None:
+        return None
+    iced_black = counter_breakdown_sum(iced_counters, ("tot_bev_b_iced",))
+    return hot_black + (iced_black or 0)
+
+
+def coffee_link_hot_milk_total(other_counters: Any) -> int | None:
+    """Return Coffee Link's aggregate hot-milk beverage count."""
+    return _required_breakdown_sum(
+        other_counters,
+        "tot_bev_bw",
+        ("tot_bev_bw", "tot_bev_w"),
+    )
+
+
+def coffee_link_cold_milk_total(iced_counters: Any) -> int | None:
+    """Return Coffee Link's aggregate cold-milk beverage count."""
+    return _required_breakdown_sum(
+        iced_counters,
+        "tot_bev_bw_iced",
+        ("tot_bev_bw_iced", "tot_bev_w_iced"),
+    )
+
+
+def coffee_link_mug_total(hot_mug: Any, cold_mug: Any) -> int | None:
+    """Return Coffee Link's Mug to Go total (hot plus optional cold)."""
+    hot = parse_counter_value(hot_mug)
+    if hot is None:
+        return None
+    cold = parse_counter_value(cold_mug)
+    return hot + (cold or 0)
 

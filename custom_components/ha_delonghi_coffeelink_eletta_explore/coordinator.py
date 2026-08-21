@@ -822,6 +822,11 @@ class DelonghiCoordinator(DataUpdateCoordinator[AylaProperties]):
         if datapoint_id is not None:
             ack_received, ack_status = await self._async_wait_for_dss_ack(str(datapoint_id))
             if ack_received and ack_status is not None:
+                if self.last_command is not None:
+                    # Privacy-safe evidence that the ACK belonged to the exact
+                    # datapoint created by this command.  The cloud datapoint
+                    # identifier and command payload are intentionally omitted.
+                    self.last_command["ack_status"] = ack_status
                 if 200 <= ack_status < 300:
                     if self.last_command is not None:
                         self.last_command["confirmation_source"] = "dss_ack"

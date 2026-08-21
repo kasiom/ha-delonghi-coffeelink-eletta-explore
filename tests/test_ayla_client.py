@@ -183,33 +183,15 @@ def test_dss_subscription_small_helpers() -> None:
 
 
 @async_test
-async def test_dss_subscription_reuses_own_and_creates_when_missing() -> None:
+async def test_dss_subscription_always_creates_fresh_stream_key() -> None:
     client = make_client()
     client._request_json = AsyncMock(
-        return_value=[
-            {"subscription": {"name": "ANDROID_DSS", "stream_key": "official"}},
-            {"subscription": {"name": const.DSS_SUBSCRIPTION_NAME}},
-            {
-                "subscription": {
-                    "name": const.DSS_SUBSCRIPTION_NAME,
-                    "stream_key": "ours",
-                }
-            },
-        ]
+        return_value={"subscription": {"stream_key": "created"}}
     )
-    subscription = await client.async_get_or_create_dss_subscription()
-    assert subscription["stream_key"] == "ours"
-    assert client._request_json.await_count == 1
-
-    client._request_json = AsyncMock(
-        side_effect=[
-            [],
-            {"subscription": {"stream_key": "created"}},
-        ]
-    )
-    subscription = await client.async_get_or_create_dss_subscription()
+    subscription = await client.async_create_dss_subscription()
     assert subscription["stream_key"] == "created"
-    create_call = client._request_json.await_args_list[1]
+    assert client._request_json.await_count == 1
+    create_call = client._request_json.await_args_list[0]
     assert create_call.args[0] == "POST"
     assert create_call.kwargs["json_body"] == {
         "name": const.DSS_SUBSCRIPTION_NAME,
@@ -226,12 +208,8 @@ async def test_dss_subscription_reuses_own_and_creates_when_missing() -> None:
 async def test_dss_subscription_rejects_invalid_cloud_responses() -> None:
     client = make_client()
     client._request_json = AsyncMock(return_value={})
-    with pytest.raises(ac.CloudError, match="JSON list"):
-        await client.async_get_or_create_dss_subscription()
-
-    client._request_json = AsyncMock(side_effect=[[], {"subscription": {}}])
     with pytest.raises(ac.CloudError, match="stream key missing"):
-        await client.async_get_or_create_dss_subscription()
+        await client.async_create_dss_subscription()
 
 
 @async_test

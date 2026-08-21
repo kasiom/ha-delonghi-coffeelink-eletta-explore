@@ -15,6 +15,7 @@ All notable user-visible changes are documented here. The project follows
   separately from a timeout.
 - Add a disabled-by-default Wi-Fi signal diagnostic sensor when the vendor cloud
   exposes connection information for the machine.
+- Add Coffee Link-equivalent aggregate counters for hot and cold milk drinks.
 
 ### Changed
 
@@ -23,6 +24,15 @@ All notable user-visible changes are documented here. The project follows
   the normal 30-second interval whenever the stream is unavailable.
 - Declare the integration as `cloud_push` and keep polling as a transparent
   reliability fallback.
+- Match Coffee Link's Eletta statistics formulas for black coffee and Mug to Go,
+  while retaining the established Home Assistant entity unique IDs.
+- Correct `d553_water_tot_qty` from half-millilitre ticks to litres; preserve
+  the vendor value's three-decimal precision instead of the app's whole-litre
+  display truncation.
+- Create a fresh, short-lived DSS subscription for every WebSocket connection,
+  matching Coffee Link 4.9.6 instead of reusing a stale server stream key.
+- Record the privacy-safe ACK status on the Last Command Status entity when DSS
+  matches the acknowledgement to the exact datapoint issued by Home Assistant.
 
 ### Security
 

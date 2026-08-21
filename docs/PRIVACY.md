@@ -16,8 +16,8 @@ coffee maker over the local network.
 - Account credentials during Gigya authentication.
 - Authentication/session tokens during subsequent cloud calls.
 - Device property reads and explicitly requested commands.
-- Creation or reuse of one integration-owned Ayla DSS subscription and its
-  account-wide cloud stream.
+- Creation of a fresh integration-owned Ayla DSS subscription for each
+  account-wide cloud-stream connection, matching Coffee Link's lifecycle.
 
 ## Diagnostics
 

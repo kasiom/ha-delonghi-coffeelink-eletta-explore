@@ -291,12 +291,14 @@ def test_send_property_command_prefers_exact_ack_and_handles_rejection() -> None
         await coordinator._send_property_command("frame", "test")
         assert coordinator.last_command_result == "acknowledged"
         assert coordinator.last_command["confirmation_source"] == "dss_ack"
+        assert coordinator.last_command["ack_status"] == 200
 
         coordinator._begin_command({"command_type": "test"})
         coordinator._async_wait_for_dss_ack = AsyncMock(return_value=(True, 400))
         with pytest.raises(HomeAssistantError, match="explicitly rejected"):
             await coordinator._send_property_command("frame", "test")
         assert coordinator.last_command_result == "rejected"
+        assert coordinator.last_command["ack_status"] == 400
 
         coordinator._begin_command({"command_type": "test"})
         coordinator._async_wait_for_dss_ack = AsyncMock(return_value=(True, 0))

@@ -158,6 +158,7 @@ def test_all_runtime_entity_translation_keys_exist_in_both_languages() -> None:
     sensor_keys = {item[1] for item in counters}
     sensor_keys.update(item[1] for item in breakdowns)
     sensor_keys.update(overrides.values())
+    sensor_keys.add("total_cold_milk_drinks")
     sensor_keys.update(
         {
             "machine_status",
