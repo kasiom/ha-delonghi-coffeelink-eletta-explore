@@ -1,7 +1,9 @@
 """Button platform for De'Longhi Coffee Link – Eletta Explore - one button per beverage."""
+
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from typing import TYPE_CHECKING
 
 from homeassistant.components.button import ButtonEntity
@@ -15,7 +17,7 @@ from .button_migration import (
     preferred_entity_index,
     start_button_beverage_id,
 )
-from .const import ACTION_START, BEVERAGES, DOMAIN
+from .const import ACTION_START, BEVERAGES, DOMAIN, ELETTA_LEARNED_BEVERAGES
 from .coordinator import DelonghiCoordinator
 from .entity import DelonghiCoordinatorEntity
 
@@ -26,20 +28,6 @@ _LOGGER = logging.getLogger(__name__)
 
 PARALLEL_UPDATES = 0
 
-# Eletta reports these learned recipes with a different ID range than the
-# common command catalogue. Keep the captured ID in the unique ID, but expose
-# the product name instead of a technical "Recipe 120" label.
-_ELETTA_LEARNED_RECIPES: dict[int, tuple[str, str, str]] = {
-    120: ("cold_brew", "Cold Brew", "mdi:snowflake"),
-    140: ("cold_brew_mug_to_go", "Cold Brew Mug to Go", "mdi:coffee-to-go"),
-    141: ("cold_brew_latte_mug_to_go", "Cold Brew Latte Mug to Go", "mdi:coffee-to-go"),
-    142: (
-        "cold_brew_cappuccino_mug_to_go",
-        "Cold Brew Cappuccino Mug to Go",
-        "mdi:coffee-to-go",
-    ),
-}
-
 
 def _migrate_start_button_entities(
     hass: HomeAssistant,
@@ -49,15 +37,10 @@ def _migrate_start_button_entities(
     """Merge legacy aliases and migrate beverage buttons to stable unique IDs."""
     registry = er.async_get(hass)
     key_to_id = {key: beverage_id for beverage_id, key, _name, _icon in BEVERAGES}
-    key_to_id.update(
-        {key: beverage_id for beverage_id, (key, _name, _icon) in _ELETTA_LEARNED_RECIPES.items()}
-    )
+    key_to_id.update({key: beverage_id for beverage_id, (key, _name, _icon) in ELETTA_LEARNED_BEVERAGES.items()})
     grouped: dict[int, list[er.RegistryEntry]] = {}
     for registry_entry in er.async_entries_for_config_entry(registry, config_entry_id):
-        if (
-            registry_entry.platform != DOMAIN
-            or not registry_entry.entity_id.startswith("button.")
-        ):
+        if registry_entry.platform != DOMAIN or not registry_entry.entity_id.startswith("button."):
             continue
         beverage_id = start_button_beverage_id(registry_entry.unique_id, dsn, key_to_id)
         if beverage_id is not None:
@@ -105,18 +88,14 @@ async def async_setup_entry(
             created: set[int] = created_beverage_ids,
             catalog: dict[int, tuple[str, str, str]] = beverage_catalog,
         ) -> list[ButtonEntity]:
-            supported = (
-                set(coordinator.learned_start_frames)
-                if coordinator.profile.learns_from_app
-                else set(catalog)
-            )
+            supported = set(coordinator.learned_start_frames) if coordinator.profile.learns_from_app else set(catalog)
             added: list[ButtonEntity] = []
             for beverage_id in sorted(supported - created):
                 if beverage_id in catalog:
                     key, friendly, icon = catalog[beverage_id]
                     translated = True
-                elif beverage_id in _ELETTA_LEARNED_RECIPES:
-                    key, friendly, icon = _ELETTA_LEARNED_RECIPES[beverage_id]
+                elif beverage_id in ELETTA_LEARNED_BEVERAGES:
+                    key, friendly, icon = ELETTA_LEARNED_BEVERAGES[beverage_id]
                     translated = True
                 else:
                     friendly, icon = f"Recipe {beverage_id}", "mdi:coffee"
@@ -124,7 +103,11 @@ async def async_setup_entry(
                     translated = False
                 added.append(
                     DelonghiStartBeverageButton(
-                        coordinator, beverage_id, key, friendly, icon,
+                        coordinator,
+                        beverage_id,
+                        key,
+                        friendly,
+                        icon,
                         translated=translated,
                     )
                 )
@@ -134,7 +117,7 @@ async def async_setup_entry(
         entities.extend(_new_recipe_buttons())
 
         def _discover_learned_buttons(
-            callback=_new_recipe_buttons,
+            callback: Callable[[], list[ButtonEntity]] = _new_recipe_buttons,
         ) -> None:
             if added := callback():
                 async_add_entities(added)
@@ -180,8 +163,7 @@ class DelonghiStartBeverageButton(_Base):
     def available(self) -> bool:
         """Do not offer a known-incompatible synthesized command."""
         return super().available and (
-            not self.coordinator.profile.learns_from_app
-            or self._bev_id in self.coordinator.learned_start_frames
+            not self.coordinator.profile.learns_from_app or self._bev_id in self.coordinator.learned_start_frames
         )
 
 
@@ -239,9 +221,10 @@ class DelonghiStopButton(_Base):
     def available(self) -> bool:
         """Stop is safe only while the active beverage is known."""
         beverage_id = self.coordinator.active_beverage_id
-        return super().available and beverage_id is not None and (
-            not self.coordinator.profile.learns_from_app
-            or beverage_id in self.coordinator.learned_stop_frames
+        return (
+            super().available
+            and beverage_id is not None
+            and (not self.coordinator.profile.learns_from_app or beverage_id in self.coordinator.learned_stop_frames)
         )
 
 
@@ -278,4 +261,3 @@ class DelonghiDumpRecipesButton(_Base):
 
     async def async_press(self) -> None:
         self.coordinator.log_recipe_datapoints()
-

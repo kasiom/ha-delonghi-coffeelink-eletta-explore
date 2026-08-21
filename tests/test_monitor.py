@@ -11,6 +11,7 @@ The parser must:
     enough (>= 13 bytes), so short Soul payloads are unaffected,
   - never raise on malformed input (returns {"error": ...}).
 """
+
 from __future__ import annotations
 
 import base64
@@ -45,6 +46,15 @@ monitor = _load("monitor", "monitor.py")
 parse_monitor_b64 = monitor.parse_monitor_b64
 crc16_aug_ccitt = cb.crc16_aug_ccitt
 MONITOR_REQUEST_ID = monitor.MONITOR_REQUEST_ID
+
+
+def test_monitor_ordering_token_matches_official_signed_big_endian_value():
+    assert monitor.monitor_ordering_token(None) is None
+    assert monitor.monitor_ordering_token("") is None
+    assert monitor.monitor_ordering_token("not-base64") is None
+    assert monitor.monitor_ordering_token(base64.b64encode(b"abc").decode()) is None
+    assert monitor.monitor_ordering_token(base64.b64encode(b"head\x00\x00\x00\x2a").decode()) == 42
+    assert monitor.monitor_ordering_token(base64.b64encode(b"head\xff\xff\xff\xff").decode()) == -1
 
 
 def _build_monitor_blob(contents: bytes) -> str:
@@ -211,4 +221,3 @@ def test_all_documented_status_codes_keep_their_exact_meaning():
         contents[5] = status_code
         result = parse_monitor_b64(_build_monitor_blob(bytes(contents)))
         assert result["status_name"] == status_name
-

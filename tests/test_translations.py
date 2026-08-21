@@ -57,10 +57,7 @@ def _literal_mapping(path: Path, name: str) -> dict[str, str]:
         if isinstance(node, ast.AnnAssign):
             if isinstance(node.target, ast.Name) and node.target.id == name:
                 return dict(ast.literal_eval(node.value))
-        elif isinstance(node, ast.Assign) and any(
-            isinstance(target, ast.Name) and target.id == name
-            for target in node.targets
-        ):
+        elif isinstance(node, ast.Assign) and any(isinstance(target, ast.Name) and target.id == name for target in node.targets):
             return dict(ast.literal_eval(node.value))
     raise AssertionError(f"Assignment {name} was not found in {path.name}")
 
@@ -71,10 +68,7 @@ def _literal_value(path: Path, name: str) -> Any:
         if isinstance(node, ast.AnnAssign):
             if isinstance(node.target, ast.Name) and node.target.id == name:
                 return ast.literal_eval(node.value)
-        elif isinstance(node, ast.Assign) and any(
-            isinstance(target, ast.Name) and target.id == name
-            for target in node.targets
-        ):
+        elif isinstance(node, ast.Assign) and any(isinstance(target, ast.Name) and target.id == name for target in node.targets):
             return ast.literal_eval(node.value)
     raise AssertionError(f"Assignment {name} was not found in {path.name}")
 
@@ -87,9 +81,7 @@ def test_translation_files_have_identical_leaf_keys_and_placeholders() -> None:
     assert not (COMPONENT / "strings.json").exists()
     assert english.keys() == czech.keys()
     for key, english_text in english.items():
-        assert set(PLACEHOLDER_PATTERN.findall(english_text)) == set(
-            PLACEHOLDER_PATTERN.findall(czech[key])
-        ), key
+        assert set(PLACEHOLDER_PATTERN.findall(english_text)) == set(PLACEHOLDER_PATTERN.findall(czech[key])), key
 
 
 def test_runtime_exception_keys_and_fallbacks_match_translations() -> None:
@@ -125,11 +117,7 @@ def test_python_sources_do_not_embed_czech_user_interface_text() -> None:
     for path in COMPONENT.glob("*.py"):
         tree = ast.parse(path.read_text(encoding="utf-8"))
         for node in ast.walk(tree):
-            if (
-                isinstance(node, ast.Constant)
-                and isinstance(node.value, str)
-                and CZECH_DIACRITICS.search(node.value)
-            ):
+            if isinstance(node, ast.Constant) and isinstance(node.value, str) and CZECH_DIACRITICS.search(node.value):
                 violations.append(f"{path.name}:{node.lineno}")
     assert not violations
 
@@ -138,38 +126,32 @@ def test_dynamic_recipe_button_has_localized_placeholder_name() -> None:
     english = _load(COMPONENT / "translations" / "en.json")
     czech = _load(COMPONENT / "translations" / "cs.json")
 
-    assert english["entity"]["button"]["start_recipe"]["name"] == (
-        "Recipe {recipe_id}"
-    )
-    assert czech["entity"]["button"]["start_recipe"]["name"] == (
-        "Recept {recipe_id}"
-    )
+    assert english["entity"]["button"]["start_recipe"]["name"] == ("Recipe {recipe_id}")
+    assert czech["entity"]["button"]["start_recipe"]["name"] == ("Recept {recipe_id}")
 
 
 def test_all_runtime_entity_translation_keys_exist_in_both_languages() -> None:
     const_path = COMPONENT / "const.py"
-    button_path = COMPONENT / "button.py"
     counters = _literal_value(const_path, "COUNTER_SENSORS")
     breakdowns = _literal_value(const_path, "BREAKDOWN_COUNTER_SENSORS")
-    overrides = _literal_value(const_path, "COUNTER_TRANSLATION_KEY_OVERRIDES")
+    aggregates = _literal_value(const_path, "COFFEE_LINK_AGGREGATE_SENSORS")
     beverages = _literal_value(const_path, "BEVERAGES")
-    eletta_recipes = _literal_value(button_path, "_ELETTA_LEARNED_RECIPES")
+    eletta_recipes = _literal_value(const_path, "ELETTA_LEARNED_BEVERAGES")
 
     sensor_keys = {item[1] for item in counters}
     sensor_keys.update(item[1] for item in breakdowns)
-    sensor_keys.update(overrides.values())
+    sensor_keys.update(translation_key for definitions in aggregates.values() for _key, translation_key in definitions)
     sensor_keys.update(
         {
             "machine_status",
             "last_command_status",
             "cloud_session_app_id",
+            "wifi_signal_strength",
         }
     )
     button_keys = {f"start_{item[1]}" for item in beverages}
     button_keys.update(f"start_{item[0]}" for item in eletta_recipes.values())
-    button_keys.update(
-        {"start_recipe", "wake", "standby", "stop", "synchronize", "dump_recipes"}
-    )
+    button_keys.update({"start_recipe", "wake", "standby", "stop", "synchronize", "dump_recipes"})
     binary_sensor_keys = {
         "connection_status",
         "water_tank_empty",
@@ -197,10 +179,7 @@ def test_all_translated_entities_and_actions_use_icon_translations() -> None:
     for platform, translated_entities in entities.items():
         platform_icons = icons["entity"][platform]
         assert platform_icons.keys() == translated_entities.keys()
-        assert all(
-            definition["default"].startswith("mdi:")
-            for definition in platform_icons.values()
-        )
+        assert all(definition["default"].startswith("mdi:") for definition in platform_icons.values())
 
     assert icons["services"] == {
         "start_beverage": "mdi:coffee",
@@ -222,12 +201,8 @@ def test_diagnostic_enum_options_have_english_and_czech_translations() -> None:
     czech = _load(COMPONENT / "translations" / "cs.json")
 
     checks = {
-        "cloud_session_app_id": _literal_assignment(
-            "CLOUD_SESSION_HOLDER_OPTIONS"
-        ),
-        "last_command_status": _literal_assignment(
-            "LAST_COMMAND_RESULT_OPTIONS"
-        ),
+        "cloud_session_app_id": _literal_assignment("CLOUD_SESSION_HOLDER_OPTIONS"),
+        "last_command_status": _literal_assignment("LAST_COMMAND_RESULT_OPTIONS"),
     }
     for translation_key, options in checks.items():
         for translations in (english, czech):
@@ -276,36 +251,22 @@ def test_descale_remaining_name_describes_inverted_percentage() -> None:
     english = _load(COMPONENT / "translations" / "en.json")
     czech = _load(COMPONENT / "translations" / "cs.json")
 
-    assert english["entity"]["sensor"]["descale_limit_usage"]["name"] == (
-        "Remaining Until Descale"
-    )
-    assert czech["entity"]["sensor"]["descale_limit_usage"]["name"] == (
-        "Do odvápnění zbývá"
-    )
+    assert english["entity"]["sensor"]["descale_limit_usage"]["name"] == ("Remaining until descale")
+    assert czech["entity"]["sensor"]["descale_limit_usage"]["name"] == ("Do odvápnění zbývá")
 
 
 def test_eletta_counter_scopes_are_clear_in_english_and_czech() -> None:
     english = _load(COMPONENT / "translations" / "en.json")["entity"]["sensor"]
     czech = _load(COMPONENT / "translations" / "cs.json")["entity"]["sensor"]
 
-    assert english["total_black_coffee_beverages"]["name"] == (
-        "Total Black Coffee Beverages"
-    )
-    assert english["total_cold_brew_bev"]["name"] == (
-        "Total Cold Coffee Beverages"
-    )
-    assert czech["total_black_coffee_beverages"]["name"] == (
-        "Počet černých káv celkem"
-    )
+    assert english["total_black_coffee_beverages"]["name"] == ("Total black coffee beverages")
+    assert english["total_cold_brew_bev"]["name"] == ("Total cold coffee beverages")
+    assert czech["total_black_coffee_beverages"]["name"] == ("Počet černých káv celkem")
     assert czech["total_espresso"]["name"] == "Počet Espresso celkem"
     assert czech["total_espresso_alt"]["name"] == "Počet Espresso"
-    assert czech["total_over_ice_espresso"]["name"] == (
-        "Počet Over Ice Espresso"
-    )
+    assert czech["total_over_ice_espresso"]["name"] == ("Počet Over Ice Espresso")
     assert czech["total_cold_brew"]["name"] == "Počet Cold Brew celkem"
-    assert czech["total_cold_brew_bev"]["name"] == (
-        "Počet studených káv celkem"
-    )
+    assert czech["total_cold_brew_bev"]["name"] == ("Počet studených káv celkem")
 
 
 def test_beverage_sensor_names_correspond_to_czech_buttons() -> None:
@@ -355,31 +316,33 @@ def test_beverage_sensor_names_correspond_to_czech_buttons() -> None:
         assert sensors[sensor_key]["name"] == sensor_name
         assert buttons[button_key]["name"] == button_name
 
-    assert sensors["total_mug_hot"]["name"] == (
-        "Počet horkých nápojů Mug to Go"
-    )
-    assert sensors["total_mug_cold"]["name"] == (
-        "Počet studených nápojů Mug to Go"
-    )
-    assert sensors["total_mug_iced_bev"]["name"] == (
-        "Počet ledových nápojů Mug to Go"
-    )
+    assert sensors["total_mug_hot"]["name"] == ("Počet horkých nápojů Mug to Go")
+    assert sensors["total_mug_cold"]["name"] == ("Počet studených nápojů Mug to Go")
+    assert sensors["total_mug_iced_bev"]["name"] == ("Počet ledových nápojů Mug to Go")
 
 
-def test_cloud_entities_are_distinct_and_plain_czech() -> None:
-    entities = _load(COMPONENT / "translations" / "cs.json")["entity"]
-    assert entities["binary_sensor"]["connection_status"]["name"] == (
-        "Připojení ke cloudu"
-    )
+def test_cloud_entities_are_distinct_and_session_holder_is_neutral() -> None:
+    english = _load(COMPONENT / "translations" / "en.json")["entity"]
+    czech = _load(COMPONENT / "translations" / "cs.json")["entity"]
+    assert czech["binary_sensor"]["connection_status"]["name"] == ("Připojení ke cloudu")
 
-    sensor = entities["sensor"]["cloud_session_app_id"]
+    czech_sensor = czech["sensor"]["cloud_session_app_id"]
+    english_sensor = english["sensor"]["cloud_session_app_id"]
 
-    assert sensor["name"] == "Relace Coffee Link"
-    assert sensor["state"] == {
+    assert czech_sensor["name"] == "Relace Coffee Link"
+    assert czech_sensor["state"] == {
         "unknown": "Neznámá",
         "free": "Volná",
-        "ha": "Home Assistant",
+        "ha": "Aktivní",
         "foreign": "Jiná aplikace",
+    }
+    assert english_sensor["state"] == {
+        "unknown": "Unknown",
+        "free": "Free",
+        # Keep the internal key for compatibility. The device-specific ID is
+        # shared with Coffee Link, so it cannot identify Home Assistant alone.
+        "ha": "Active",
+        "foreign": "Another application",
     }
 
 
@@ -390,8 +353,7 @@ def test_last_command_status_is_precise_in_both_languages() -> None:
     english_sensor = english["entity"]["sensor"]["last_command_status"]
     czech_sensor = czech["entity"]["sensor"]["last_command_status"]
 
-    assert english_sensor["name"] == "Last Command Status"
+    assert english_sensor["name"] == "Last command status"
     assert czech_sensor["name"] == "Stav posledního příkazu"
     assert "idle" not in english_sensor["state"]
     assert "idle" not in czech_sensor["state"]
-

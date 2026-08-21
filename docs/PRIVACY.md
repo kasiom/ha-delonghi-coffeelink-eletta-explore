@@ -1,7 +1,9 @@
 # Privacy and cloud data
 
-The integration is cloud polling. It communicates with the De'Longhi/Gigya and
-Ayla endpoints used by Coffee Link.
+The integration communicates with the De'Longhi/Gigya and Ayla endpoints used by
+Coffee Link. It combines an Ayla DSS cloud stream with periodic reconciliation
+polls and a 30-second polling fallback. It does not communicate directly with the
+coffee maker over the local network.
 
 ## Stored locally by Home Assistant
 
@@ -14,12 +16,17 @@ Ayla endpoints used by Coffee Link.
 - Account credentials during Gigya authentication.
 - Authentication/session tokens during subsequent cloud calls.
 - Device property reads and explicitly requested commands.
+- Creation of a fresh integration-owned Ayla DSS subscription for each
+  account-wide cloud-stream connection, matching Coffee Link's lifecycle.
 
 ## Diagnostics
 
 Downloadable diagnostics exclude the account e-mail and password, access tokens,
 DSN, raw command/response values and app identifier. Property names and sanitized
 operational metadata remain so maintainers can diagnose compatibility.
+The DSS stream key and Wi-Fi network name are never stored, logged or included in
+diagnostics. Connection diagnostics contain only the connectivity type and an
+optional RSSI value.
 
 ## Logs
 

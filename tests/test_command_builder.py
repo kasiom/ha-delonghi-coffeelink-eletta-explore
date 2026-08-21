@@ -8,6 +8,7 @@ Payloads below are REAL frames captured from the GitHub issue threads (logged as
 "Sending ... value=" by the integration itself), so they are known-good and let
 us assert the decoder against ground truth.
 """
+
 from __future__ import annotations
 
 import base64
@@ -47,6 +48,7 @@ ac = _load("ayla_client", "ayla_client.py")
 
 # --- CRC -------------------------------------------------------------------
 
+
 def test_crc16_aug_ccitt_known_vector():
     # Hot Water header (12 bytes) -> CRC 0x8124 (from captured frame).
     header = bytes.fromhex("0d0d83f010010f00fa1b0106")
@@ -55,8 +57,9 @@ def test_crc16_aug_ccitt_known_vector():
 
 # --- build_beverage_command -----------------------------------------------
 
+
 def test_build_beverage_command_structure():
-    cmd = cb.build_beverage_command(0x10, const.ACTION_START, timestamp=0x6a20b3db)
+    cmd = cb.build_beverage_command(0x10, const.ACTION_START, timestamp=0x6A20B3DB)
     assert cmd.hex(" ") == "0d 0d 83 f0 10 01 0f 00 fa 1b 01 06 81 24 6a 20 b3 db"
 
 
@@ -66,7 +69,7 @@ def test_build_beverage_command_rejects_bad_param_length():
 
 
 def test_build_wake_command_structure():
-    cmd = cb.build_wake_command(timestamp=0x6a1744a2)
+    cmd = cb.build_wake_command(timestamp=0x6A1744A2)
     assert cmd.hex(" ") == "0d 07 84 0f 02 01 55 12 6a 17 44 a2"
 
 
@@ -76,6 +79,7 @@ def test_build_power_command_rejects_bad_param_length():
 
 
 # --- decode_command: beverage ---------------------------------------------
+
 
 @pytest.mark.parametrize(
     "b64, bev_id, bev_name, params",
@@ -103,7 +107,7 @@ def test_decode_power_real_frame():
     assert d["family"] == "84 0f"
     assert d["params"] == "02 01"
     assert d["crc_valid"] is True
-    assert d["timestamp"] == 0x6a1744a2
+    assert d["timestamp"] == 0x6A1744A2
 
 
 def test_decode_tolerates_ayla_trailing_newline():
@@ -116,6 +120,7 @@ def test_decode_tolerates_ayla_trailing_newline():
 
 
 # --- standby command ---------------------------------------------------------
+
 
 def test_build_standby_command_structure():
     # Frame validated LIVE on the reference Soul (machine powered off,
@@ -161,6 +166,7 @@ def test_standby_profile_values():
 
 # --- device_signature_from_frame ---------------------------------------------
 
+
 def test_device_signature_from_learned_wake_frame():
     # Public protocol capture with a deterministic synthetic device signature.
     app_wake_hex = "0d 07 84 0f 02 01 55 12 6a 24 79 c0 11 22 33 44"
@@ -187,6 +193,7 @@ def test_device_signature_absent_or_junk():
 
 
 # --- cloud session app_id helpers (DlghIoT convention) -----------------------
+
 
 def test_normalize_signed_app_id():
     # 0xC0FFEE11 has the sign bit set -> negative int32 (matches the decimal
@@ -217,6 +224,7 @@ def test_cloud_session_profile_gating():
 
 
 # --- monitor (d302_monitor_machine parsing) ----------------------------------
+
 
 def _make_monitor_blob(status: int, progress: int = 0, accessory: int = 1) -> str:
     """Build a synthetic MonitorV2 EcamPacket: prefix, length, data, crc, ts."""
@@ -268,6 +276,7 @@ def test_parse_monitor_rejects_bad_input():
 
 # --- is_wake_power_frame (wake-learning guard) ------------------------------
 
+
 def test_is_wake_power_frame_accepts_real_wake():
     # Real captured app wake (params 02 01) must be learnable.
     d = cb.decode_command("DQeEDwIBVRJqIf9q")
@@ -298,6 +307,7 @@ def test_is_wake_power_frame_rejects_non_power_frames():
 
 
 # --- decode_command: robustness -------------------------------------------
+
 
 def test_decode_rejects_non_base64():
     d = cb.decode_command("not base64 !!!")
@@ -339,7 +349,7 @@ def test_decode_valid_beverage_without_timestamp():
 
 def test_decode_machine_response_prefix():
     # Response frames start with 0xd0 (machine -> app).
-    d = cb.decode_command(base64.b64encode(bytes([0xd0, 0x0d, 0x83, 0xf0, 0x00])).decode())
+    d = cb.decode_command(base64.b64encode(bytes([0xD0, 0x0D, 0x83, 0xF0, 0x00])).decode())
     assert d["type"] == "machine_response"
 
 
@@ -354,34 +364,41 @@ def test_decode_machine_response_prefix():
 # (name, bev_id, action, recipe_hex, full_app_frame_hex, timestamp)
 _ELETTA_FRAMES = [
     (
-        "Hot Water", 0x10, 0x03, "0f 00 96 1b 01 1c 01 27",
+        "Hot Water",
+        0x10,
+        0x03,
+        "0f 00 96 1b 01 1c 01 27",
         "0d 11 83 f0 10 03 0f 00 96 1b 01 1c 01 27 01 0a 9a 26 6a 24 39 14 11 22 33 44",
-        0x6a243914,
+        0x6A243914,
     ),
     (
-        "Espresso", 0x01, 0x02, "01 00 28 02 04 08 00 1b",
+        "Espresso",
+        0x01,
+        0x02,
+        "01 00 28 02 04 08 00 1b",
         "0d 11 83 f0 01 02 01 00 28 02 04 08 00 1b 01 0a 7e 68 6a 24 68 ef 11 22 33 44",
-        0x6a2468ef,
+        0x6A2468EF,
     ),
     (
-        "Cappuccino", 0x07, 0x03, "01 00 41 02 03 09 00 d3 0b 02 1b 01 1c 02 27",
-        "0d 18 83 f0 07 03 01 00 41 02 03 09 00 d3 0b 02 1b 01 1c 02 27 01 0a d3 c7 "
-        "6a 24 68 50 11 22 33 44",
-        0x6a246850,
+        "Cappuccino",
+        0x07,
+        0x03,
+        "01 00 41 02 03 09 00 d3 0b 02 1b 01 1c 02 27",
+        "0d 18 83 f0 07 03 01 00 41 02 03 09 00 d3 0b 02 1b 01 1c 02 27 01 0a d3 c7 6a 24 68 50 11 22 33 44",
+        0x6A246850,
     ),
     (
-        "Flat White", 0x0a, 0x03,
+        "Flat White",
+        0x0A,
+        0x03,
         "01 00 5a 02 03 09 01 90 0b 01 0c 01 1b 03 1c 02 27",
-        "0d 1a 83 f0 0a 03 01 00 5a 02 03 09 01 90 0b 01 0c 01 1b 03 1c 02 27 01 0a "
-        "ed 36 6a 24 67 ce 11 22 33 44",
-        0x6a2467ce,
+        "0d 1a 83 f0 0a 03 01 00 5a 02 03 09 01 90 0b 01 0c 01 1b 03 1c 02 27 01 0a ed 36 6a 24 67 ce 11 22 33 44",
+        0x6A2467CE,
     ),
 ]
 
 
-@pytest.mark.parametrize(
-    "name, bev_id, action, recipe_hex, frame_hex, ts", _ELETTA_FRAMES
-)
+@pytest.mark.parametrize("name, bev_id, action, recipe_hex, frame_hex, ts", _ELETTA_FRAMES)
 def test_eletta_decode_variable_length(name, bev_id, action, recipe_hex, frame_hex, ts):
     """Decoding a captured Eletta frame yields style=eletta, a valid CRC (proving
     the existing CRC algorithm already covers Eletta), and the full recipe block."""
@@ -396,9 +413,7 @@ def test_eletta_decode_variable_length(name, bev_id, action, recipe_hex, frame_h
     assert d["timestamp"] == ts
 
 
-def _signed_eletta_frame_without_optional_trailer(
-    beverage_id: int, recipe: bytes
-) -> str:
+def _signed_eletta_frame_without_optional_trailer(beverage_id: int, recipe: bytes) -> str:
     """Build the signed trailerless shape observed on Eletta firmware."""
     body = bytes([0x83, 0xF0, beverage_id, 0x03]) + recipe
     frame = bytes([0x0D, len(body) + 3]) + body
@@ -436,6 +451,7 @@ def test_soul_frame_still_decodes_as_soul():
 
 # --- replay_with_timestamp (Eletta verbatim frame replay) ------------------
 
+
 def test_replay_swaps_only_timestamp_and_keeps_crc_valid():
     """Replaying a captured Eletta frame changes only the 4 timestamp bytes; the
     action, recipe block, CRC and trailing device signature are all preserved,
@@ -450,7 +466,7 @@ def test_replay_swaps_only_timestamp_and_keeps_crc_valid():
     new_raw = base64.b64decode(replayed)
     # frame_len = length byte + 1; timestamp lives at [frame_len : frame_len+4].
     frame_len = orig_raw[1] + 1
-    assert new_raw[:frame_len] == orig_raw[:frame_len]          # frame + CRC intact
+    assert new_raw[:frame_len] == orig_raw[:frame_len]  # frame + CRC intact
     assert new_raw[frame_len : frame_len + 4] == bytes.fromhex("11223344")
     assert new_raw[frame_len + 4 :] == orig_raw[frame_len + 4 :]  # device signature kept
     # And it still decodes as a valid Eletta frame.
@@ -542,6 +558,7 @@ def test_eletta_validation_rejects_trailer_frame_without_device_signature():
 
 # --- recipe datapoint dump (zero-touch diagnostic) -------------------------
 
+
 def test_recipe_dump_lines_selects_and_decodes():
     """Only recipe datapoints (+ active profile) are dumped; base64 blobs decode
     to hex, non-recipe properties are ignored."""
@@ -549,8 +566,8 @@ def test_recipe_dump_lines_selects_and_decodes():
     props = {
         "d059_rec_1_espresso": {"value": esp_b64},
         "d286_mach_sett_profile": {"value": 1},
-        "software_version": {"value": "1.2.3"},   # not a recipe -> skipped
-        "d704_tot_bev_espressi": {"value": "x"},   # counter, not _rec_ -> skipped
+        "software_version": {"value": "1.2.3"},  # not a recipe -> skipped
+        "d704_tot_bev_espressi": {"value": "x"},  # counter, not _rec_ -> skipped
     }
     lines = cb.recipe_dump_lines(props)
     assert lines == [
@@ -574,10 +591,15 @@ def test_recipe_dump_lines_handles_non_base64_and_empty():
 
 # --- model profiles (per-oem behaviour, extensible) ------------------------
 
+
 def test_profile_detection_by_oem_model():
     """Known oem_model families resolve to their profile."""
-    assert mp.profile_for("DL-millcore").key == "soul"
-    assert mp.profile_for("DL-striker-cb").key == "eletta"
+    soul = mp.profile_for("DL-millcore")
+    eletta = mp.profile_for("DL-striker-cb")
+    assert soul.key == "soul"
+    assert soul.statistics_family == "legacy"
+    assert eletta.key == "eletta"
+    assert eletta.statistics_family == "striker"
     # Prefix match, not exact.
     assert mp.profile_for("DL-millcore-x").key == "soul"
 
@@ -589,10 +611,19 @@ def test_base_profile_never_claims_a_model_match():
 def test_profile_unknown_model_defaults_sensibly():
     """Unknown model: replay (eletta-style) works on any machine, so it's the
     default - unless the plain data_request channel says it's Soul-like."""
-    assert mp.profile_for(None).key == "eletta"
-    assert mp.profile_for("DL-future-xyz").key == "eletta"
-    assert mp.profile_for("DL-future-xyz", command_property="data_request").key == "soul"
-    assert mp.profile_for("DL-future-xyz", command_property="app_data_request").key == "eletta"
+    fallbacks = (
+        mp.profile_for(None),
+        mp.profile_for("DL-future-xyz"),
+        mp.profile_for("DL-future-xyz", command_property="data_request"),
+        mp.profile_for("DL-future-xyz", command_property="app_data_request"),
+    )
+    assert [profile.key for profile in fallbacks] == [
+        "eletta",
+        "eletta",
+        "soul",
+        "eletta",
+    ]
+    assert all(profile.statistics_family is None for profile in fallbacks)
 
 
 def test_soul_profile_synthesizes_commands():
@@ -613,9 +644,7 @@ def test_eletta_profile_requires_learned_frame():
     assert eletta.beverage_value(0x01, const.ACTION_START, learned_frame=None) is None
     assert eletta.wake_value(None) is None
     # With a learned frame -> replays it as a valid frame.
-    learned = base64.b64encode(
-        bytes.fromhex("0d 07 84 0f 02 01 55 12 6a 24 79 c0 11 22 33 44".replace(" ", ""))
-    ).decode()
+    learned = base64.b64encode(bytes.fromhex("0d 07 84 0f 02 01 55 12 6a 24 79 c0 11 22 33 44".replace(" ", ""))).decode()
     out = eletta.wake_value(learned)
     assert isinstance(out, str)
     d = cb.decode_command(out)
@@ -623,6 +652,7 @@ def test_eletta_profile_requires_learned_frame():
 
 
 # --- learned-frame persistence (serialize/deserialize) ---------------------
+
 
 def test_learned_frames_roundtrip():
     """Serialize -> deserialize must preserve per-beverage frames and the wake

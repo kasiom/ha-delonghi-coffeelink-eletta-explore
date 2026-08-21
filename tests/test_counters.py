@@ -5,6 +5,7 @@ matching the approach in test_command_builder.py. Covers both value shapes seen
 in the field: plain integers (PrimaDonna Soul) and JSON-object aggregated
 counters (Eletta Explore, #7).
 """
+
 from __future__ import annotations
 
 import importlib.util
@@ -30,11 +31,19 @@ counters = _load("counters", "counters.py")
 parse_counter_value = counters.parse_counter_value
 counter_breakdown = counters.counter_breakdown
 counter_breakdown_sum = counters.counter_breakdown_sum
+coffee_link_black_coffee_total = counters.coffee_link_black_coffee_total
+coffee_link_cold_milk_total = counters.coffee_link_cold_milk_total
+coffee_link_hot_milk_total = counters.coffee_link_hot_milk_total
+coffee_link_mug_total = counters.coffee_link_mug_total
+parse_total_water_volume_liters = counters.parse_total_water_volume_liters
 parse_water_volume_liters = counters.parse_water_volume_liters
 parse_water_hardness_level = counters.parse_water_hardness_level
+coffee_link_legacy_black_coffee_total = counters.coffee_link_legacy_black_coffee_total
+coffee_link_legacy_hot_milk_total = counters.coffee_link_legacy_hot_milk_total
 
 
 # --- parse_counter_value -------------------------------------------------- #
+
 
 @pytest.mark.parametrize(
     "value,expected",
@@ -48,7 +57,7 @@ parse_water_hardness_level = counters.parse_water_hardness_level
         ('{"espresso": 12, "coffee": 3}', 15),
         ('{"a": 1, "b": 2, "c": 3}', 6),
         ('{"only": 7}', 7),
-        ('{}', 0),
+        ("{}", 0),
         # JSON where some sub-values are not integers -> ignored, rest summed
         ('{"good": 5, "bad": "x", "also": 2}', 7),
         # Unparseable / unexpected -> None (sensor stays unknown)
@@ -57,9 +66,9 @@ parse_water_hardness_level = counters.parse_water_hardness_level
         (False, None),
         ("", None),
         ("not-a-number", None),
-        ('{"broken": ', None),   # malformed non-object-looking string
-        ('{"broken":}', None),   # malformed object-looking JSON
-        ("[1, 2, 3]", None),     # JSON array, not an object
+        ('{"broken": ', None),  # malformed non-object-looking string
+        ('{"broken":}', None),  # malformed object-looking JSON
+        ("[1, 2, 3]", None),  # JSON array, not an object
     ],
 )
 def test_parse_counter_value(value, expected):
@@ -88,6 +97,42 @@ def test_parse_water_volume_liters(raw_milliliters, liters):
 
 
 @pytest.mark.parametrize(
+    ("raw_half_milliliter_ticks", "liters"),
+    [
+        (0, 0.0),
+        (1, 0.001),
+        (2000, 1.0),
+        (419850, 209.925),
+        (None, None),
+        ("invalid", None),
+    ],
+)
+def test_parse_total_water_volume_liters(raw_half_milliliter_ticks, liters):
+    assert parse_total_water_volume_liters(raw_half_milliliter_ticks) == liters
+
+
+@pytest.mark.parametrize(
+    ("black", "expected"),
+    [("314", 314), (None, None), ("invalid", None)],
+)
+def test_coffee_link_legacy_black_coffee_total(black, expected):
+    assert coffee_link_legacy_black_coffee_total(black) == expected
+
+
+@pytest.mark.parametrize(
+    ("coffee_and_milk", "milk_only", "expected"),
+    [("250", "17", 267), ("250", None, 250), (None, "17", None)],
+)
+def test_coffee_link_legacy_hot_milk_total(coffee_and_milk, milk_only, expected):
+    assert coffee_link_legacy_hot_milk_total(coffee_and_milk, milk_only) == expected
+
+
+def test_coffee_link_striker_without_cold_brew_excludes_milk_only_field():
+    value = '{"tot_bev_bw":40,"tot_bev_w":5}'
+    assert counters.coffee_link_hot_milk_total(value, include_milk_only=False) == 40
+
+
+@pytest.mark.parametrize(
     ("cloud_value", "display_level"),
     [
         (0, 1),
@@ -106,6 +151,7 @@ def test_parse_water_hardness_level(cloud_value, display_level):
 
 
 # --- counter_breakdown ---------------------------------------------------- #
+
 
 def test_counter_breakdown_returns_json_object():
     assert counter_breakdown('{"espresso": 12, "coffee": 3}') == {
@@ -135,12 +181,11 @@ def test_counter_breakdown_none_for_non_objects(value):
 
 # --- counter_breakdown_sum ------------------------------------------------ #
 
+
 def test_counter_breakdown_sum_selects_only_requested_fields():
     value = '{"over_ice": 3, "cold_brew": 11, "cold_brew_latte": "2"}'
     assert counter_breakdown_sum(value, ("over_ice",)) == 3
-    assert counter_breakdown_sum(
-        value, ("cold_brew", "cold_brew_latte")
-    ) == 13
+    assert counter_breakdown_sum(value, ("cold_brew", "cold_brew_latte")) == 13
 
 
 def test_counter_breakdown_sum_requires_at_least_one_selected_field():
@@ -152,6 +197,40 @@ def test_counter_breakdown_sum_ignores_invalid_selected_values():
     value = '{"good": 5, "bad": "x", "boolean": true}'
     assert counter_breakdown_sum(value, ("good", "bad", "boolean")) == 5
     assert counter_breakdown_sum(value, ("bad", "boolean")) is None
+
+
+def test_coffee_link_official_eletta_aggregates():
+    iced = '{"tot_bev_b_iced":23,"tot_bev_bw_iced":7,"tot_bev_w_iced":3,"unrelated":99}'
+    other = '{"tot_bev_bw":300,"tot_bev_w":8,"unrelated":99}'
+
+    assert coffee_link_black_coffee_total(616, iced) == 639
+    assert coffee_link_hot_milk_total(other) == 308
+    assert coffee_link_cold_milk_total(iced) == 10
+    assert coffee_link_mug_total(16, 0) == 16
+
+
+def test_coffee_link_aggregates_require_official_primary_fields():
+    assert coffee_link_black_coffee_total(None, '{"tot_bev_b_iced":23}') is None
+    assert coffee_link_black_coffee_total(616, None) == 616
+    assert coffee_link_hot_milk_total('{"tot_bev_w":8}') is None
+    assert coffee_link_cold_milk_total('{"tot_bev_w_iced":3}') is None
+    assert coffee_link_mug_total(None, 2) is None
+    assert coffee_link_mug_total(16, None) == 16
+
+
+@pytest.mark.parametrize(
+    ("parser", "invalid"),
+    [
+        (coffee_link_hot_milk_total, '{"tot_bev_bw":true,"tot_bev_w":8}'),
+        (coffee_link_hot_milk_total, '{"tot_bev_bw":"bad","tot_bev_w":8}'),
+        (
+            coffee_link_cold_milk_total,
+            '{"tot_bev_bw_iced":true,"tot_bev_w_iced":3}',
+        ),
+    ],
+)
+def test_coffee_link_aggregates_reject_invalid_required_fields(parser, invalid):
+    assert parser(invalid) is None
 
 
 def test_eletta_cold_group_keeps_over_ice_separate_from_cold_brew():
@@ -178,8 +257,5 @@ def test_eletta_cold_group_keeps_over_ice_separate_from_cold_brew():
     )
 
     assert parse_counter_value(value) == 20
-    assert counter_breakdown_sum(
-        value, ("tot_id57_over_ice_espresso",)
-    ) == 3
+    assert counter_breakdown_sum(value, ("tot_id57_over_ice_espresso",)) == 3
     assert counter_breakdown_sum(value, cold_brew_keys) == 17
-

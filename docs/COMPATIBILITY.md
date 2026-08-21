@@ -17,9 +17,52 @@ load on the same target Home Assistant. Newer Home Assistant versions are
 expected to work, but vendor and Home Assistant changes require continuing
 validation.
 
+Local beta 1.3.0-beta.4 completed automated verification, a backed-up live
+deployment, Home Assistant configuration validation, a clean restart and
+read-only acceptance on the same Eletta Explore. The Ayla DSS stream was active,
+received three real events during a statistics synchronization and reported no
+current error. Loaded English and Czech resources were complete, all maintenance
+sensors settled to available, and the machine remained in standby. Its aggregate
+statistics matched Coffee Link (639 black coffees, 308 milk drinks, 10 cold milk
+drinks and 16 Mug to Go), while the corrected water total reported 209.925 L.
+
+Release candidate 1.3.0-beta.5 preserves those verified Eletta formulas and adds
+the legacy Coffee Link formula used by the PrimaDonna Soul profile: `d700` is
+black coffee and
+`d701 + d703` is the milk-beverage summary. It no longer labels `d703` as water.
+Unknown OEM models expose only unambiguous direct counters until a model-specific
+profile is supported. Per-recipe counters remain opt-in for newly registered
+entities; existing registry choices are preserved. Beta.5 also discards the
+local IP address received from the vendor cloud instead of retaining or exposing
+it, makes account reconfiguration password-only, and aligns English names and
+De'Longhi branding. Its isolated and actual-Home-Assistant test suites pass.
+Beta.5 also completed backed-up deployments, configuration checks, clean
+restarts, read-only acceptance and a supervised physical cycle on the verified
+Eletta. Wake passed from standby through waking to ready, Cold Brew Start/Stop
+returned safely to ready, and Standby returned the machine to standby. The DSS
+stream remained healthy and all four maintenance-condition entities were
+available without manual synchronization. The Eletta command property declares
+`ack_enabled: false`; therefore Coffee Link and the integration confirm commands
+from resulting cloud state rather than waiting for a nonexistent datapoint ACK.
+The live stream received datapoint events and no datapoint-ACK event, exactly as
+declared. No beta.5 release has been published.
+
+Release candidate 1.3.0-beta.6 keeps the beta.5 protocol and model mappings and
+tightens runtime reliability, rate-limit handling, command-state confirmation,
+account-device caching and code quality. It completed a backed-up deployment,
+Home Assistant configuration validation, a clean restart and read-only cloud
+synchronization on the same Eletta. The DSS stream recovered from the expected
+post-restart polling fallback, received real datapoint events and remained
+healthy. A supervised Wake, Cold Brew Start/Stop and Standby cycle then passed;
+every command was attributed to Home Assistant and confirmed by the resulting
+machine state, as required by Eletta's non-ACK command property. The machine
+returned to standby and the Home Assistant system log contained no integration
+error.
+
 ## Verified Eletta behavior
 
-- Account setup, reauthentication, polling and cloud-outage recovery logic.
+- Account setup, reauthentication, hybrid DSS/polling and cloud-outage recovery
+  logic.
 - Machine, counter and maintenance-state parsing.
 - Dynamic recipe learning and stable button identity.
 - Wake and standby transitions.
@@ -27,10 +70,10 @@ validation.
 - Coffee Link session ownership and command acknowledgement handling.
 - English/Czech translation-key and placeholder parity.
 
-Wake, standby and Cold Brew Start/Stop were physically repeated after deploying
-1.2.0. Last Command Status recorded the expected transaction transitions and the
-machine returned to standby. Other beverage recipes have not all completed the
-same supervised physical matrix.
+Wake, standby and Cold Brew Start/Stop were physically repeated on beta.6. Last
+Command Status recorded the expected transaction transitions, used the friendly
+Cold Brew name for Start and Stop, and the machine returned to standby. Other
+beverage recipes have not all completed the same supervised physical matrix.
 
 ## Known limitations
 
@@ -39,8 +82,8 @@ same supervised physical matrix.
 - Vendor authentication, cloud-property or mobile-app changes may require an
   integration update.
 - Eletta recipe controls must normally be observed once in Coffee Link.
-- Multiple app actions between two 30-second polls can cause an intermediate
-  command to be missed.
+- While DSS is unavailable, multiple app actions between two 30-second fallback
+  polls can cause an intermediate command to be missed.
 - Account membership is checked every ten minutes. Adding or removing a coffee
   maker triggers an automatic integration reload; the change is therefore not
   instantaneous.

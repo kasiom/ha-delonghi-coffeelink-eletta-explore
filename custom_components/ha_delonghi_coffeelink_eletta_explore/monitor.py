@@ -20,6 +20,7 @@ Matthieu Guerquin-Kern (https://framagit.org/mattgk/dlghiot).
 All helpers are pure and never raise - a malformed blob returns
 ``{"error": ...}`` so the poll loop is never at risk.
 """
+
 from __future__ import annotations
 
 import base64
@@ -34,6 +35,24 @@ _LOGGER = logging.getLogger(__name__)
 
 # data[0] identifying a MonitorV2 packet.
 MONITOR_REQUEST_ID = 0x75
+
+
+def monitor_ordering_token(value_b64: str) -> int | None:
+    """Return the signed big-endian ordering token used by Coffee Link.
+
+    The official app compares the final four bytes of consecutive MonitorV2
+    values before accepting a DSS update.  Keeping this helper separate from
+    the user-facing parser preserves the existing sensor attributes.
+    """
+    if not isinstance(value_b64, str) or not value_b64.strip():
+        return None
+    try:
+        raw = base64.b64decode("".join(value_b64.split()), validate=True)
+    except ValueError, binascii.Error:
+        return None
+    if len(raw) < 4:
+        return None
+    return int.from_bytes(raw[-4:], "big", signed=True)
 
 
 def _parse_ecam_packet(raw: bytes) -> tuple[bytes, bytes, bytes]:
@@ -73,12 +92,7 @@ def _parse_monitor_contents(contents: bytes) -> dict[str, int]:
     }
     if len(contents) >= 13:
         fields["switches"] = contents[1] | (contents[2] << 8)
-        fields["alarms"] = (
-            contents[3]
-            | (contents[4] << 8)
-            | (contents[8] << 16)
-            | (contents[9] << 24)
-        )
+        fields["alarms"] = contents[3] | (contents[4] << 8) | (contents[8] << 16) | (contents[9] << 24)
     return fields
 
 
@@ -124,4 +138,3 @@ def parse_monitor_b64(value_b64: str) -> dict[str, Any]:
     except (ValueError, binascii.Error) as err:
         _LOGGER.debug("Failed to parse monitor blob: %s", err)
         return {"error": str(err)}
-

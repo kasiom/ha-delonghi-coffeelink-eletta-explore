@@ -1,11 +1,10 @@
 {
   "entity": {
     "sensor": {
-      "total_beverages": { "default": "mdi:counter" },
       "total_black_coffee_beverages": { "default": "mdi:counter" },
       "total_espresso": { "default": "mdi:coffee" },
       "total_milk_drinks": { "default": "mdi:cup" },
-      "total_water": { "default": "mdi:water" },
+      "total_cold_milk_drinks": { "default": "mdi:cup" },
       "total_espresso_alt": { "default": "mdi:coffee" },
       "total_coffee": { "default": "mdi:coffee" },
       "total_long_coffee": { "default": "mdi:coffee" },
@@ -44,7 +43,8 @@
       "descale_alert_count": { "default": "mdi:alert-circle-outline" },
       "machine_status": { "default": "mdi:coffee-maker" },
       "cloud_session_app_id": { "default": "mdi:key-chain" },
-      "last_command_status": { "default": "mdi:progress-check" }
+      "last_command_status": { "default": "mdi:progress-check" },
+      "wifi_signal_strength": { "default": "mdi:wifi" }
     },
     "button": {
       "start_espresso": { "default": "mdi:coffee" },

@@ -28,6 +28,14 @@ supported while that review is pending.
 5. Open **Settings → Devices & services → Add integration**, search for the
    integration and enter the account used by the official Coffee Link app.
 
+### Prerelease testing
+
+To test a version marked as a GitHub prerelease, enable beta versions for this
+repository in HACS and select the offered prerelease explicitly. Review its
+changelog and safety notes first, create a Home Assistant backup and keep the
+coffee maker supervised during the required physical acceptance checks. Disable
+beta versions again if the installation should follow only stable releases.
+
 ## Manual installation
 
 1. Download the source archive attached to the latest GitHub release.

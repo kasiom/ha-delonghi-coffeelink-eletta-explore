@@ -8,11 +8,7 @@ from pathlib import Path
 
 import pytest
 
-PKG_DIR = (
-    Path(__file__).resolve().parents[1]
-    / "custom_components"
-    / "ha_delonghi_coffeelink_eletta_explore"
-)
+PKG_DIR = Path(__file__).resolve().parents[1] / "custom_components" / "ha_delonghi_coffeelink_eletta_explore"
 
 
 def _load_firmware():

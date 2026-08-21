@@ -6,7 +6,7 @@ import sys
 from unittest.mock import AsyncMock, patch
 
 import pytest
-from homeassistant.config_entries import ConfigEntryState
+from homeassistant.config_entries import SOURCE_RECONFIGURE, ConfigEntryState
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
 from homeassistant.helpers import device_registry as dr
@@ -25,6 +25,7 @@ from custom_components.ha_delonghi_coffeelink_eletta_explore.const import (
 from custom_components.ha_delonghi_coffeelink_eletta_explore.diagnostics import (
     async_get_config_entry_diagnostics,
 )
+from custom_components.ha_delonghi_coffeelink_eletta_explore.dss import AylaDssManager
 
 TEST_EMAIL = "owner@example.test"
 TEST_PASSWORD = "not-a-real-password"
@@ -44,7 +45,6 @@ def _device() -> AylaDevice:
         oem_model="DL-millcore",
         model="Synthetic model",
         sw_version="test-version",
-        lan_ip="",
         connection_status="online",
     )
 
@@ -77,6 +77,45 @@ async def test_user_config_flow_uses_real_home_assistant(hass: HomeAssistant) ->
     }
 
 
+async def test_reconfigure_keeps_the_existing_account(hass: HomeAssistant) -> None:
+    """Update a password without allowing the config entry account to change."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="De'Longhi Coffee Link – Eletta Explore",
+        unique_id=TEST_EMAIL,
+        data={CONF_EMAIL: TEST_EMAIL, CONF_PASSWORD: TEST_PASSWORD},
+    )
+    entry.add_to_hass(hass)
+    replacement_password = "another-synthetic-password"
+
+    with (
+        patch.object(DelonghiAylaClient, "async_authenticate", AsyncMock()),
+        patch.object(
+            DelonghiAylaClient,
+            "async_get_devices",
+            AsyncMock(return_value=[_device()]),
+        ),
+    ):
+        result = await hass.config_entries.flow.async_init(
+            DOMAIN,
+            context={"source": SOURCE_RECONFIGURE, "entry_id": entry.entry_id},
+        )
+        assert result["type"] is FlowResultType.FORM
+
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            {CONF_PASSWORD: replacement_password},
+        )
+
+    assert result["type"] is FlowResultType.ABORT
+    assert result["reason"] == "reconfigure_successful"
+    assert entry.unique_id == TEST_EMAIL
+    assert entry.data == {
+        CONF_EMAIL: TEST_EMAIL,
+        CONF_PASSWORD: replacement_password,
+    }
+
+
 async def test_setup_diagnostics_and_unload_use_real_registries(
     hass: HomeAssistant,
 ) -> None:
@@ -103,6 +142,13 @@ async def test_setup_diagnostics_and_unload_use_real_registries(
             "async_get_properties",
             AsyncMock(return_value=properties),
         ),
+        patch.object(
+            DelonghiAylaClient,
+            "async_get_connection_info",
+            AsyncMock(return_value={}),
+        ) as connection_info,
+        patch.object(AylaDssManager, "start", return_value=None) as dss_start,
+        patch.object(AylaDssManager, "async_stop", AsyncMock()) as dss_stop,
     ):
         assert await hass.config_entries.async_setup(entry.entry_id)
         await hass.async_block_till_done()
@@ -110,9 +156,7 @@ async def test_setup_diagnostics_and_unload_use_real_registries(
         assert entry.state is ConfigEntryState.LOADED
         assert len(entry.runtime_data.coordinators) == 1
 
-        device_entry = dr.async_get(hass).async_get_device_by_identifier(
-            (DOMAIN, TEST_DSN), entry.entry_id
-        )
+        device_entry = dr.async_get(hass).async_get_device_by_identifier((DOMAIN, TEST_DSN), entry.entry_id)
         assert device_entry is not None
         assert er.async_entries_for_config_entry(er.async_get(hass), entry.entry_id)
 
@@ -124,5 +168,9 @@ async def test_setup_diagnostics_and_unload_use_real_registries(
 
         assert await hass.config_entries.async_unload(entry.entry_id)
         await hass.async_block_till_done()
+
+        connection_info.assert_awaited_once_with(TEST_DSN)
+        dss_start.assert_called_once_with()
+        dss_stop.assert_awaited_once_with()
 
     assert entry.state is ConfigEntryState.NOT_LOADED

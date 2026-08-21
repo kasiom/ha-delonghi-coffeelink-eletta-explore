@@ -2,10 +2,13 @@
 
 ## Data updates
 
-The integration polls the vendor cloud every 30 seconds. The **Synchronize Data**
-button acquires a safe Coffee Link cloud session, waits for the machine to publish
-fresh values and then refreshes the coordinator. Counter changes can still be
-delayed by the machine or vendor cloud.
+After an initial cloud read, the integration receives near-real-time Ayla DSS
+updates and performs a full reconciliation poll every five minutes. If the stream
+is unavailable or silent, the integration immediately resumes 30-second polling
+and reconnects in the background. The **Synchronize Data** button acquires a safe
+Coffee Link cloud session, waits for the machine to publish fresh values and then
+refreshes the coordinator. Counter changes can still be delayed by the machine or
+vendor cloud.
 
 The Coffee Link account device list is checked every ten minutes. A membership
 change schedules one config-entry reload so newly added machines appear and
@@ -17,11 +20,15 @@ removed machines do not leave stale devices or entities behind.
 - **Machine Status** reports the verified MonitorV2 state and keeps raw status,
   step, progress, accessory and alarm values in attributes for diagnostics.
 - **Coffee Link Session** reports whether the exclusive command session is free,
-  held by this integration or held by another application.
+  active under the machine's shared Coffee Link identifier or uses a different
+  application identifier. The shared identifier cannot distinguish Home Assistant
+  from the official app.
 - **Last Command Status** tracks only commands issued by Home Assistant:
   pending, sent, acknowledged, timed out or rejected.
 - Beverage and maintenance sensors expose current counters and percentages with
   appropriate units and state classes.
+- **Wi-Fi Signal Strength** is a disabled-by-default diagnostic sensor. It appears
+  only when the vendor cloud supplies RSSI; the Wi-Fi network name is discarded.
 - Water tank, grounds container, descaling and filter binary sensors use the
   Home Assistant problem device class, so their normal state is shown as OK.
 
@@ -42,9 +49,10 @@ A greyed-out button is normally an intentional safety state, not a failed entity
 ## Learning a recipe
 
 Prepare the recipe once in the official Coffee Link app while Home Assistant is
-polling the machine. The integration observes, validates and stores the exact
-frame, then dynamically adds a button. If multiple app commands occur between two
-polls, an intermediate command can be missed; repeat the recipe if needed.
+running. The integration observes, validates and stores the exact frame, then
+dynamically adds a button. DSS normally delivers it immediately; during polling
+fallback, multiple app commands between two reads can still hide an intermediate
+command, so repeat the recipe if needed.
 
 If a command restored from Home Assistant storage no longer passes integrity or
 device-signature validation, the integration discards it and creates an item in

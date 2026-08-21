@@ -13,8 +13,8 @@
       },
       "reconfigure": {
         "title": "Změna nastavení De'Longhi Coffee Link – Eletta Explore",
-        "description": "Zadejte a ověřte údaje účtu Coffee Link, které mají nahradit účet {email}.",
-        "data": { "email": "E-mail", "password": "Heslo" }
+        "description": "Zadejte a ověřte nové heslo ke stávajícímu účtu Coffee Link {email}.",
+        "data": { "password": "Heslo" }
       }
     },
     "error": {
@@ -26,16 +26,15 @@
     "abort": {
       "already_configured": "Tento účet je již nastaven.",
       "reauth_successful": "Přihlášení bylo úspěšně obnoveno.",
-      "reconfigure_successful": "Účet Coffee Link byl úspěšně změněn."
+      "reconfigure_successful": "Přihlašovací údaje k účtu Coffee Link byly úspěšně aktualizovány."
     }
   },
   "entity": {
     "sensor": {
-      "total_beverages": { "name": "Počet nápojů celkem" },
       "total_black_coffee_beverages": { "name": "Počet černých káv celkem" },
       "total_espresso": { "name": "Počet Espresso celkem" },
       "total_milk_drinks": { "name": "Počet mléčných nápojů" },
-      "total_water": { "name": "Počet výdejů vody" },
+      "total_cold_milk_drinks": { "name": "Počet studených mléčných nápojů" },
       "total_espresso_alt": { "name": "Počet Espresso" },
       "total_coffee": { "name": "Počet káv" },
       "total_long_coffee": { "name": "Počet Long Coffee" },
@@ -97,7 +96,7 @@
         "state": {
           "unknown": "Neznámá",
           "free": "Volná",
-          "ha": "Home Assistant",
+          "ha": "Aktivní",
           "foreign": "Jiná aplikace"
         }
       },
@@ -110,6 +109,9 @@
           "timed_out": "Vypršel časový limit",
           "rejected": "Odmítnut"
         }
+      },
+      "wifi_signal_strength": {
+        "name": "Síla signálu Wi-Fi"
       }
     },
     "button": {
@@ -167,6 +169,7 @@
     "water_tank_missing": { "message": "Nádržka na vodu není vložena." },
     "grounds_container_missing": { "message": "Zásobník na sedlinu není vložen." },
     "command_not_acknowledged": { "message": "Příkaz byl odeslán, ale kávovar jej nepotvrdil včas." },
+    "command_rejected_by_device": { "message": "Kávovar příkaz výslovně odmítl." },
     "cloud_session_in_use": { "message": "Cloudovou relaci Coffee Link používá jiná aplikace; zavřete ji nebo počkejte na uvolnění relace." },
     "cached_session_unverified": { "message": "Uloženou cloudovou relaci Coffee Link se nepodařilo ověřit." },
     "cloud_session_timeout": { "message": "Při navazování cloudové relace Coffee Link vypršel časový limit." },

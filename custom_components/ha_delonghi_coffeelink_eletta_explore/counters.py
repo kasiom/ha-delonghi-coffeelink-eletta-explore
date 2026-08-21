@@ -1,4 +1,4 @@
-"""Pure counter-value parsing for DeLonghi datapoints.
+"""Pure counter-value parsing for De'Longhi datapoints.
 
 Kept free of Home Assistant imports so the parsing logic is unit-testable on its
 own (see tests/test_counters.py). Two value shapes exist across models:
@@ -9,6 +9,7 @@ own (see tests/test_counters.py). Two value shapes exist across models:
   the sensor ``unknown`` before #7. For those, the sensor state is the sum of
   the integer sub-values and the raw object is exposed as attributes.
 """
+
 from __future__ import annotations
 
 import json
@@ -45,16 +46,36 @@ def parse_counter_value(val: Any) -> int | None:
         return total
     try:
         return int(val_str)
-    except (TypeError, ValueError):
+    except TypeError, ValueError:
         return None
 
 
 def parse_water_volume_liters(val: Any) -> float | None:
-    """Convert a De'Longhi water-volume counter from millilitres to litres."""
+    """Convert a legacy/filter water-volume counter from millilitres to litres.
+
+    This conversion is intentionally kept separate from
+    :func:`parse_total_water_volume_liters`.  Coffee Link 4.9.6 proves the
+    half-millilitre scale only for ``d553_water_tot_qty``; applying it to the
+    filter counter without equivalent evidence would silently change an
+    unrelated sensor.
+    """
     milliliters = parse_counter_value(val)
     if milliliters is None:
         return None
     return round(milliliters / 1000, 3)
+
+
+def parse_total_water_volume_liters(val: Any) -> float | None:
+    """Convert ``d553_water_tot_qty`` half-millilitre ticks to litres.
+
+    The Eletta Coffee Link statistics screen calculates this property as
+    ``raw / 2000`` (the app truncates the displayed number to whole litres).
+    Home Assistant retains the available three-decimal precision.
+    """
+    half_milliliter_ticks = parse_counter_value(val)
+    if half_milliliter_ticks is None:
+        return None
+    return round(half_milliliter_ticks / 2000, 3)
 
 
 def parse_percentage_value(val: Any) -> int | None:
@@ -87,7 +108,7 @@ def parse_water_hardness_level(val: Any) -> int | None:
     return cloud_level + 1
 
 
-def counter_breakdown(val: Any) -> dict | None:
+def counter_breakdown(val: Any) -> dict[str, Any] | None:
     """Return the per-recipe JSON breakdown of a counter value, else ``None``.
 
     Only JSON-object values (Eletta aggregated counters) have a breakdown; plain
@@ -127,8 +148,87 @@ def counter_breakdown_sum(val: Any, keys: Collection[str]) -> int | None:
             continue
         try:
             total += int(sub_value)
-        except (TypeError, ValueError):
+        except TypeError, ValueError:
             continue
         found = True
     return total if found else None
 
+
+def _required_breakdown_sum(val: Any, required_key: str, keys: Collection[str]) -> int | None:
+    """Sum JSON fields only when Coffee Link's required discriminator exists."""
+    data = counter_breakdown(val)
+    if data is None or required_key not in data:
+        return None
+    required_value = data[required_key]
+    if isinstance(required_value, bool):
+        return None
+    try:
+        int(required_value)
+    except TypeError, ValueError:
+        return None
+    return counter_breakdown_sum(val, keys)
+
+
+def coffee_link_black_coffee_total(black: Any, iced_counters: Any) -> int | None:
+    """Return Coffee Link's black-coffee total for Eletta Explore.
+
+    Coffee Link adds the scalar ``d701_tot_bev_b`` and the optional
+    ``tot_bev_b_iced`` field from ``d733_tot_bev_counters``.
+    """
+    hot_black = parse_counter_value(black)
+    if hot_black is None:
+        return None
+    iced_black = counter_breakdown_sum(iced_counters, ("tot_bev_b_iced",))
+    return hot_black + (iced_black or 0)
+
+
+def coffee_link_hot_milk_total(other_counters: Any, *, include_milk_only: bool = True) -> int | None:
+    """Return Coffee Link's Striker hot-milk beverage count.
+
+    Cold-Brew-capable Striker machines add the milk-only field. Other Striker
+    variants use only ``tot_bev_bw``; this mirrors Coffee Link's capability
+    branch instead of assuming that every Striker has the same recipe set.
+    """
+    keys = ("tot_bev_bw", "tot_bev_w") if include_milk_only else ("tot_bev_bw",)
+    return _required_breakdown_sum(
+        other_counters,
+        "tot_bev_bw",
+        keys,
+    )
+
+
+def coffee_link_cold_milk_total(iced_counters: Any) -> int | None:
+    """Return Coffee Link's aggregate cold-milk beverage count."""
+    return _required_breakdown_sum(
+        iced_counters,
+        "tot_bev_bw_iced",
+        ("tot_bev_bw_iced", "tot_bev_w_iced"),
+    )
+
+
+def coffee_link_mug_total(hot_mug: Any, cold_mug: Any) -> int | None:
+    """Return Coffee Link's Mug to Go total (hot plus optional cold)."""
+    hot = parse_counter_value(hot_mug)
+    if hot is None:
+        return None
+    cold = parse_counter_value(cold_mug)
+    return hot + (cold or 0)
+
+
+def coffee_link_legacy_black_coffee_total(black: Any) -> int | None:
+    """Return Coffee Link's black-coffee total for the legacy ECAM branch."""
+    return parse_counter_value(black)
+
+
+def coffee_link_legacy_hot_milk_total(coffee_and_milk: Any, milk_only: Any) -> int | None:
+    """Return the legacy Coffee Link hot-milk aggregate.
+
+    Coffee Link 4.9.6 displays this statistic only when
+    ``d701_tot_bev_bw`` is present and adds optional ``d703_tot_bev_w``.
+    Despite its suffix, d703 is therefore not a water-dispense counter.
+    """
+    combined = parse_counter_value(coffee_and_milk)
+    if combined is None:
+        return None
+    milk = parse_counter_value(milk_only)
+    return combined + (milk or 0)

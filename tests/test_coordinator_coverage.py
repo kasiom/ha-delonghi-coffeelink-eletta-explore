@@ -3,6 +3,7 @@
 The Home Assistant and cloud doubles are defined in ``test_reliability``.  All
 tests remain local and deterministic; no real Ayla request is made.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -39,7 +40,6 @@ def replacement_device(dsn: str = "private-device-id") -> Any:
         oem_model="DL-striker-cb",
         model="Eletta",
         sw_version="2",
-        lan_ip="192.0.2.20",
         connection_status="online",
     )
 
@@ -65,6 +65,30 @@ def test_shutdown_resets_session_cancels_task_and_calls_base(monkeypatch: pytest
     run(coordinator.async_shutdown())
 
 
+def test_async_setup_restores_persistent_command_state() -> None:
+    coordinator, _client = _coordinator()
+    coordinator.async_load_learned = AsyncMock()
+    run(coordinator._async_setup())
+    coordinator.async_load_learned.assert_awaited_once_with()
+
+
+def test_initial_maintenance_confirmation_refreshes_only_a_pending_snapshot() -> None:
+    coordinator, _client = _coordinator("DL-striker-cb")
+    coordinator.async_request_refresh = AsyncMock()
+
+    run(coordinator.async_confirm_initial_maintenance_snapshot())
+    coordinator.async_request_refresh.assert_not_awaited()
+
+    coordinator._maintenance_candidate_count = 1
+    run(coordinator.async_confirm_initial_maintenance_snapshot())
+    coordinator.async_request_refresh.assert_awaited_once_with()
+
+    coordinator.async_request_refresh.reset_mock()
+    coordinator.stable_maintenance_monitor = {"alarms": 0}
+    run(coordinator.async_confirm_initial_maintenance_snapshot())
+    coordinator.async_request_refresh.assert_not_awaited()
+
+
 def test_update_data_detects_channels_refreshes_metadata_and_reuses_them(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -77,9 +101,7 @@ def test_update_data_detects_channels_refreshes_metadata_and_reuses_them(
     }
     client.async_get_properties = AsyncMock(return_value=props)
     replacement = replacement_device()
-    client.async_get_devices = AsyncMock(
-        side_effect=[[replacement_device("other"), replacement], [replacement]]
-    )
+    client.async_get_devices = AsyncMock(side_effect=[[replacement_device("other"), replacement], [replacement]])
     sniff = Mock()
     monitor = Mock()
     session = Mock()
@@ -95,15 +117,14 @@ def test_update_data_detects_channels_refreshes_metadata_and_reuses_them(
     assert coordinator.response_property == const.RESPONSE_PROPERTY_CANDIDATES[0]
     assert coordinator.connected_property == const.CONNECTED_PROPERTY_CANDIDATES[0]
     assert coordinator.device is replacement
-    device_list_callback.assert_called_once_with(
-        [replacement_device("other"), replacement]
-    )
+    device_list_callback.assert_called_once_with([replacement_device("other"), replacement])
     sniff.assert_called_once_with(props)
     monitor.assert_called_once_with(props)
     session.assert_called_once_with(props)
 
     assert run(coordinator._async_update_data()) == props
     assert client.async_get_devices.await_count == 1
+    client.async_get_devices.assert_awaited_once_with(max_age=const.DEVICE_METADATA_REFRESH_INTERVAL)
 
 
 @pytest.mark.parametrize(
@@ -111,7 +132,7 @@ def test_update_data_detects_channels_refreshes_metadata_and_reuses_them(
     [
         (ayla_client.AuthError("bad"), ConfigEntryAuthFailed, "credentials"),
         (ayla_client.CloudError("offline"), RuntimeError, "Ayla cloud error"),
-        (ValueError("broken"), RuntimeError, "Error fetching Delonghi data"),
+        (ValueError("broken"), RuntimeError, "Error fetching De'Longhi data"),
     ],
 )
 def test_update_data_maps_failures(
@@ -123,6 +144,16 @@ def test_update_data_maps_failures(
     client.async_get_properties = AsyncMock(side_effect=error)
     with pytest.raises(expected_type, match=message):
         run(coordinator._async_update_data())
+
+
+def test_update_data_preserves_sanitized_rate_limit_delay() -> None:
+    coordinator, client = _coordinator()
+    client.async_get_properties = AsyncMock(side_effect=ayla_client.RateLimitError("limited", retry_after=123))
+
+    with pytest.raises(RuntimeError, match="rate limit") as error:
+        run(coordinator._async_update_data())
+
+    assert error.value.retry_after == 123
 
 
 def test_detect_property_required_optional_and_found() -> None:
@@ -220,11 +251,9 @@ def test_wait_for_session_confirmation_success_progress_and_timeout(
 ) -> None:
     async def success() -> None:
         coordinator, _client = _coordinator("DL-striker-cb")
-        coordinator._fetch_app_id_live = AsyncMock(
-            side_effect=[(None, False), (coordinator._integration_app_id, True)]
-        )
+        coordinator._fetch_app_id_live = AsyncMock(side_effect=[(None, False), (coordinator._integration_app_id, True)])
         times = iter([0.0, 0.0, 16.0, 16.0, 17.0])
-        monkeypatch.setattr(cm.time, "time", lambda: next(times))
+        monkeypatch.setattr(cm, "monotonic", lambda: next(times))
         monkeypatch.setattr(cm.asyncio, "sleep", AsyncMock())
         assert await coordinator._wait_for_session_confirmed() is True
         assert coordinator._session_confirmed is True
@@ -235,7 +264,7 @@ def test_wait_for_session_confirmation_success_progress_and_timeout(
         coordinator, _client = _coordinator("DL-striker-cb")
         coordinator._fetch_app_id_live = AsyncMock(return_value=(999, True))
         monkeypatch.setattr(cm, "CONNECT_CONFIRM_TIMEOUT", 0)
-        monkeypatch.setattr(cm.time, "time", lambda: 100.0)
+        monkeypatch.setattr(cm, "monotonic", lambda: 100.0)
         assert await coordinator._wait_for_session_confirmed() is False
         assert coordinator._session_confirmed is False
         coordinator._fetch_app_id_live.assert_awaited_once()
@@ -317,6 +346,8 @@ def test_command_metadata_default_unknown_beverage_and_completion(
     context = coordinator._beverage_command_context(0xFE, const.ACTION_STOP)
     assert context["beverage_name"] == "0xfe"
     assert context["action"] == "stop"
+    context = coordinator._beverage_command_context(120, const.ACTION_START)
+    assert context["beverage_name"] == "Cold Brew"
 
 
 def test_post_command_refresh_cancels_previous_uses_ha_task_and_handles_failure(
@@ -331,22 +362,16 @@ def test_post_command_refresh_cancels_previous_uses_ha_task_and_handles_failure(
         monkeypatch.setattr(cm, "POST_COMMAND_REFRESH_DELAY", 0)
         created: list[str] = []
 
-        def create_task(
-            hass: Any, coro: Coroutine[Any, Any, Any], name: str
-        ) -> asyncio.Task[Any]:
+        def create_task(hass: Any, coro: Coroutine[Any, Any, Any], name: str) -> asyncio.Task[Any]:
             created.append(name)
             return asyncio.create_task(coro, name=name)
 
-        coordinator._config_entry = types.SimpleNamespace(
-            async_create_background_task=create_task
-        )
+        coordinator.config_entry = types.SimpleNamespace(async_create_background_task=create_task)
         coordinator._schedule_post_command_refresh()
         await coordinator._post_command_refresh_task
         previous.cancel.assert_called_once()
         refresh.assert_awaited_once()
-        assert created == [
-            f"{const.DOMAIN}_post_command_refresh_{coordinator._device_log_id}"
-        ]
+        assert created == [f"{const.DOMAIN}_post_command_refresh_{coordinator._device_log_id}"]
 
         coordinator._post_command_refresh_task = None
         coordinator.async_request_refresh = AsyncMock(side_effect=RuntimeError("refresh failed"))
@@ -387,6 +412,92 @@ def test_wait_for_command_confirmation_response_monitor_and_timeout(
     run(scenario())
 
 
+def test_streaming_command_confirmation_uses_event_then_single_fallback_refresh() -> None:
+    async def scenario() -> None:
+        coordinator, _client = _coordinator()
+        coordinator.dss_state = "streaming"
+        coordinator.response_property = "response"
+        coordinator._last_resp_marker = "old"
+        coordinator.async_request_refresh = AsyncMock()
+
+        confirmation = asyncio.create_task(coordinator._wait_for_command_confirmation(("old", {}), timeout=1))
+        await asyncio.sleep(0)
+        coordinator._last_resp_marker = "new"
+        coordinator._notify_command_state_waiters()
+
+        assert await confirmation is True
+        coordinator.async_request_refresh.assert_not_awaited()
+        assert not coordinator._command_confirmation.has_waiters
+
+        coordinator._last_resp_marker = "old"
+        assert await coordinator._wait_for_command_confirmation(("old", {}), timeout=0) is False
+        coordinator.async_request_refresh.assert_awaited_once_with()
+
+    run(scenario())
+
+
+def test_confirmation_tracker_covers_races_timeouts_polling_and_shutdown() -> None:
+    async def scenario() -> None:
+        tracker = cm.CommandConfirmationTracker()
+        loop = asyncio.get_running_loop()
+
+        completed = loop.create_future()
+        completed.set_result(None)
+        tracker._waiters.add(completed)
+        tracker.notify()
+
+        active = loop.create_future()
+        tracker._waiters.add(active)
+        assert tracker.has_waiters is True
+        tracker.cancel()
+        assert active.cancelled()
+        assert tracker.has_waiters is False
+
+        checks = iter([False, True])
+        assert (
+            await tracker.async_wait(
+                changed=lambda: next(checks),
+                streaming=lambda: True,
+                refresh=AsyncMock(),
+                timeout=1,
+                poll_interval=0,
+            )
+            is True
+        )
+
+        refresh = AsyncMock()
+        assert (
+            await tracker.async_wait(
+                changed=lambda: False,
+                streaming=lambda: True,
+                refresh=refresh,
+                timeout=0.001,
+                poll_interval=0,
+            )
+            is False
+        )
+        refresh.assert_awaited_once_with()
+
+        refresh_count = 0
+
+        async def polling_refresh() -> None:
+            nonlocal refresh_count
+            refresh_count += 1
+
+        assert (
+            await tracker.async_wait(
+                changed=lambda: refresh_count >= 2,
+                streaming=lambda: False,
+                refresh=polling_refresh,
+                timeout=1,
+                poll_interval=0,
+            )
+            is True
+        )
+
+    run(scenario())
+
+
 def test_send_property_command_confirmation_modes() -> None:
     async def scenario() -> None:
         coordinator, client = _coordinator()
@@ -400,9 +511,7 @@ def test_send_property_command_confirmation_modes() -> None:
             (coordinator.device.dsn, "data_request", "two"),
             (coordinator.device.dsn, "data_request", "three"),
         ]
-        assert coordinator._wait_for_command_confirmation.await_args_list[-1].kwargs == {
-            "timeout": 9
-        }
+        assert coordinator._wait_for_command_confirmation.await_args_list[-1].kwargs == {"timeout": 9}
 
     run(scenario())
 
@@ -422,7 +531,7 @@ def test_session_refresh_power_values_and_freshness(monkeypatch: pytest.MonkeyPa
         assert coordinator._wake_command_value()
         assert coordinator._standby_command_value()
 
-        monkeypatch.setattr(cm.time, "time", lambda: 100.0)
+        monkeypatch.setattr(cm, "monotonic", lambda: 100.0)
         coordinator._last_connect_at = 99.0
         assert coordinator._session_is_fresh(999) is True
         coordinator._last_connect_at = 100.0 - cm.CONNECT_SETTLE_DELAY - 1
@@ -462,9 +571,7 @@ def test_with_cloud_session_cached_verification_and_confirmed_send() -> None:
         with pytest.raises(HomeAssistantError, match="could not be verified"):
             await coordinator._with_cloud_session(send)
 
-        coordinator._fetch_app_id_live = AsyncMock(
-            return_value=(coordinator._integration_app_id, True)
-        )
+        coordinator._fetch_app_id_live = AsyncMock(return_value=(coordinator._integration_app_id, True))
         await coordinator._with_cloud_session(send)
         send.assert_awaited_once()
 
@@ -654,15 +761,11 @@ def test_maybe_learn_frame_guard_and_power_paths(monkeypatch: pytest.MonkeyPatch
     coordinator._maybe_learn_frame({})
     coordinator._maybe_learn_frame({"raw_b64": "x", "type": "other"})
     coordinator._maybe_learn_frame({"raw_b64": "x", "type": "beverage"})
-    coordinator._maybe_learn_frame(
-        {"raw_b64": "x", "type": "beverage", "beverage_id": "bad", "action": 1}
-    )
+    coordinator._maybe_learn_frame({"raw_b64": "x", "type": "beverage", "beverage_id": "bad", "action": 1})
 
     monkeypatch.setattr(coordinator, "_learned_device_signature", lambda: b"same")
     monkeypatch.setattr(cm, "device_signature_from_frame", lambda _frame: b"different")
-    coordinator._maybe_learn_frame(
-        {"raw_b64": "bad-power", "type": "power", "crc_valid": True, "params": "01 01"}
-    )
+    coordinator._maybe_learn_frame({"raw_b64": "bad-power", "type": "power", "crc_valid": True, "params": "01 01"})
     assert coordinator.learned_wake_frame is None
 
     monkeypatch.setattr(cm, "device_signature_from_frame", lambda _frame: b"same")
@@ -672,16 +775,12 @@ def test_maybe_learn_frame_guard_and_power_paths(monkeypatch: pytest.MonkeyPatch
     monkeypatch.setattr(coordinator, "_restore_device_app_id", restore)
     monkeypatch.setattr(cm.ir, "async_delete_issue", delete_issue)
     coordinator._discarded_learning_keys.add("wake")
-    coordinator._maybe_learn_frame(
-        {"raw_b64": "good-power", "type": "power", "crc_valid": True, "params": "01 01"}
-    )
+    coordinator._maybe_learn_frame({"raw_b64": "good-power", "type": "power", "crc_valid": True, "params": "01 01"})
     assert coordinator.learned_wake_frame == "good-power"
     assert coordinator._discarded_learning_keys == set()
     delete_issue.assert_called_once()
     restore.assert_called_once()
-    coordinator._maybe_learn_frame(
-        {"raw_b64": "good-power", "type": "power", "crc_valid": True, "params": "01 01"}
-    )
+    coordinator._maybe_learn_frame({"raw_b64": "good-power", "type": "power", "crc_valid": True, "params": "01 01"})
     assert restore.call_count == 1
 
 
@@ -724,11 +823,9 @@ def test_wait_for_session_confirmation_foreign_without_progress(
 ) -> None:
     async def scenario() -> None:
         coordinator, _client = _coordinator("DL-striker-cb")
-        coordinator._fetch_app_id_live = AsyncMock(
-            side_effect=[(999, True), (coordinator._integration_app_id, True)]
-        )
+        coordinator._fetch_app_id_live = AsyncMock(side_effect=[(999, True), (coordinator._integration_app_id, True)])
         times = iter([0.0, 0.0, 1.0, 1.0, 2.0])
-        monkeypatch.setattr(cm.time, "time", lambda: next(times))
+        monkeypatch.setattr(cm, "monotonic", lambda: next(times))
         monkeypatch.setattr(cm.asyncio, "sleep", AsyncMock())
         assert await coordinator._wait_for_session_confirmed() is True
 
@@ -743,12 +840,7 @@ def test_command_confirmation_polls_unchanged_state_before_timeout(
         coordinator.monitor = {"status": 7}
         coordinator.async_request_refresh = AsyncMock()
         monkeypatch.setattr(cm.asyncio, "sleep", AsyncMock())
-        assert (
-            await coordinator._wait_for_command_confirmation(
-                (None, dict(coordinator.monitor)), timeout=0.0001
-            )
-            is False
-        )
+        assert await coordinator._wait_for_command_confirmation((None, dict(coordinator.monitor)), timeout=0.0001) is False
         assert coordinator.async_request_refresh.await_count >= 1
 
     run(scenario())
@@ -1073,9 +1165,7 @@ def test_raw_command_enforces_eletta_signature_readiness_and_power_family(
         coordinator.monitor = {"status": 7, "step": 0, "alarms": 0, "switches": 0}
         signature = bytes.fromhex("11 22 33 44")
         beverage = command_builder.build_and_encode(1, const.ACTION_START)
-        signed_beverage = base64.b64encode(
-            base64.b64decode(beverage) + signature
-        ).decode()
+        signed_beverage = base64.b64encode(base64.b64decode(beverage) + signature).decode()
 
         wake = command_builder.build_wake_encoded()
         signed_wake = base64.b64encode(base64.b64decode(wake) + signature).decode()
@@ -1088,9 +1178,7 @@ def test_raw_command_enforces_eletta_signature_readiness_and_power_family(
         assert client.writes[-1][2] == signed_beverage
         assert coordinator.last_command["action"] == "start"
 
-        wrong_signature = base64.b64encode(
-            base64.b64decode(beverage) + bytes.fromhex("55 66 77 88")
-        ).decode()
+        wrong_signature = base64.b64encode(base64.b64decode(beverage) + bytes.fromhex("55 66 77 88")).decode()
         with pytest.raises(HomeAssistantError, match="device-signature"):
             await coordinator.async_send_raw(wrong_signature)
 
@@ -1107,9 +1195,7 @@ def test_raw_command_enforces_eletta_signature_readiness_and_power_family(
         await coordinator.async_send_raw(signed_wake)
         assert coordinator.last_command["action"] == "wake"
 
-        wrong_wake = base64.b64encode(
-            base64.b64decode(wake) + bytes.fromhex("55 66 77 88")
-        ).decode()
+        wrong_wake = base64.b64encode(base64.b64decode(wake) + bytes.fromhex("55 66 77 88")).decode()
         with pytest.raises(HomeAssistantError, match="device-signature"):
             await coordinator.async_send_raw(wrong_wake)
 

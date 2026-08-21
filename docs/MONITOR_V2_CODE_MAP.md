@@ -1,8 +1,9 @@
 # MonitorV2 (0x75): mapa kódů a pravidla interpretace
 
-Stav analýzy: 2026-08-19
+Stav analýzy: 2026-08-21
 
 Stav implementace: opraveno ve verzi 1.1.16, regresně pokryto ve verzi 1.1.26
+a znovu fyzicky ověřeno ve verzi 1.3.0-beta.6
 Cílový model: De'Longhi Eletta Explore (`DL-striker-cb`)
 Datový zdroj: `d302_monitor_machine`
 
@@ -222,6 +223,11 @@ Ve verzi 1.1.16 byly provedeny všechny změny vyplývající z analýzy:
 Ve verzi 1.1.26 jsou všechny větve parseru a navazující logiky pokryty
 automatickými testy. Nový význam kódu se přesto nesmí přidat bez zachyceného
 paketu a fyzického ověření na konkrétním modelu.
+
+Fyzická přejímka verze 1.3.0-beta.6 znovu potvrdila přechody `standby` →
+`waking_up` → `ready`, obecný stav `preparing_beverage` při Cold Brew a přechod
+`going_to_sleep` → `standby`. Interpretace typu nápoje se nadále neopírá o
+samotnou hodnotu `Step`.
 
 ## Použité zdroje
 

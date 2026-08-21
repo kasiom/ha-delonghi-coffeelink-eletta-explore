@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from dataclasses import dataclass
+from typing import Any
 
 import voluptuous as vol
 from homeassistant.config_entries import ConfigEntry, ConfigEntryState
@@ -31,6 +32,7 @@ from .const import (
     SERVICE_STOP_BEVERAGE,
 )
 from .coordinator import DelonghiCoordinator
+from .dss import AylaDssManager
 from .errors import translated_auth_error, translated_service_error
 
 _LOGGER = logging.getLogger(__name__)
@@ -45,16 +47,10 @@ RETIRED_SENSOR_UNIQUE_ID_SUFFIXES = (
     "_statistics_synchronized",
 )
 
-DEVICE_TARGET = {vol.Required(ATTR_DEVICE_ID): vol.All(cv.ensure_list, [cv.string])}
-SERVICE_START_SCHEMA = vol.Schema(
-    {**DEVICE_TARGET, vol.Required("beverage"): vol.In(BEVERAGE_KEYS)}
-)
-SERVICE_STOP_SCHEMA = vol.Schema(
-    {**DEVICE_TARGET, vol.Optional("beverage"): vol.In(BEVERAGE_KEYS)}
-)
-SERVICE_RAW_SCHEMA = vol.Schema(
-    {**DEVICE_TARGET, vol.Required("value_base64"): cv.string}
-)
+DEVICE_TARGET: dict[Any, Any] = {vol.Required(ATTR_DEVICE_ID): vol.All(cv.ensure_list, [cv.string])}
+SERVICE_START_SCHEMA = vol.Schema({**DEVICE_TARGET, vol.Required("beverage"): vol.In(BEVERAGE_KEYS)})
+SERVICE_STOP_SCHEMA = vol.Schema({**DEVICE_TARGET, vol.Optional("beverage"): vol.In(BEVERAGE_KEYS)})
+SERVICE_RAW_SCHEMA = vol.Schema({**DEVICE_TARGET, vol.Required("value_base64"): cv.string})
 
 
 @dataclass(slots=True)
@@ -63,6 +59,7 @@ class DelonghiRuntimeData:
 
     client: DelonghiAylaClient
     coordinators: list[DelonghiCoordinator]
+    dss_manager: AylaDssManager | None = None
 
 
 type DelonghiConfigEntry = ConfigEntry[DelonghiRuntimeData]
@@ -80,18 +77,13 @@ def _coordinators(hass: HomeAssistant) -> list[DelonghiCoordinator]:
     return result
 
 
-def _async_remove_retired_sensor_entities(
-    hass: HomeAssistant, entry: DelonghiConfigEntry
-) -> None:
+def _async_remove_retired_sensor_entities(hass: HomeAssistant, entry: DelonghiConfigEntry) -> None:
     """Remove retired timestamps and the legacy enum superseded by connectivity."""
     registry = er.async_get(hass)
     for registry_entry in er.async_entries_for_config_entry(registry, entry.entry_id):
         unique_id = registry_entry.unique_id
         retired_timestamp = unique_id.endswith(RETIRED_SENSOR_UNIQUE_ID_SUFFIXES)
-        legacy_connection_sensor = (
-            registry_entry.domain == Platform.SENSOR
-            and unique_id.endswith("_connection_status")
-        )
+        legacy_connection_sensor = registry_entry.domain == Platform.SENSOR and unique_id.endswith("_connection_status")
         if retired_timestamp or legacy_connection_sensor:
             registry.async_remove(registry_entry.entity_id)
 
@@ -106,20 +98,12 @@ def _async_remove_stale_devices(
     entity_registry = er.async_get(hass)
     stale_devices = [
         device
-        for device in dr.async_entries_for_config_entry(
-            device_registry, entry.entry_id
-        )
-        if (
-            device_dsns := {
-                dsn for domain, dsn in device.identifiers if domain == DOMAIN
-            }
-        )
+        for device in dr.async_entries_for_config_entry(device_registry, entry.entry_id)
+        if (device_dsns := {dsn for domain, dsn in device.identifiers if domain == DOMAIN})
         and device_dsns.isdisjoint(active_dsns)
     ]
     stale_device_ids = {device.id for device in stale_devices}
-    for registry_entry in er.async_entries_for_config_entry(
-        entity_registry, entry.entry_id
-    ):
+    for registry_entry in er.async_entries_for_config_entry(entity_registry, entry.entry_id):
         if registry_entry.device_id in stale_device_ids:
             entity_registry.async_remove(registry_entry.entity_id)
     for device in stale_devices:
@@ -136,11 +120,7 @@ def _target_coordinator(hass: HomeAssistant, call: ServiceCall) -> DelonghiCoord
     if device is None:
         raise translated_service_error("target_missing")
 
-    dsns = {
-        identifier[1]
-        for identifier in device.identifiers
-        if identifier[0] == DOMAIN
-    }
+    dsns = {identifier[1] for identifier in device.identifiers if identifier[0] == DOMAIN}
     matches = [coord for coord in _coordinators(hass) if coord.device.dsn in dsns]
     if len(matches) != 1:
         raise translated_service_error("target_not_loaded")
@@ -152,9 +132,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
     async def _start_beverage(call: ServiceCall) -> None:
         coordinator = _target_coordinator(hass, call)
-        await coordinator.async_send_beverage(
-            BEVERAGE_IDS[call.data["beverage"]], ACTION_START
-        )
+        await coordinator.async_send_beverage(BEVERAGE_IDS[call.data["beverage"]], ACTION_START)
 
     async def _stop_beverage(call: ServiceCall) -> None:
         coordinator = _target_coordinator(hass, call)
@@ -189,9 +167,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     return True
 
 
-async def async_setup_entry(
-    hass: HomeAssistant, entry: DelonghiConfigEntry
-) -> bool:
+async def async_setup_entry(hass: HomeAssistant, entry: DelonghiConfigEntry) -> bool:
     """Set up one Coffee Link account and refresh every discovered machine."""
     session = async_get_clientsession(hass)
     client = DelonghiAylaClient(session, entry.data[CONF_EMAIL], entry.data[CONF_PASSWORD])
@@ -202,11 +178,11 @@ async def async_setup_entry(
     except AuthError as err:
         raise translated_auth_error() from err
     except CloudError as err:
-        raise ConfigEntryNotReady(f"DeLonghi cloud is temporarily unavailable: {err}") from err
+        raise ConfigEntryNotReady(f"De'Longhi cloud is temporarily unavailable: {err}") from err
 
     if not devices:
         _async_remove_stale_devices(hass, entry, frozenset())
-        raise ConfigEntryNotReady("No DeLonghi devices found on this account")
+        raise ConfigEntryNotReady("No De'Longhi devices found on this account")
 
     coordinators: list[DelonghiCoordinator] = []
     active_dsns = frozenset(device.dsn for device in devices)
@@ -232,12 +208,10 @@ async def async_setup_entry(
 
     try:
         for device in devices:
-            coordinator = DelonghiCoordinator(
-                hass, client, device, entry, _handle_device_list
-            )
-            await coordinator.async_load_learned()
-            await coordinator.async_config_entry_first_refresh()
+            coordinator = DelonghiCoordinator(hass, client, device, entry, _handle_device_list)
             coordinators.append(coordinator)
+            await coordinator.async_config_entry_first_refresh()
+            await coordinator.async_confirm_initial_maintenance_snapshot()
     except Exception:
         await asyncio.gather(
             *(coordinator.async_shutdown() for coordinator in coordinators),
@@ -245,22 +219,26 @@ async def async_setup_entry(
         )
         raise
 
-    entry.runtime_data = DelonghiRuntimeData(client, coordinators)
+    dss_manager = AylaDssManager(hass, entry, client, coordinators)
+    entry.runtime_data = DelonghiRuntimeData(client, coordinators, dss_manager)
     _async_remove_stale_devices(hass, entry, active_dsns)
     _async_remove_retired_sensor_entities(hass, entry)
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    dss_manager.start()
+    try:
+        await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    except Exception:
+        await dss_manager.async_stop()
+        await asyncio.gather(
+            *(coordinator.async_shutdown() for coordinator in coordinators),
+            return_exceptions=True,
+        )
+        raise
     return True
 
 
-async def async_unload_entry(
-    hass: HomeAssistant, entry: DelonghiConfigEntry
-) -> bool:
+async def async_unload_entry(hass: HomeAssistant, entry: DelonghiConfigEntry) -> bool:
     """Unload platforms and stop coordinator work for one account."""
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
-    if unload_ok:
-        await asyncio.gather(
-            *(coordinator.async_shutdown() for coordinator in entry.runtime_data.coordinators),
-            return_exceptions=True,
-        )
+    if unload_ok and entry.runtime_data.dss_manager is not None:
+        await entry.runtime_data.dss_manager.async_stop()
     return unload_ok
-

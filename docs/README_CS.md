@@ -8,11 +8,12 @@ připojené přes Coffee Link a platformu Ayla IoT.
 | Položka | Stav |
 |---|---|
 | Aktuální vydání | 1.2.1 – nainstalováno přes HACS a ověřeno načtení v cílovém Home Assistantu |
-| Fyzické ověření příkazů | 1.2.0 – probuzení, Cold Brew Start/Stop a pohotovostní režim; 1.2.1 tyto části běhu nemění |
+| Předběžné vydání | 1.3.0-beta.6 – automatické testy, testy ve skutečném HA, zálohované nasazení a ověření bez ovládání kávovaru prošly |
+| Fyzické ověření příkazů | 1.3.0-beta.6 – probuzení, Cold Brew Start/Stop a pohotovostní režim na ověřeném kávovaru Eletta prošly |
 | Ověřený kávovar | Eletta Explore ECAM450.65.G (`DL-striker-cb`, oblast EU) |
 | Home Assistant | 2026.8.2 nebo novější |
 | Jazyky | čeština a angličtina |
-| Automatické testy | 312 izolovaných testů se 100% pokrytím + testy ve skutečném HA |
+| Automatické testy | 373 izolovaných testů se 100% pokrytím + 3 testy ve skutečném Home Assistantu |
 | Distribuce | vlastní repozitář HACS nebo ruční instalace z vydání na GitHubu; zařazení do výchozího katalogu se posuzuje |
 
 Profil PrimaDonna Soul zůstává v kódu pro zkoušky kompatibility, neprošel však
@@ -21,7 +22,15 @@ stejným fyzickým ověřením a je označen jako experimentální.
 ## Co integrace poskytuje
 
 - stav kávovaru, připojení ke cloudu a údržbové stavy;
+- téměř okamžité cloudové aktualizace DSS a u vlastností s podporou ACK přesná
+  potvrzení datového bodu; příkazový kanál ověřeného modelu Eletta podporu ACK
+  nemá, proto se stejně jako v Coffee Link potvrzuje změnou stavu kávovaru;
+- automatický návrat k 30sekundovému dotazování při výpadku streamu;
 - počitadla nápojů, vody, filtru, odvápnění a zásobníku sedliny;
+- souhrnné statistiky se stejným významem pro Eletta/Striker a starší větev
+  PrimaDonna Soul; u neznámého modelu se význam interních polí neodhaduje;
+- podrobná počitadla jednotlivých receptů zůstávají dostupná, ale pro nově
+  registrované entity jsou ve výchozím stavu vypnutá;
 - dynamická tlačítka nápojů naučená z oficiální aplikace Coffee Link;
 - automatické načtení přidaného kávovaru a odstranění záznamů odebraného
   kávovaru;
@@ -32,6 +41,17 @@ stejným fyzickým ověřením a je označen jako experimentální.
 - diagnostiku bez přihlašovacích údajů, identifikátorů zařízení a surových příkazů;
 - přeložené položky Opravy, které upozorní na poškozený uložený příkaz a po
   opětovném naučení samy zmizí.
+
+Entita **Relace Coffee Link** zobrazuje, zda je výhradní příkazová relace
+**Volná**, **Aktivní** pod sdíleným identifikátorem Coffee Link, nebo ji používá
+**Jiná aplikace**. Sdílený identifikátor nerozliší tuto integraci od oficiální
+aplikace, proto je stav záměrně neutrální. **Stav posledního příkazu** sleduje
+jen příkazy odeslané z Home Assistantu; provoz oficiální aplikace se do něj
+nezapisuje.
+
+Výchozí stav entity použije Home Assistant jen při jejím prvním zaregistrování.
+Aktualizace proto nevypne podrobná počitadla, která už má stávající instalace
+zapnutá; lze je spravovat jednotlivě na stránce **Entity** daného zařízení.
 
 ## Instalace
 
@@ -61,7 +81,8 @@ různých vydání. Podrobnosti jsou v [návodu k instalaci](INSTALLATION.md).
 
 Připravte požadovaný nápoj jednou v oficiální aplikaci Coffee Link, zatímco
 Home Assistant běží. Integrace příkaz zkontroluje, bezpečně uloží a vytvoří
-odpovídající tlačítko. Nové tlačítko se zpravidla objeví do 30 sekund. Opakované
+odpovídající tlačítko. Přes DSS se nové tlačítko zpravidla objeví ihned; při
+náhradním dotazování nejpozději přibližně do 30 sekund. Opakované
 naučení stejného receptu nahradí jeho starší příkaz.
 
 Tlačítko **Zastavit přípravu nápoje** je dostupné jen tehdy, když integrace zná

@@ -12,7 +12,8 @@
 ## Beverage button is missing
 
 - Prepare the recipe once from Coffee Link while Home Assistant is running.
-- Wait for at least one 30-second polling interval.
+- Wait for one DSS update; when the stream is unavailable, wait for at least one
+  30-second polling interval.
 - Reload the integration if dynamic entity discovery did not add the button.
 - Review the log for a rejected checksum, recipe identity, action or device
   signature.
@@ -41,9 +42,10 @@ Do not bypass this state with the raw-command action.
 ## Coffee Link reports another active session
 
 Close Coffee Link completely and wait for the machine's session to become free.
-The **Coffee Link Session** entity distinguishes a free session, this integration's
-session and another application's session. Home Assistant will not take over a
-foreign active session.
+The **Coffee Link Session** entity distinguishes a free session, an active shared-ID
+session and a different application's session. An active shared-ID session can
+belong to either Home Assistant or the official app; the cloud value cannot identify
+which one. Home Assistant will not take over a foreign active session.
 
 ## Counters look stale
 

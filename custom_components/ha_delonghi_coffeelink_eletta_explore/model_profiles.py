@@ -15,6 +15,7 @@ To add first-class support for a new model, add a ``ModelProfile`` subclass with
 its ``matches()`` rule and (if it needs the learn-and-replay path) set
 ``learns_from_app = True``. Nothing else in the integration has to change.
 """
+
 from __future__ import annotations
 
 from .command_builder import (
@@ -39,14 +40,17 @@ class ModelProfile:
     # ECAM models (Eletta / app_* channel) require a cloud session via
     # app_device_connected before commands are relayed; Soul does not.
     uses_cloud_session = False
+    # The official Coffee Link app presents the same user-facing statistics
+    # across machine generations, but assembles them from different Ayla
+    # properties.  Keep that mapping explicit and independent from the command
+    # fallback selected for an otherwise unknown model.
+    statistics_family: str | None = None
 
     @classmethod
     def matches(cls, oem_model: str) -> bool:
         return False
 
-    def beverage_value(
-        self, beverage_id: int, action: int, learned_frame: str | None
-    ) -> str | None:
+    def beverage_value(self, beverage_id: int, action: int, learned_frame: str | None) -> str | None:
         """Return the base64 command value to send for a beverage.
 
         Returns ``None`` to signal "this profile needs a learned frame that is
@@ -82,6 +86,7 @@ class SoulProfile(ModelProfile):
     label = "PrimaDonna Soul (DL-millcore)"
     command_property = "data_request"
     learns_from_app = False
+    statistics_family = "legacy"
 
     @classmethod
     def matches(cls, oem_model: str) -> bool:
@@ -102,14 +107,13 @@ class ElettaProfile(ModelProfile):
     command_property = "app_data_request"
     learns_from_app = True
     uses_cloud_session = True
+    statistics_family = "striker"
 
     @classmethod
     def matches(cls, oem_model: str) -> bool:
         return oem_model.startswith(ELETTA_OEM_PREFIX)
 
-    def beverage_value(
-        self, beverage_id: int, action: int, learned_frame: str | None
-    ) -> str | None:
+    def beverage_value(self, beverage_id: int, action: int, learned_frame: str | None) -> str | None:
         if learned_frame is not None:
             return replay_with_timestamp(learned_frame)
         return None
@@ -146,7 +150,9 @@ def profile_for(oem_model: str | None, command_property: str | None = None) -> M
     for profile in PROFILES:
         if profile.matches(oem):
             return profile()
-    if command_property == "data_request":
-        return SoulProfile()
-    return ElettaProfile()
-
+    fallback: ModelProfile = SoulProfile() if command_property == "data_request" else ElettaProfile()
+    # The command channel is a useful safe fallback for command framing, but it
+    # does not prove the semantics of d700-d703.  Unknown machines therefore do
+    # not inherit a known model's statistics formula by accident.
+    fallback.statistics_family = None
+    return fallback

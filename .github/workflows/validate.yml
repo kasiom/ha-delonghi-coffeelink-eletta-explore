@@ -31,6 +31,8 @@ jobs:
         run: python -m compileall -q custom_components tests tests_ha
       - name: Run Ruff
         run: python -m ruff check custom_components tests tests_ha
+      - name: Check Ruff formatting
+        run: python -m ruff format --check custom_components tests tests_ha
       - name: Run tests with coverage
         run: >-
           python -m pytest -q
@@ -60,5 +62,7 @@ jobs:
           cache-dependency-path: requirements_ha_test.txt
       - name: Install Home Assistant test runtime
         run: python -m pip install --requirement requirements_ha_test.txt
+      - name: Run strict type checking
+        run: python -m mypy custom_components/ha_delonghi_coffeelink_eletta_explore
       - name: Test against real Home Assistant interfaces
         run: python -m pytest -q -c pytest_ha.ini

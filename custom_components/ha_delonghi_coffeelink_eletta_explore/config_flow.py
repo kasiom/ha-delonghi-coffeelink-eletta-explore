@@ -30,13 +30,9 @@ class DelonghiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     VERSION = 1
 
-    async def _async_validate_account(
-        self, email: str, password: str
-    ) -> tuple[str | None, list[AylaDevice] | None]:
+    async def _async_validate_account(self, email: str, password: str) -> tuple[str | None, list[AylaDevice] | None]:
         """Validate credentials and return an error key plus discovered devices."""
-        client = DelonghiAylaClient(
-            async_get_clientsession(self.hass), email.strip(), password
-        )
+        client = DelonghiAylaClient(async_get_clientsession(self.hass), email.strip(), password)
         try:
             await client.async_authenticate()
             devices = await client.async_get_devices()
@@ -51,16 +47,12 @@ class DelonghiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             return "no_devices", None
         return None, devices
 
-    async def async_step_user(
-        self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    async def async_step_user(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Create a config entry after testing the account."""
         errors: dict[str, str] = {}
         if user_input is not None:
             email = user_input[CONF_EMAIL].strip()
-            error, _devices = await self._async_validate_account(
-                email, user_input[CONF_PASSWORD]
-            )
+            error, _devices = await self._async_validate_account(email, user_input[CONF_PASSWORD])
             if error:
                 errors["base"] = error
             else:
@@ -80,25 +72,21 @@ class DelonghiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             errors=errors,
         )
 
-    async def async_step_reauth(
-        self, entry_data: Mapping[str, Any]
-    ) -> ConfigFlowResult:
+    async def async_step_reauth(self, entry_data: Mapping[str, Any]) -> ConfigFlowResult:
         """Start reauthentication for an existing entry."""
         return await self.async_step_reauth_confirm()
 
-    async def async_step_reauth_confirm(
-        self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    async def async_step_reauth_confirm(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Validate and save a replacement password without duplicating the entry."""
         reauth_entry = self._get_reauth_entry()
         errors: dict[str, str] = {}
         if user_input is not None:
-            error, _devices = await self._async_validate_account(
-                reauth_entry.data[CONF_EMAIL], user_input[CONF_PASSWORD]
-            )
+            error, _devices = await self._async_validate_account(reauth_entry.data[CONF_EMAIL], user_input[CONF_PASSWORD])
             if error:
                 errors["base"] = error
             else:
+                await self.async_set_unique_id(reauth_entry.data[CONF_EMAIL].casefold())
+                self._abort_if_unique_id_mismatch()
                 return self.async_update_reload_and_abort(
                     reauth_entry,
                     data_updates={CONF_PASSWORD: user_input[CONF_PASSWORD]},
@@ -111,35 +99,26 @@ class DelonghiConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             description_placeholders={"email": reauth_entry.data[CONF_EMAIL]},
         )
 
-    async def async_step_reconfigure(
-        self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
-        """Update the Coffee Link account after validating new credentials."""
+    async def async_step_reconfigure(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        """Update credentials for the existing Coffee Link account."""
         entry = self._get_reconfigure_entry()
         errors: dict[str, str] = {}
         if user_input is not None:
-            email = user_input[CONF_EMAIL].strip()
-            error, _devices = await self._async_validate_account(
-                email, user_input[CONF_PASSWORD]
-            )
+            error, _devices = await self._async_validate_account(entry.data[CONF_EMAIL], user_input[CONF_PASSWORD])
             if error:
                 errors["base"] = error
             else:
-                await self.async_set_unique_id(email.casefold())
+                await self.async_set_unique_id(entry.data[CONF_EMAIL].casefold())
                 self._abort_if_unique_id_mismatch()
                 return self.async_update_reload_and_abort(
                     entry,
-                    data_updates={
-                        CONF_EMAIL: email,
-                        CONF_PASSWORD: user_input[CONF_PASSWORD],
-                    },
+                    data_updates={CONF_PASSWORD: user_input[CONF_PASSWORD]},
                     reason="reconfigure_successful",
                 )
 
         return self.async_show_form(
             step_id="reconfigure",
-            data_schema=STEP_USER_SCHEMA,
+            data_schema=STEP_REAUTH_SCHEMA,
             errors=errors,
             description_placeholders={"email": entry.data[CONF_EMAIL]},
         )
-

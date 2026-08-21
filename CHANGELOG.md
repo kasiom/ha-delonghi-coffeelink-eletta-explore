@@ -6,6 +6,111 @@ All notable user-visible changes are documented here. The project follows
 
 ## [Unreleased]
 
+## [1.3.0-beta.6] - 2026-08-21
+
+### Changed
+
+- Confirm commands from DSS state-change events while the cloud stream is
+  healthy; retain one authoritative reconciliation after timeout and the
+  bounded polling path when streaming is unavailable.
+- Share the slowly changing account device list through a lock-protected cache,
+  preventing one identical cloud request per machine during reconciliation.
+- Move persistent recipe restoration into the coordinator setup phase, use
+  monotonic clocks for runtime deadlines and remove duplicate coordinator
+  shutdown work and unused client/device state.
+- Use the current aiohttp WebSocket timeout API and enforce Ruff formatting plus
+  strict mypy 2.3.0 checking in CI.
+
+### Fixed
+
+- Forward a sanitized, bounded Ayla `Retry-After` value to Home Assistant's
+  coordinator so rate-limited updates are rescheduled correctly.
+- Prevent a raw device DSN from reaching request-debug details; operation names
+  remain available for troubleshooting.
+- Always perform the first optional connection-diagnostics read, including on a
+  freshly booted host whose monotonic clock is below the hourly refresh interval.
+
+### Tests
+
+- Keep 100% statement and branch coverage across all 19 Python modules with 373
+  isolated tests, plus 3 tests against Home Assistant 2026.8.2 interfaces.
+- Complete a backed-up deployment, Home Assistant configuration check, clean
+  restart, read-only cloud synchronization and a supervised Wake, Cold Brew
+  Start/Stop and Standby cycle on the verified Eletta Explore. The machine
+  returned to standby and the Home Assistant system log remained error-free.
+
+## [1.3.0-beta.5] - 2026-08-21
+
+### Added
+
+- Add an account-wide Ayla DSS cloud stream for near-real-time datapoint and
+  datapoint-ack updates, with immediate automatic fallback to polling.
+- Add exact command confirmation by matching the device acknowledgement to the
+  datapoint created by Home Assistant; an explicit device rejection is reported
+  separately from a timeout.
+- Add a disabled-by-default Wi-Fi signal diagnostic sensor when the vendor cloud
+  exposes connection information for the machine.
+- Add Coffee Link-equivalent aggregate counters for hot and cold milk drinks.
+- Add explicit Coffee Link statistics families for Eletta/Striker Cold Brew and
+  the legacy PrimaDonna Soul branch; unknown models never inherit an aggregate
+  formula merely from their command channel.
+
+### Changed
+
+- Protect cloud-push state from duplicate, out-of-order and older MonitorV2
+  events; retain a five-minute reconciliation poll while streaming and restore
+  the normal 30-second interval whenever the stream is unavailable.
+- Declare the integration as `cloud_push` and keep polling as a transparent
+  reliability fallback.
+- Match Coffee Link's Eletta statistics formulas for black coffee and Mug to Go,
+  while retaining the established Home Assistant entity unique IDs.
+- Correct `d553_water_tot_qty` from half-millilitre ticks to litres; preserve
+  the vendor value's three-decimal precision instead of the app's whole-litre
+  display truncation.
+- Create a fresh, short-lived DSS subscription for every WebSocket connection,
+  matching Coffee Link 4.9.6 instead of reusing a stale server stream key.
+- Record the privacy-safe ACK status on the Last Command Status entity when DSS
+  matches the acknowledgement to the exact datapoint issued by Home Assistant.
+- Match Coffee Link's legacy statistics formula: `d700` is the black-coffee
+  total, while `d701 + d703` is the hot-milk aggregate. Remove the misleading
+  water-dispense interpretation of `d703`; total water remains sourced from
+  `d553` and converted to litres.
+- Keep semantic summary and maintenance statistics enabled for new entity
+  registrations, while making per-recipe and recipe-group counters available
+  but disabled by default. Existing Home Assistant entity-registry choices are
+  not changed.
+- Display the backward-compatible Coffee Link session state `ha` as the neutral
+  **Active** / **Aktivní**. The machine-derived identifier is
+  shared with the official app and therefore cannot prove which client holds it.
+- Restrict reconfiguration to validating a replacement password for the
+  existing Coffee Link account. Changing accounts still requires a separate
+  config entry, matching Home Assistant's reconfiguration contract.
+- Use Home Assistant sentence case for English entity names, retain official
+  Coffee Link recipe names and use the correct De'Longhi brand spelling in all
+  user-facing English text.
+
+### Fixed
+
+- Honor each command property's cloud-declared ACK capability, matching Coffee
+  Link: ACK-enabled models wait up to the Ayla SDK's ten-second window, while
+  Eletta's non-ACK command channel immediately uses cloud-state confirmation.
+- Match the official Ayla SDK's `x-ayla-source: Mobile` datapoint-write header
+  and add privacy-safe DSS event-type/ACK-capability diagnostics.
+- Use the shared Eletta learned-recipe catalogue in command diagnostics, so
+  Last Command Status reports names such as Cold Brew instead of raw IDs.
+- Isolate connection-information and DSS startup in the actual Home Assistant
+  runtime test so it cannot contact a vendor endpoint.
+- Remove the unverified LAN configuration link from the cloud-only device and
+  replace the fallback device name containing its DSN with a privacy-safe name.
+- Confirm a pending standby maintenance snapshot during setup so water-tank,
+  grounds-container, filter and descale entities do not remain unavailable until
+  the five-minute DSS reconciliation poll.
+
+### Security
+
+- Never retain or expose the DSS stream key or Wi-Fi network name. Diagnostics
+  include only sanitized stream health, connectivity type and optional RSSI.
+
 ### Documentation
 
 - Update the technical audit and English/Czech project status after publication
@@ -15,6 +120,14 @@ All notable user-visible changes are documented here. The project follows
   command-acceptance baseline; 1.2.1 does not change those runtime paths.
 - Record the current external HACS catalog check state without presenting it as
   an integration or release-validation failure.
+- Record beta.4's backed-up target-HA deployment, clean restart, read-only
+  statistics synchronization, loaded English/Czech resources and DSS event
+  acceptance without claiming a physical command test.
+- Add an explicit prerelease path to the maintainer release process and prepare
+  beta.5 as the corrected public release candidate.
+- Record beta.5's backed-up deployment, clean restart, loaded English/Czech
+  resources, read-only maintenance/DSS acceptance and supervised Wake, Cold Brew
+  Start/Stop and Standby acceptance.
 
 ## [1.2.1] - 2026-08-19
 
@@ -352,6 +465,7 @@ All notable user-visible changes are documented here. The project follows
 - Initial standalone version derived from substantially modified MIT-licensed
   Coffee Link integration work.
 
-[Unreleased]: https://github.com/kasiom/ha-delonghi-coffeelink-eletta-explore/compare/v1.2.1...HEAD
+[Unreleased]: https://github.com/kasiom/ha-delonghi-coffeelink-eletta-explore/compare/v1.3.0-beta.6...HEAD
+[1.3.0-beta.6]: https://github.com/kasiom/ha-delonghi-coffeelink-eletta-explore/compare/v1.2.1...v1.3.0-beta.6
 [1.2.1]: https://github.com/kasiom/ha-delonghi-coffeelink-eletta-explore/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/kasiom/ha-delonghi-coffeelink-eletta-explore/releases/tag/v1.2.0

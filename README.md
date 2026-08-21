@@ -4,9 +4,9 @@
   <img src="custom_components/ha_delonghi_coffeelink_eletta_explore/brand/icon@2x.png" width="192" alt="Unofficial De'Longhi Coffee Link – Eletta Explore integration icon">
 </p>
 
-An independent, cloud-polling Home Assistant custom integration for De'Longhi
+An independent, cloud-connected Home Assistant custom integration for De'Longhi
 Eletta Explore coffee machines connected through Coffee Link and the Ayla IoT
-platform.
+platform. It combines near-real-time cloud push with an automatic polling fallback.
 
 [![Validate](https://github.com/kasiom/ha-delonghi-coffeelink-eletta-explore/actions/workflows/validate.yml/badge.svg)](https://github.com/kasiom/ha-delonghi-coffeelink-eletta-explore/actions/workflows/validate.yml)
 [![HACS and hassfest](https://github.com/kasiom/ha-delonghi-coffeelink-eletta-explore/actions/workflows/hacs.yml/badge.svg)](https://github.com/kasiom/ha-delonghi-coffeelink-eletta-explore/actions/workflows/hacs.yml)
@@ -23,11 +23,12 @@ platform.
 | Item | Status |
 |---|---|
 | Current release | 1.2.1; installed through HACS and verified to load on the target Home Assistant |
-| Physical command acceptance | 1.2.0; supervised Wake, Cold Brew Start/Stop and Standby passed; 1.2.1 does not change those runtime paths |
+| Prerelease | 1.3.0-beta.6; automated, actual-HA runtime, backed-up deployment and read-only validation passed |
+| Physical command acceptance | 1.3.0-beta.6; supervised Wake, Cold Brew Start/Stop and Standby passed on the verified Eletta |
 | Verified machine | Eletta Explore ECAM450.65.G (`DL-striker-cb`, EU region) |
 | Home Assistant | 2026.8.2 or newer |
 | Languages | English and Czech |
-| Automated tests | 312 isolated tests at 100% line/branch coverage + real HA runtime tests |
+| Automated tests | 373 isolated tests at 100% line/branch coverage + 3 actual Home Assistant runtime tests |
 | Distribution | HACS custom repository or manual installation from a GitHub release; default-catalog review is pending |
 
 The PrimaDonna Soul profile remains available for compatibility testing, but it
@@ -41,8 +42,16 @@ experimental. See [Compatibility and known limitations](docs/COMPATIBILITY.md).
 - Automatic reload when a coffee maker is added to or removed from the Coffee
   Link account, including cleanup of stale entity and device registry entries.
 - Machine state, cloud connectivity and maintenance-condition entities.
+- Near-real-time Ayla DSS state updates and, on cloud properties that declare
+  ACK support, exact datapoint acknowledgements; protected by event ordering and
+  an automatic 30-second polling fallback. Eletta's non-ACK command channel is
+  confirmed from the resulting machine state, matching Coffee Link behavior.
 - Beverage, water, filter, descaling and grounds-container statistics with
   appropriate Home Assistant units and state classes.
+- Model-aware Coffee Link summary formulas: Eletta/Striker and the legacy
+  PrimaDonna Soul layout map to the same semantic entities without guessing on
+  unknown machines. Per-recipe counters remain available but are disabled by
+  default for newly registered entities.
 - Stable maintenance alarms that ignore transient startup and shutdown frames.
 - Dynamic beverage buttons learned from commands produced by the official
   Coffee Link app.
@@ -60,10 +69,17 @@ experimental. See [Compatibility and known limitations](docs/COMPATIBILITY.md).
 - English/Czech entity, state, exception and Repairs translations with icons
   provided through Home Assistant's current icon-translation mechanism.
 
-The **Coffee Link Session** entity reports which application currently holds the
-exclusive command session. **Last Command Status** records only commands issued by
-Home Assistant; traffic observed from the official app is kept separate in
-diagnostics.
+The **Coffee Link Session** entity reports whether the exclusive command session
+is free, uses the machine's shared Coffee Link identifier or uses a different
+identifier. The shared identifier cannot distinguish this integration from the
+official app, so its neutral state is **Active**. **Last Command Status**
+records only commands issued by Home Assistant; traffic observed from the official
+app is kept separate in diagnostics.
+
+Home Assistant applies an entity's enabled-by-default setting only when it is
+first registered. Updating to the beta does not disable counters that an existing
+installation already has enabled. They can be managed individually under the
+device's **Entities** page.
 
 ## Installation
 
@@ -104,7 +120,8 @@ validates it, stores it locally in Home Assistant and creates a matching button.
 
 1. Keep Home Assistant and the integration running.
 2. Prepare the required drink once from the official Coffee Link app.
-3. Wait for the next cloud poll, normally no more than 30 seconds.
+3. Wait for the DSS update; if the stream is unavailable, polling fallback normally
+   discovers it within 30 seconds.
 4. Reload the integration only if the new button does not appear automatically.
 
 Learning the same recipe again replaces the previous frame. A command with an
