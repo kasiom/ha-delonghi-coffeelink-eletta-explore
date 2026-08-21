@@ -385,7 +385,7 @@ def test_cloud_entities_are_distinct_and_session_holder_is_neutral() -> None:
     assert czech_sensor["state"] == {
         "unknown": "Neznámá",
         "free": "Volná",
-        "ha": "Aktivní relace",
+        "ha": "Aktivní",
         "foreign": "Jiná aplikace",
     }
     assert english_sensor["state"] == {
@@ -393,7 +393,7 @@ def test_cloud_entities_are_distinct_and_session_holder_is_neutral() -> None:
         "free": "Free",
         # Keep the internal key for compatibility. The device-specific ID is
         # shared with Coffee Link, so it cannot identify Home Assistant alone.
-        "ha": "Active session",
+        "ha": "Active",
         "foreign": "Another application",
     }
 

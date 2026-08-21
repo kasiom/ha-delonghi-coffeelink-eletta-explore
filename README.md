@@ -70,7 +70,7 @@ experimental. See [Compatibility and known limitations](docs/COMPATIBILITY.md).
 The **Coffee Link Session** entity reports whether the exclusive command session
 is free, uses the machine's shared Coffee Link identifier or uses a different
 identifier. The shared identifier cannot distinguish this integration from the
-official app, so its neutral state is **Active session**. **Last Command Status**
+official app, so its neutral state is **Active**. **Last Command Status**
 records only commands issued by Home Assistant; traffic observed from the official
 app is kept separate in diagnostics.
 

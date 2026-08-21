@@ -184,7 +184,7 @@
         "state": {
           "unknown": "Unknown",
           "free": "Free",
-          "ha": "Active session",
+          "ha": "Active",
           "foreign": "Another application"
         }
       },

@@ -74,7 +74,7 @@ tested Eletta Explore model and documented acceptance evidence.
   command.
 - Coffee Link session behavior: free after deployment and the backward-compatible
   internal `ha` state after the explicit Home Assistant read-only statistics
-  synchronization. The visible state is the neutral **Active session**, because
+  synchronization. The visible state is the neutral **Active**, because
   Coffee Link can use the same machine-derived identifier.
 
 ## Standards baseline

@@ -654,7 +654,7 @@ class DelonghiCoordinator(DataUpdateCoordinator[AylaProperties]):
         """Return a privacy-safe, backward-compatible session-holder key.
 
         The device-specific ID can be shared by Coffee Link and this integration,
-        so the legacy ``ha`` key is displayed as the neutral "Active session".
+        so the legacy ``ha`` key is displayed as the neutral "Active".
         """
         if app_id is None:
             return "unknown"

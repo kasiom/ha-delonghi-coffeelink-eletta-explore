@@ -96,7 +96,7 @@
         "state": {
           "unknown": "Neznámá",
           "free": "Volná",
-          "ha": "Aktivní relace",
+          "ha": "Aktivní",
           "foreign": "Jiná aplikace"
         }
       },
