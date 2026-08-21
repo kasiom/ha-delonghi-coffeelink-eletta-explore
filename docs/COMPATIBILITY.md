@@ -17,20 +17,24 @@ load on the same target Home Assistant. Newer Home Assistant versions are
 expected to work, but vendor and Home Assistant changes require continuing
 validation.
 
-Local beta 1.3.0-beta.3 has additionally completed automated verification and a
-backed-up live deployment on the same Eletta Explore. Its fresh Ayla DSS
-subscription connected without retry, its translated aggregate statistics matched
-Coffee Link (639 black coffees, 308 milk drinks, 10 cold milk drinks and 16 Mug to
-Go), and the corrected water total reported 209.925 L. Beverage commands and their
-exact live DSS acknowledgements have not yet been physically repeated on this beta.
+Local beta 1.3.0-beta.4 supersedes beta.3 and has completed automated verification,
+a backed-up live deployment, Home Assistant configuration validation, a clean
+restart and read-only acceptance on the same Eletta Explore. The Ayla DSS stream
+was active, received three real events during a statistics synchronization and
+reported no current error. Loaded English and Czech resources were complete, all
+maintenance sensors settled to available, and the machine remained in standby.
+Its aggregate statistics matched Coffee Link (639 black coffees, 308 milk drinks,
+10 cold milk drinks and 16 Mug to Go), while the corrected water total reported
+209.925 L.
 
-Version 1.3.0-beta.4 is prepared in the local source tree but is not installed or
-published. It preserves the verified Eletta formulas and adds the legacy Coffee
-Link formula used by the PrimaDonna Soul profile: `d700` is black coffee and
+Beta.4 preserves the verified Eletta formulas and adds the legacy Coffee Link
+formula used by the PrimaDonna Soul profile: `d700` is black coffee and
 `d701 + d703` is the milk-beverage summary. It no longer labels `d703` as water.
 Unknown OEM models expose only unambiguous direct counters until a model-specific
 profile is supported. Per-recipe counters remain opt-in for newly registered
-entities; existing registry choices are preserved.
+entities; existing registry choices are preserved. The beta remains local and
+unpublished. Beverage commands and their exact live DSS acknowledgements have not
+yet been physically repeated on beta.4.
 
 ## Verified Eletta behavior
 

@@ -23,8 +23,8 @@ platform. It combines near-real-time cloud push with an automatic polling fallba
 | Item | Status |
 |---|---|
 | Current release | 1.2.1; installed through HACS and verified to load on the target Home Assistant |
-| Local beta | 1.3.0-beta.4 prepared locally; model-aware Coffee Link statistics and a quieter default entity set; not installed or published |
-| Physical command acceptance | 1.2.0; supervised Wake, Cold Brew Start/Stop and Standby passed; 1.2.1 does not change those runtime paths |
+| Local beta | 1.3.0-beta.4; installed locally on the target Home Assistant; read-only runtime and localization acceptance passed; not published |
+| Physical command acceptance | 1.2.0; supervised Wake, Cold Brew Start/Stop and Standby passed; the beta.4 command cycle is pending |
 | Verified machine | Eletta Explore ECAM450.65.G (`DL-striker-cb`, EU region) |
 | Home Assistant | 2026.8.2 or newer |
 | Languages | English and Czech |

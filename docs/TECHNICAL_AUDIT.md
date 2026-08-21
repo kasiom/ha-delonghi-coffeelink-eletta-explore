@@ -2,7 +2,7 @@
 
 Audit date: 2026-08-21
 
-Audited release: 1.2.1 stable; installed 1.3.0-beta.3 and prepared 1.3.0-beta.4 addenda
+Audited release: 1.2.1 stable; installed 1.3.0-beta.4 addendum
 
 ## Verdict
 
@@ -27,17 +27,21 @@ statistics matched Coffee Link. No appliance command was sent during this
 read-only beta acceptance, so exact live ACK and physical beverage paths remain
 deliberately pending.
 
-Local beta 1.3.0-beta.4 is prepared but not deployed. It adds explicit statistics
-families rather than inferring a formula from whichever raw property happens to
-exist. The Eletta/Striker Cold Brew profile retains the live-verified aggregate
-formulas. The legacy PrimaDonna Soul branch now follows Coffee Link 4.9.6:
+Local beta 1.3.0-beta.4 supersedes beta.3 and is deployed on the target Home
+Assistant. It adds explicit statistics families rather than inferring a formula
+from whichever raw property happens to exist. The Eletta/Striker Cold Brew profile
+retains the live-verified aggregate formulas. The legacy PrimaDonna Soul branch
+now follows Coffee Link 4.9.6:
 `d700_tot_bev_b` is black coffee and `d701_tot_bev_bw + d703_tot_bev_w` is the
 milk-beverage total. Consequently, the former standalone interpretation of d703
 as water is removed; physical water volume remains the independently verified
 `d553_water_tot_qty / 2000`. Unknown OEM models expose no guessed d700-d703
 summary. For newly registered entities, semantic summaries remain enabled while
 per-recipe and recipe-group counters are disabled by default; existing registry
-choices are unaffected.
+choices are unaffected. Its backed-up deployment, configuration check, restart,
+read-only statistics synchronization and loaded English/Czech resources passed.
+The machine stayed in standby, DSS received three real events, all maintenance
+sensors became available and diagnostics reported no current stream error.
 
 The beta isolated suite covers every executable line and branch in all 18 Python
 modules. A second suite loads the integration through actual Home Assistant
@@ -50,8 +54,8 @@ tested Eletta Explore model and documented acceptance evidence.
 
 - Published and installed release: 1.2.1; physical command-acceptance baseline:
   1.2.0.
-- Locally installed beta: 1.3.0-beta.3 on branch `feature/cloud-dss-hybrid`; not
-  pushed to GitHub. Prepared source: 1.3.0-beta.4; not installed or published.
+- Locally installed beta: 1.3.0-beta.4 on branch `feature/cloud-dss-hybrid`; not
+  pushed to GitHub or published.
 - Home Assistant: 2026.8.2.
 - Python: 3.14.6.
 - Home Assistant OS: 18.2.
@@ -63,10 +67,13 @@ tested Eletta Explore model and documented acceptance evidence.
   installed through HACS and verified to load its config entry with the coffee
   maker ready, cloud connectivity available and no relevant integration error.
   All deployed text files were verified with SHA-256 hashes and the previous
-  component tree was backed up locally.
+  component tree was backed up locally. Beta.4 subsequently passed the same
+  configuration and backup safeguards, a clean restart, a read-only statistics
+  synchronization and privacy-safe diagnostic verification.
 - Post-restart command state: unknown, by design until Home Assistant issues a
   command.
-- Post-restart Coffee Link session: free.
+- Coffee Link session behavior: free after deployment and `ha` after the explicit
+  Home Assistant read-only statistics synchronization, as expected.
 
 ## Standards baseline
 
@@ -107,7 +114,7 @@ shipped.
 | Translation placeholders | synchronized |
 | Public HACS repository validation | passed |
 | Home Assistant hassfest | passed |
-| Manifest version | 1.3.0-beta.4 (prepared local beta) |
+| Manifest version | 1.3.0-beta.4 (installed local beta) |
 
 Tests use deterministic local doubles and make no calls to a real account or
 vendor endpoint. Covered behavior includes authentication refresh and failure
@@ -126,8 +133,8 @@ fails validation.
 
 | Area | Evidence | Status |
 |---|---|---|
-| Installation and restart | 1.2.0 passed clean restart; 1.2.1 installed through HACS; 1.3.0-beta.3 backed up, installed and loaded locally | verified |
-| Hybrid cloud updates | Fresh DSS subscription connected without retry after beta.3 restart; fallback covered deterministically | read-only live + automated |
+| Installation and restart | 1.2.0 passed clean restart; 1.2.1 installed through HACS; 1.3.0-beta.4 backed up, installed and loaded locally | verified |
+| Hybrid cloud updates | Beta.4 DSS was streaming and received three real events during read-only synchronization; fallback covered deterministically | read-only live + automated |
 | Exact DSS command ACK | datapoint matching, rejection and fallback covered deterministically | physical command pending |
 | Wake | 1.2.0 changed standby → waking up → ready | verified on Eletta |
 | Standby | 1.2.0 changed ready → standby | verified on Eletta |
@@ -141,9 +148,11 @@ fails validation.
 | Fault and outage paths | deterministic automated coverage | controlled live faults pending |
 | PrimaDonna Soul | profile and automated compatibility paths | experimental |
 
-The beta.4 model formulas and default entity policy are covered by deterministic
-tests only. They do not change the installed beta.3 until an explicit deployment
-and restart are performed.
+The beta.4 Eletta formulas, translations and runtime entity availability passed
+live read-only acceptance. PrimaDonna Soul formulas, unknown-model behavior and
+the default policy for newly registered entities remain covered deterministically;
+they require a matching physical model or a fresh registry to verify live. No
+appliance command was sent during beta.4 acceptance.
 
 Wake, Cold Brew Start, Cold Brew Stop and Standby were physically repeated after
 deploying 1.2.0. Last Command Status recorded `pending`, `sent` and

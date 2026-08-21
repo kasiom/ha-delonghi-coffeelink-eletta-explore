@@ -59,6 +59,9 @@ All notable user-visible changes are documented here. The project follows
   command-acceptance baseline; 1.2.1 does not change those runtime paths.
 - Record the current external HACS catalog check state without presenting it as
   an integration or release-validation failure.
+- Record beta.4's backed-up target-HA deployment, clean restart, read-only
+  statistics synchronization, loaded English/Czech resources and DSS event
+  acceptance without claiming a physical command test.
 
 ## [1.2.1] - 2026-08-19
 
