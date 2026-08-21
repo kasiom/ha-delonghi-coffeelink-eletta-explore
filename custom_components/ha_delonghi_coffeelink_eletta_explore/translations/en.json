@@ -39,9 +39,6 @@
   },
   "entity": {
     "sensor": {
-      "total_beverages": {
-        "name": "Total Beverages"
-      },
       "total_black_coffee_beverages": {
         "name": "Total Black Coffee Beverages"
       },
@@ -53,9 +50,6 @@
       },
       "total_cold_milk_drinks": {
         "name": "Total Cold Milk Drinks"
-      },
-      "total_water": {
-        "name": "Total Water"
       },
       "total_espresso_alt": {
         "name": "Total Espresso"

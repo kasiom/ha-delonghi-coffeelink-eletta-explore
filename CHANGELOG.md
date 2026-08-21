@@ -16,6 +16,9 @@ All notable user-visible changes are documented here. The project follows
 - Add a disabled-by-default Wi-Fi signal diagnostic sensor when the vendor cloud
   exposes connection information for the machine.
 - Add Coffee Link-equivalent aggregate counters for hot and cold milk drinks.
+- Add explicit Coffee Link statistics families for Eletta/Striker Cold Brew and
+  the legacy PrimaDonna Soul branch; unknown models never inherit an aggregate
+  formula merely from their command channel.
 
 ### Changed
 
@@ -33,6 +36,14 @@ All notable user-visible changes are documented here. The project follows
   matching Coffee Link 4.9.6 instead of reusing a stale server stream key.
 - Record the privacy-safe ACK status on the Last Command Status entity when DSS
   matches the acknowledgement to the exact datapoint issued by Home Assistant.
+- Match Coffee Link's legacy statistics formula: `d700` is the black-coffee
+  total, while `d701 + d703` is the hot-milk aggregate. Remove the misleading
+  water-dispense interpretation of `d703`; total water remains sourced from
+  `d553` and converted to litres.
+- Keep semantic summary and maintenance statistics enabled for new entity
+  registrations, while making per-recipe and recipe-group counters available
+  but disabled by default. Existing Home Assistant entity-registry choices are
+  not changed.
 
 ### Security
 

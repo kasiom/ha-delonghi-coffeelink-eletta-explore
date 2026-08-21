@@ -1,8 +1,8 @@
 # Technical audit
 
-Audit date: 2026-08-20
+Audit date: 2026-08-21
 
-Audited release: 1.2.1 stable; 1.3.0-beta.3 local beta addendum
+Audited release: 1.2.1 stable; installed 1.3.0-beta.3 and prepared 1.3.0-beta.4 addenda
 
 ## Verdict
 
@@ -27,6 +27,18 @@ statistics matched Coffee Link. No appliance command was sent during this
 read-only beta acceptance, so exact live ACK and physical beverage paths remain
 deliberately pending.
 
+Local beta 1.3.0-beta.4 is prepared but not deployed. It adds explicit statistics
+families rather than inferring a formula from whichever raw property happens to
+exist. The Eletta/Striker Cold Brew profile retains the live-verified aggregate
+formulas. The legacy PrimaDonna Soul branch now follows Coffee Link 4.9.6:
+`d700_tot_bev_b` is black coffee and `d701_tot_bev_bw + d703_tot_bev_w` is the
+milk-beverage total. Consequently, the former standalone interpretation of d703
+as water is removed; physical water volume remains the independently verified
+`d553_water_tot_qty / 2000`. Unknown OEM models expose no guessed d700-d703
+summary. For newly registered entities, semantic summaries remain enabled while
+per-recipe and recipe-group counters are disabled by default; existing registry
+choices are unaffected.
+
 The beta isolated suite covers every executable line and branch in all 18 Python
 modules. A second suite loads the integration through actual Home Assistant
 2026.8.2 interfaces. These results establish strong software confidence, but
@@ -39,7 +51,7 @@ tested Eletta Explore model and documented acceptance evidence.
 - Published and installed release: 1.2.1; physical command-acceptance baseline:
   1.2.0.
 - Locally installed beta: 1.3.0-beta.3 on branch `feature/cloud-dss-hybrid`; not
-  pushed to GitHub.
+  pushed to GitHub. Prepared source: 1.3.0-beta.4; not installed or published.
 - Home Assistant: 2026.8.2.
 - Python: 3.14.6.
 - Home Assistant OS: 18.2.
@@ -82,20 +94,20 @@ shipped.
 
 | Check | Result |
 |---|---|
-| Unit and integration-isolation tests | 352 passed |
+| Unit and integration-isolation tests | 362 passed |
 | Actual Home Assistant runtime tests | 2 passed |
 | Python modules measured | 18 |
-| Statements | 2,547 / 2,547 |
-| Branches | 824 / 824 |
+| Statements | 2,562 / 2,562 |
+| Branches | 828 / 828 |
 | Line coverage | 100% |
 | Branch coverage | 100% |
 | Ruff | passed |
 | Python compilation | passed |
-| English/Czech leaf-key parity | 190 / 190 |
+| English/Czech leaf-key parity | 189 / 189 |
 | Translation placeholders | synchronized |
 | Public HACS repository validation | passed |
 | Home Assistant hassfest | passed |
-| Manifest version | 1.3.0-beta.3 (local beta) |
+| Manifest version | 1.3.0-beta.4 (prepared local beta) |
 
 Tests use deterministic local doubles and make no calls to a real account or
 vendor endpoint. Covered behavior includes authentication refresh and failure
@@ -128,6 +140,10 @@ fails validation.
 | Foreign-session conflict | deterministic automated coverage | controlled live conflict pending |
 | Fault and outage paths | deterministic automated coverage | controlled live faults pending |
 | PrimaDonna Soul | profile and automated compatibility paths | experimental |
+
+The beta.4 model formulas and default entity policy are covered by deterministic
+tests only. They do not change the installed beta.3 until an explicit deployment
+and restart are performed.
 
 Wake, Cold Brew Start, Cold Brew Stop and Standby were physically repeated after
 deploying 1.2.0. Last Command Status recorded `pending`, `sent` and

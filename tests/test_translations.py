@@ -151,14 +151,17 @@ def test_all_runtime_entity_translation_keys_exist_in_both_languages() -> None:
     button_path = COMPONENT / "button.py"
     counters = _literal_value(const_path, "COUNTER_SENSORS")
     breakdowns = _literal_value(const_path, "BREAKDOWN_COUNTER_SENSORS")
-    overrides = _literal_value(const_path, "COUNTER_TRANSLATION_KEY_OVERRIDES")
+    aggregates = _literal_value(const_path, "COFFEE_LINK_AGGREGATE_SENSORS")
     beverages = _literal_value(const_path, "BEVERAGES")
     eletta_recipes = _literal_value(button_path, "_ELETTA_LEARNED_RECIPES")
 
     sensor_keys = {item[1] for item in counters}
     sensor_keys.update(item[1] for item in breakdowns)
-    sensor_keys.update(overrides.values())
-    sensor_keys.add("total_cold_milk_drinks")
+    sensor_keys.update(
+        translation_key
+        for definitions in aggregates.values()
+        for _key, translation_key in definitions
+    )
     sensor_keys.update(
         {
             "machine_status",

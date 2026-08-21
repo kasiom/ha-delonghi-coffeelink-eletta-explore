@@ -577,11 +577,6 @@ def test_sensor_setup_entry_covers_supported_and_absent_properties(monkeypatch):
     )
     monkeypatch.setattr(
         sensor_module,
-        "COUNTER_TRANSLATION_KEY_OVERRIDES",
-        {("kept_counter", "present"): "kept_override"},
-    )
-    monkeypatch.setattr(
-        sensor_module,
         "BREAKDOWN_COUNTER_SENSORS",
         [
             (["missing"], "missing_breakdown", "Missing", "mdi:counter", ("selected",)),
@@ -601,7 +596,10 @@ def test_sensor_setup_entry_covers_supported_and_absent_properties(monkeypatch):
     assert sum(isinstance(item, sensor_module.DelonghiMachineStatusSensor) for item in added) == 2
     assert sum(isinstance(item, sensor_module.DelonghiLastCommandSensor) for item in added) == 2
     assert sum(isinstance(item, sensor_module.DelonghiCloudSessionAppIdSensor) for item in added) == 1
-    assert any(getattr(item, "_attr_translation_key", None) == "kept_override" for item in added)
+    assert any(
+        getattr(item, "_attr_translation_key", None) == "kept_counter"
+        for item in added
+    )
 
     empty = []
     empty_entry = types.SimpleNamespace(
@@ -665,6 +663,89 @@ def test_sensor_setup_entry_builds_coffee_link_official_aggregates(monkeypatch):
     )._attr_translation_key == "total_black_coffee_beverages"
 
 
+def test_sensor_setup_entry_builds_legacy_official_aggregates(monkeypatch):
+    coordinator, _client = _coordinator("DL-millcore")
+    coordinator.data = {
+        "d700_tot_bev_b": {"value": 314},
+        "d701_tot_bev_bw": {"value": 250},
+        "d703_tot_bev_w": {"value": 17},
+    }
+    monkeypatch.setattr(sensor_module, "COUNTER_SENSORS", [])
+    monkeypatch.setattr(sensor_module, "BREAKDOWN_COUNTER_SENSORS", [])
+    entry = types.SimpleNamespace(
+        runtime_data=types.SimpleNamespace(coordinators=[coordinator])
+    )
+    added = []
+
+    asyncio.run(sensor_module.async_setup_entry(object(), entry, added.extend))
+
+    aggregates = [
+        entity
+        for entity in added
+        if isinstance(entity, sensor_module.DelonghiCoffeeLinkAggregateSensor)
+    ]
+    assert {entity._key: entity.native_value for entity in aggregates} == {
+        "total_beverages": 314,
+        "total_milk_drinks": 267,
+    }
+    assert all(
+        entity._attr_translation_key
+        in {"total_black_coffee_beverages", "total_milk_drinks"}
+        for entity in aggregates
+    )
+
+
+def test_non_cold_brew_striker_uses_its_official_hot_milk_formula(monkeypatch):
+    coordinator, _client = _coordinator("DL-striker-base")
+    coordinator.data = {
+        "d702_tot_bev_other": {
+            "value": '{"tot_bev_bw":40,"tot_bev_w":5}'
+        },
+    }
+    monkeypatch.setattr(sensor_module, "COUNTER_SENSORS", [])
+    monkeypatch.setattr(sensor_module, "BREAKDOWN_COUNTER_SENSORS", [])
+    entry = types.SimpleNamespace(
+        runtime_data=types.SimpleNamespace(coordinators=[coordinator])
+    )
+    added = []
+
+    asyncio.run(sensor_module.async_setup_entry(object(), entry, added.extend))
+
+    aggregates = [
+        entity
+        for entity in added
+        if isinstance(entity, sensor_module.DelonghiCoffeeLinkAggregateSensor)
+    ]
+    assert {entity._key: entity.native_value for entity in aggregates} == {
+        "total_milk_drinks": 40,
+    }
+
+
+def test_unknown_model_does_not_guess_legacy_counter_semantics(monkeypatch):
+    coordinator, _client = _coordinator("DL-future-xyz")
+    coordinator.profile = model_profiles.profile_for(
+        "DL-future-xyz", command_property="data_request"
+    )
+    coordinator.data = {
+        "d700_tot_bev_b": {"value": 314},
+        "d701_tot_bev_bw": {"value": 250},
+        "d703_tot_bev_w": {"value": 17},
+    }
+    monkeypatch.setattr(sensor_module, "COUNTER_SENSORS", [])
+    monkeypatch.setattr(sensor_module, "BREAKDOWN_COUNTER_SENSORS", [])
+    entry = types.SimpleNamespace(
+        runtime_data=types.SimpleNamespace(coordinators=[coordinator])
+    )
+    added = []
+
+    asyncio.run(sensor_module.async_setup_entry(object(), entry, added.extend))
+
+    assert not any(
+        isinstance(entity, sensor_module.DelonghiCoffeeLinkAggregateSensor)
+        for entity in added
+    )
+
+
 @pytest.mark.parametrize(
     ("key", "raw", "expected"),
     [
@@ -725,6 +806,9 @@ def test_counter_sensor_metadata_missing_values_and_single_warning(caplog):
     disabled = sensor_module.DelonghiCounterSensor(
         coordinator, "missing", "descale_alert_count", "mdi:counter"
     )
+    detailed = sensor_module.DelonghiCounterSensor(
+        coordinator, "missing", "total_espresso", "mdi:coffee"
+    )
     filter_volume = sensor_module.DelonghiCounterSensor(
         coordinator, "missing", "water_filter_quantity", "mdi:water"
     )
@@ -737,6 +821,7 @@ def test_counter_sensor_metadata_missing_values_and_single_warning(caplog):
 
     assert diagnostic._attr_entity_category == "diagnostic"
     assert disabled._attr_entity_registry_enabled_default is False
+    assert detailed._attr_entity_registry_enabled_default is False
     assert filter_volume._attr_native_unit_of_measurement == "L"
     assert filter_volume._attr_state_class == "total_increasing"
     assert percentage._attr_native_unit_of_measurement == "%"
@@ -756,8 +841,13 @@ def test_counter_sensor_metadata_missing_values_and_single_warning(caplog):
 def test_breakdown_machine_and_cloud_session_sensor_edge_states():
     coordinator, _client = _coordinator("DL-striker-cb")
     breakdown = sensor_module.DelonghiBreakdownCounterSensor(
-        coordinator, "breakdown", "cold_brew", "mdi:snowflake", ("a", "b")
+        coordinator,
+        "breakdown",
+        "total_cold_brew",
+        "mdi:snowflake",
+        ("a", "b"),
     )
+    assert breakdown._attr_entity_registry_enabled_default is False
     assert breakdown.native_value is None
     coordinator.data = {"breakdown": {"value": '{"a": 2, "b": 4}'}}
     assert breakdown.native_value == 6

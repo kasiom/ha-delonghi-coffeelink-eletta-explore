@@ -23,12 +23,12 @@ platform. It combines near-real-time cloud push with an automatic polling fallba
 | Item | Status |
 |---|---|
 | Current release | 1.2.1; installed through HACS and verified to load on the target Home Assistant |
-| Local beta | 1.3.0-beta.3; Coffee Link statistics and fresh-subscription DSS lifecycle, not published to GitHub |
+| Local beta | 1.3.0-beta.4 prepared locally; model-aware Coffee Link statistics and a quieter default entity set; not installed or published |
 | Physical command acceptance | 1.2.0; supervised Wake, Cold Brew Start/Stop and Standby passed; 1.2.1 does not change those runtime paths |
 | Verified machine | Eletta Explore ECAM450.65.G (`DL-striker-cb`, EU region) |
 | Home Assistant | 2026.8.2 or newer |
 | Languages | English and Czech |
-| Automated tests | 352 isolated tests at 100% line/branch coverage + real HA runtime tests |
+| Automated tests | 362 isolated tests at 100% line/branch coverage + real HA runtime tests |
 | Distribution | HACS custom repository or manual installation from a GitHub release; default-catalog review is pending |
 
 The PrimaDonna Soul profile remains available for compatibility testing, but it
@@ -46,6 +46,10 @@ experimental. See [Compatibility and known limitations](docs/COMPATIBILITY.md).
   ordering and an automatic 30-second polling fallback.
 - Beverage, water, filter, descaling and grounds-container statistics with
   appropriate Home Assistant units and state classes.
+- Model-aware Coffee Link summary formulas: Eletta/Striker and the legacy
+  PrimaDonna Soul layout map to the same semantic entities without guessing on
+  unknown machines. Per-recipe counters remain available but are disabled by
+  default for newly registered entities.
 - Stable maintenance alarms that ignore transient startup and shutdown frames.
 - Dynamic beverage buttons learned from commands produced by the official
   Coffee Link app.
@@ -67,6 +71,11 @@ The **Coffee Link Session** entity reports which application currently holds the
 exclusive command session. **Last Command Status** records only commands issued by
 Home Assistant; traffic observed from the official app is kept separate in
 diagnostics.
+
+Home Assistant applies an entity's enabled-by-default setting only when it is
+first registered. Updating to the beta does not disable counters that an existing
+installation already has enabled. They can be managed individually under the
+device's **Entities** page.
 
 ## Installation
 

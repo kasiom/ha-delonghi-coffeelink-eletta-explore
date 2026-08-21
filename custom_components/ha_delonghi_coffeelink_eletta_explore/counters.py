@@ -183,12 +183,24 @@ def coffee_link_black_coffee_total(black: Any, iced_counters: Any) -> int | None
     return hot_black + (iced_black or 0)
 
 
-def coffee_link_hot_milk_total(other_counters: Any) -> int | None:
-    """Return Coffee Link's aggregate hot-milk beverage count."""
+def coffee_link_hot_milk_total(
+    other_counters: Any, *, include_milk_only: bool = True
+) -> int | None:
+    """Return Coffee Link's Striker hot-milk beverage count.
+
+    Cold-Brew-capable Striker machines add the milk-only field. Other Striker
+    variants use only ``tot_bev_bw``; this mirrors Coffee Link's capability
+    branch instead of assuming that every Striker has the same recipe set.
+    """
+    keys = (
+        ("tot_bev_bw", "tot_bev_w")
+        if include_milk_only
+        else ("tot_bev_bw",)
+    )
     return _required_breakdown_sum(
         other_counters,
         "tot_bev_bw",
-        ("tot_bev_bw", "tot_bev_w"),
+        keys,
     )
 
 
@@ -208,4 +220,25 @@ def coffee_link_mug_total(hot_mug: Any, cold_mug: Any) -> int | None:
         return None
     cold = parse_counter_value(cold_mug)
     return hot + (cold or 0)
+
+
+def coffee_link_legacy_black_coffee_total(black: Any) -> int | None:
+    """Return Coffee Link's black-coffee total for the legacy ECAM branch."""
+    return parse_counter_value(black)
+
+
+def coffee_link_legacy_hot_milk_total(
+    coffee_and_milk: Any, milk_only: Any
+) -> int | None:
+    """Return the legacy Coffee Link hot-milk aggregate.
+
+    Coffee Link 4.9.6 displays this statistic only when
+    ``d701_tot_bev_bw`` is present and adds optional ``d703_tot_bev_w``.
+    Despite its suffix, d703 is therefore not a water-dispense counter.
+    """
+    combined = parse_counter_value(coffee_and_milk)
+    if combined is None:
+        return None
+    milk = parse_counter_value(milk_only)
+    return combined + (milk or 0)
 

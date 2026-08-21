@@ -22,8 +22,9 @@ from .ayla_client import AylaProperties, normalize_signed_app_id
 from .const import (
     APP_ID_PROPERTY,
     BREAKDOWN_COUNTER_SENSORS,
+    COFFEE_LINK_AGGREGATE_SENSORS,
     COUNTER_SENSORS,
-    COUNTER_TRANSLATION_KEY_OVERRIDES,
+    DETAILED_COUNTER_KEYS,
     MACHINE_STATUS_OPTIONS,
 )
 from .coordinator import DelonghiCoordinator
@@ -31,6 +32,8 @@ from .counters import (
     coffee_link_black_coffee_total,
     coffee_link_cold_milk_total,
     coffee_link_hot_milk_total,
+    coffee_link_legacy_black_coffee_total,
+    coffee_link_legacy_hot_milk_total,
     coffee_link_mug_total,
     counter_breakdown_sum,
     parse_counter_value,
@@ -80,43 +83,26 @@ async def async_setup_entry(
     coordinators = entry.runtime_data.coordinators
     entities: list[SensorEntity] = []
     for coord in coordinators:
-        data = coord.data or {}
         aggregate_keys: set[str] = set()
 
-        # Coffee Link builds these Eletta statistics in the app from multiple
-        # cloud values.  Keep the historical unique IDs where an older direct
-        # sensor existed, while matching the official aggregate semantics.
-        if "d701_tot_bev_b" in data and "d700_tot_bev_b" not in data:
-            entities.append(
-                DelonghiCoffeeLinkAggregateSensor(
-                    coord,
-                    "total_beverages",
-                    "total_black_coffee_beverages",
-                )
+        # Coffee Link normalizes model-specific raw fields into the same
+        # semantic summaries. Unknown models deliberately get no d700-d703
+        # aggregate: the command-channel fallback is not evidence of counter
+        # semantics.
+        aggregate_definitions = COFFEE_LINK_AGGREGATE_SENSORS.get(
+            coord.profile.statistics_family,
+            (),
+        )
+        for key, translation_key in aggregate_definitions:
+            entity = DelonghiCoffeeLinkAggregateSensor(
+                coord,
+                key,
+                translation_key,
             )
-            aggregate_keys.add("total_beverages")
-
-        other_value = (data.get("d702_tot_bev_other") or {}).get("value")
-        if coffee_link_hot_milk_total(other_value) is not None:
-            entities.append(
-                DelonghiCoffeeLinkAggregateSensor(coord, "total_milk_drinks")
-            )
-            aggregate_keys.add("total_milk_drinks")
-
-        iced_value = (data.get("d733_tot_bev_counters") or {}).get("value")
-        if coffee_link_cold_milk_total(iced_value) is not None:
-            entities.append(
-                DelonghiCoffeeLinkAggregateSensor(coord, "total_cold_milk_drinks")
-            )
-            aggregate_keys.add("total_cold_milk_drinks")
-
-        hot_mug = (data.get("d731_tot_mug_hot") or {}).get("value")
-        cold_mug = (data.get("d732_tot_mug_cold") or {}).get("value")
-        if coffee_link_mug_total(hot_mug, cold_mug) is not None:
-            entities.append(
-                DelonghiCoffeeLinkAggregateSensor(coord, "total_mug_bev")
-            )
-            aggregate_keys.add("total_mug_bev")
+            if entity.native_value is None:
+                continue
+            entities.append(entity)
+            aggregate_keys.add(key)
 
         for candidates, key, _friendly, icon in COUNTER_SENSORS:
             if key in aggregate_keys:
@@ -135,7 +121,6 @@ async def async_setup_entry(
                     prop_name,
                     key,
                     icon,
-                    COUNTER_TRANSLATION_KEY_OVERRIDES.get((key, prop_name)),
                 )
             )
         for candidates, key, _friendly, icon, breakdown_keys in BREAKDOWN_COUNTER_SENSORS:
@@ -194,6 +179,8 @@ class DelonghiCounterSensor(_Base):
         self._prop_name = prop_name
         self._key = key
         self._logged_unparseable = False
+        if key in DETAILED_COUNTER_KEYS:
+            self._attr_entity_registry_enabled_default = False
         if key in {
             "total_descales",
             "water_total_quantity",
@@ -269,7 +256,7 @@ class DelonghiCounterSensor(_Base):
 
 
 class DelonghiCoffeeLinkAggregateSensor(_Base):
-    """Official Eletta statistic assembled from multiple cloud counters."""
+    """Official Coffee Link statistic assembled for a known model family."""
 
     _attr_state_class = SensorStateClass.TOTAL_INCREASING
 
@@ -290,23 +277,40 @@ class DelonghiCoffeeLinkAggregateSensor(_Base):
     @property
     def native_value(self) -> int | None:
         data = self.coordinator.data or {}
-        if self._key == "total_beverages":
+        family = self.coordinator.profile.statistics_family
+        if family == "striker" and self._key == "total_beverages":
             return coffee_link_black_coffee_total(
                 self._value(data, "d701_tot_bev_b"),
                 self._value(data, "d733_tot_bev_counters"),
             )
-        if self._key == "total_milk_drinks":
-            return coffee_link_hot_milk_total(
-                self._value(data, "d702_tot_bev_other")
+        if family == "striker" and self._key == "total_milk_drinks":
+            iced_counters = self._value(data, "d733_tot_bev_counters")
+            oem_model = self.coordinator.device.oem_model or ""
+            include_milk_only = (
+                oem_model.lower().startswith("dl-striker-cb")
+                or coffee_link_cold_milk_total(iced_counters) is not None
             )
-        if self._key == "total_cold_milk_drinks":
+            return coffee_link_hot_milk_total(
+                self._value(data, "d702_tot_bev_other"),
+                include_milk_only=include_milk_only,
+            )
+        if family == "striker" and self._key == "total_cold_milk_drinks":
             return coffee_link_cold_milk_total(
                 self._value(data, "d733_tot_bev_counters")
             )
-        if self._key == "total_mug_bev":
+        if family == "striker" and self._key == "total_mug_bev":
             return coffee_link_mug_total(
                 self._value(data, "d731_tot_mug_hot"),
                 self._value(data, "d732_tot_mug_cold"),
+            )
+        if family == "legacy" and self._key == "total_beverages":
+            return coffee_link_legacy_black_coffee_total(
+                self._value(data, "d700_tot_bev_b")
+            )
+        if family == "legacy" and self._key == "total_milk_drinks":
+            return coffee_link_legacy_hot_milk_total(
+                self._value(data, "d701_tot_bev_bw"),
+                self._value(data, "d703_tot_bev_w"),
             )
         return None
 
@@ -327,6 +331,8 @@ class DelonghiBreakdownCounterSensor(_Base):
         super().__init__(coord, key)
         self._prop_name = prop_name
         self._breakdown_keys = breakdown_keys
+        if key in DETAILED_COUNTER_KEYS:
+            self._attr_entity_registry_enabled_default = False
 
     @property
     def native_value(self) -> int | None:

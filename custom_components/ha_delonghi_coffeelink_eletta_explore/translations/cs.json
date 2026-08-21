@@ -31,12 +31,10 @@
   },
   "entity": {
     "sensor": {
-      "total_beverages": { "name": "Počet nápojů celkem" },
       "total_black_coffee_beverages": { "name": "Počet černých káv celkem" },
       "total_espresso": { "name": "Počet Espresso celkem" },
       "total_milk_drinks": { "name": "Počet mléčných nápojů" },
       "total_cold_milk_drinks": { "name": "Počet studených mléčných nápojů" },
-      "total_water": { "name": "Počet výdejů vody" },
       "total_espresso_alt": { "name": "Počet Espresso" },
       "total_coffee": { "name": "Počet káv" },
       "total_long_coffee": { "name": "Počet Long Coffee" },

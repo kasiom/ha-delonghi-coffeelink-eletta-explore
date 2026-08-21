@@ -24,6 +24,14 @@ Coffee Link (639 black coffees, 308 milk drinks, 10 cold milk drinks and 16 Mug 
 Go), and the corrected water total reported 209.925 L. Beverage commands and their
 exact live DSS acknowledgements have not yet been physically repeated on this beta.
 
+Version 1.3.0-beta.4 is prepared in the local source tree but is not installed or
+published. It preserves the verified Eletta formulas and adds the legacy Coffee
+Link formula used by the PrimaDonna Soul profile: `d700` is black coffee and
+`d701 + d703` is the milk-beverage summary. It no longer labels `d703` as water.
+Unknown OEM models expose only unambiguous direct counters until a model-specific
+profile is supported. Per-recipe counters remain opt-in for newly registered
+entities; existing registry choices are preserved.
+
 ## Verified Eletta behavior
 
 - Account setup, reauthentication, hybrid DSS/polling and cloud-outage recovery

@@ -8,12 +8,12 @@ připojené přes Coffee Link a platformu Ayla IoT.
 | Položka | Stav |
 |---|---|
 | Aktuální vydání | 1.2.1 – nainstalováno přes HACS a ověřeno načtení v cílovém Home Assistantu |
-| Lokální beta | 1.3.0-beta.3 – statistiky dle Coffee Link a nový životní cyklus DSS, nezveřejněno na GitHubu |
+| Lokální beta | 1.3.0-beta.4 připravena lokálně – modelové statistiky Coffee Link a přehlednější výchozí sada entit; nenasazeno ani nezveřejněno |
 | Fyzické ověření příkazů | 1.2.0 – probuzení, Cold Brew Start/Stop a pohotovostní režim; 1.2.1 tyto části běhu nemění |
 | Ověřený kávovar | Eletta Explore ECAM450.65.G (`DL-striker-cb`, oblast EU) |
 | Home Assistant | 2026.8.2 nebo novější |
 | Jazyky | čeština a angličtina |
-| Automatické testy | 352 izolovaných testů se 100% pokrytím + testy ve skutečném HA |
+| Automatické testy | 362 izolovaných testů se 100% pokrytím + testy ve skutečném HA |
 | Distribuce | vlastní repozitář HACS nebo ruční instalace z vydání na GitHubu; zařazení do výchozího katalogu se posuzuje |
 
 Profil PrimaDonna Soul zůstává v kódu pro zkoušky kompatibility, neprošel však
@@ -25,6 +25,10 @@ stejným fyzickým ověřením a je označen jako experimentální.
 - téměř okamžité cloudové aktualizace DSS a přesná potvrzení příkazů s
   automatickým návratem k 30sekundovému dotazování při výpadku streamu;
 - počitadla nápojů, vody, filtru, odvápnění a zásobníku sedliny;
+- souhrnné statistiky se stejným významem pro Eletta/Striker a starší větev
+  PrimaDonna Soul; u neznámého modelu se význam interních polí neodhaduje;
+- podrobná počitadla jednotlivých receptů zůstávají dostupná, ale pro nově
+  registrované entity jsou ve výchozím stavu vypnutá;
 - dynamická tlačítka nápojů naučená z oficiální aplikace Coffee Link;
 - automatické načtení přidaného kávovaru a odstranění záznamů odebraného
   kávovaru;
@@ -35,6 +39,10 @@ stejným fyzickým ověřením a je označen jako experimentální.
 - diagnostiku bez přihlašovacích údajů, identifikátorů zařízení a surových příkazů;
 - přeložené položky Opravy, které upozorní na poškozený uložený příkaz a po
   opětovném naučení samy zmizí.
+
+Výchozí stav entity použije Home Assistant jen při jejím prvním zaregistrování.
+Aktualizace proto nevypne podrobná počitadla, která už má stávající instalace
+zapnutá; lze je spravovat jednotlivě na stránce **Entity** daného zařízení.
 
 ## Instalace
 

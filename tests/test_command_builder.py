@@ -576,8 +576,12 @@ def test_recipe_dump_lines_handles_non_base64_and_empty():
 
 def test_profile_detection_by_oem_model():
     """Known oem_model families resolve to their profile."""
-    assert mp.profile_for("DL-millcore").key == "soul"
-    assert mp.profile_for("DL-striker-cb").key == "eletta"
+    soul = mp.profile_for("DL-millcore")
+    eletta = mp.profile_for("DL-striker-cb")
+    assert soul.key == "soul"
+    assert soul.statistics_family == "legacy"
+    assert eletta.key == "eletta"
+    assert eletta.statistics_family == "striker"
     # Prefix match, not exact.
     assert mp.profile_for("DL-millcore-x").key == "soul"
 
@@ -589,10 +593,19 @@ def test_base_profile_never_claims_a_model_match():
 def test_profile_unknown_model_defaults_sensibly():
     """Unknown model: replay (eletta-style) works on any machine, so it's the
     default - unless the plain data_request channel says it's Soul-like."""
-    assert mp.profile_for(None).key == "eletta"
-    assert mp.profile_for("DL-future-xyz").key == "eletta"
-    assert mp.profile_for("DL-future-xyz", command_property="data_request").key == "soul"
-    assert mp.profile_for("DL-future-xyz", command_property="app_data_request").key == "eletta"
+    fallbacks = (
+        mp.profile_for(None),
+        mp.profile_for("DL-future-xyz"),
+        mp.profile_for("DL-future-xyz", command_property="data_request"),
+        mp.profile_for("DL-future-xyz", command_property="app_data_request"),
+    )
+    assert [profile.key for profile in fallbacks] == [
+        "eletta",
+        "eletta",
+        "soul",
+        "eletta",
+    ]
+    assert all(profile.statistics_family is None for profile in fallbacks)
 
 
 def test_soul_profile_synthesizes_commands():

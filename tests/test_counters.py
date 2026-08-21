@@ -37,6 +37,10 @@ coffee_link_mug_total = counters.coffee_link_mug_total
 parse_total_water_volume_liters = counters.parse_total_water_volume_liters
 parse_water_volume_liters = counters.parse_water_volume_liters
 parse_water_hardness_level = counters.parse_water_hardness_level
+coffee_link_legacy_black_coffee_total = (
+    counters.coffee_link_legacy_black_coffee_total
+)
+coffee_link_legacy_hot_milk_total = counters.coffee_link_legacy_hot_milk_total
 
 
 # --- parse_counter_value -------------------------------------------------- #
@@ -105,6 +109,31 @@ def test_parse_water_volume_liters(raw_milliliters, liters):
 )
 def test_parse_total_water_volume_liters(raw_half_milliliter_ticks, liters):
     assert parse_total_water_volume_liters(raw_half_milliliter_ticks) == liters
+
+
+@pytest.mark.parametrize(
+    ("black", "expected"),
+    [("314", 314), (None, None), ("invalid", None)],
+)
+def test_coffee_link_legacy_black_coffee_total(black, expected):
+    assert coffee_link_legacy_black_coffee_total(black) == expected
+
+
+@pytest.mark.parametrize(
+    ("coffee_and_milk", "milk_only", "expected"),
+    [("250", "17", 267), ("250", None, 250), (None, "17", None)],
+)
+def test_coffee_link_legacy_hot_milk_total(
+    coffee_and_milk, milk_only, expected
+):
+    assert coffee_link_legacy_hot_milk_total(coffee_and_milk, milk_only) == expected
+
+
+def test_coffee_link_striker_without_cold_brew_excludes_milk_only_field():
+    value = '{"tot_bev_bw":40,"tot_bev_w":5}'
+    assert counters.coffee_link_hot_milk_total(
+        value, include_milk_only=False
+    ) == 40
 
 
 @pytest.mark.parametrize(

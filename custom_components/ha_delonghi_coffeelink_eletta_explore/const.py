@@ -159,18 +159,32 @@ BEVERAGES = [
     (0x1b, "brew_over_ice",   "Brew Over Ice",    "mdi:coffee"),
 ]
 
+# Coffee Link's Statistics screen normalizes different raw property layouts to
+# common user-facing totals.  The names below are deliberately semantic and
+# retain the established entity unique IDs across supported model families.
+COFFEE_LINK_AGGREGATE_SENSORS = {
+    "striker": (
+        ("total_beverages", "total_black_coffee_beverages"),
+        ("total_milk_drinks", "total_milk_drinks"),
+        ("total_cold_milk_drinks", "total_cold_milk_drinks"),
+        ("total_mug_bev", "total_mug_bev"),
+    ),
+    "legacy": (
+        ("total_beverages", "total_black_coffee_beverages"),
+        ("total_milk_drinks", "total_milk_drinks"),
+    ),
+}
+
 # Counter properties to expose as sensors:
 #   (candidate_property_names, entity_key, display_name, icon)
 # Property names differ between models; the first candidate present on the device
 # wins (same approach as COMMAND_PROPERTY_CANDIDATES). A sensor whose property is
 # absent on the device is not created (avoids permanently-"unknown" entities).
-#   - PrimaDonna Soul (DL-millcore): d700_tot_bev_b, d701_tot_bev_bw, d703_tot_bev_w, d825_descale_status
-#   - Eletta Explore (DL-striker-cb): d701_tot_bev_b (no milk/water/descale equivalents exposed)
+# The d700-d703 family is intentionally absent here: Coffee Link gives those
+# fields model-dependent aggregate semantics, handled above rather than exposed
+# as misleading raw counters.
 COUNTER_SENSORS = [
-    (["d700_tot_bev_b", "d701_tot_bev_b"], "total_beverages",       "Total Beverages",       "mdi:counter"),
     (["d704_tot_bev_espressi"],            "total_espresso",        "Total Espresso",        "mdi:coffee"),
-    (["d701_tot_bev_bw"],                  "total_milk_drinks",     "Total Milk Drinks",     "mdi:cup"),
-    (["d703_tot_bev_w"],                   "total_water",           "Total Water",           "mdi:water"),
     (["d705_tot_id1_espr"],                "total_espresso_alt",    "Total Espresso Alt",    "mdi:coffee"),
     (["d706_tot_id2_coffee"],              "total_coffee",          "Total Coffee",          "mdi:coffee"),
     (["d707_tot_id3_long"],                "total_long_coffee",     "Total Long Coffee",     "mdi:coffee"),
@@ -207,12 +221,35 @@ COUNTER_SENSORS = [
     (["d524_ix_calcare_alm_qty"],           "descale_alert_count",   "Descale Alert Count",   "mdi:alert-circle-outline"),
 ]
 
-# A property can represent a different scope on another model while retaining
-# the same historical unique_id. Only the translation key changes. In
-# particular, Eletta's d701 counter contains black-coffee beverages rather than
-# every beverage dispensed by the machine; Soul's d700 mapping stays unchanged.
-COUNTER_TRANSLATION_KEY_OVERRIDES = {
-    ("total_beverages", "d701_tot_bev_b"): "total_black_coffee_beverages",
+# Per-recipe and recipe-group counters remain available for advanced users, but
+# are disabled for new entity registrations to keep the default device page
+# focused on Coffee Link's semantic summaries. Existing registry choices are
+# preserved by Home Assistant.
+DETAILED_COUNTER_KEYS = {
+    "total_espresso",
+    "total_espresso_alt",
+    "total_coffee",
+    "total_long_coffee",
+    "total_doppio",
+    "total_americano",
+    "total_cappuccino",
+    "total_latte_macchiato",
+    "total_caffelatte",
+    "total_flat_white",
+    "total_espresso_macchiato",
+    "total_hot_milk",
+    "total_cappuccino_doppio",
+    "total_cappuccino_reverse",
+    "total_hot_water",
+    "total_coffee_pot",
+    "total_brew_over_ice",
+    "total_mug_hot",
+    "total_mug_cold",
+    "total_iced_bev",
+    "total_mug_iced_bev",
+    "total_cold_brew_bev",
+    "total_over_ice_espresso",
+    "total_cold_brew",
 }
 
 # Selected user-facing counters derived from JSON breakdowns. The parent
