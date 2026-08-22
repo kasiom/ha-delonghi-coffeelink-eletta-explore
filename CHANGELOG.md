@@ -11,6 +11,9 @@ All notable user-visible changes are documented here. The project follows
 - Rename the disabled recipe diagnostic button to **Log recipe data** in
   English and **Zapsat data receptů** in Czech; keep its entity identity,
   diagnostic category and disabled-by-default behaviour unchanged.
+- Rename the manual cloud refresh button to **Refresh cloud data** in English
+  and **Načíst data z cloudu** in Czech, classify it as diagnostic and disable
+  it by default without changing its entity identity or refresh behaviour.
 
 ## [1.3.0-beta.6] - 2026-08-21
 
