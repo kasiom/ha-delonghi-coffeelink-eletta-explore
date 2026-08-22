@@ -32,8 +32,8 @@ optional RSSI value.
 
 Routine cloud logs use operation names and a short one-way device reference;
 they do not include request URLs, DSNs, upstream response bodies or network-error
-text. Retry details are emitted at debug level. The disabled-by-default **Dump
-Recipe Datapoints** diagnostic button is an explicit exception: when a user
+text. Retry details are emitted at debug level. The disabled-by-default **Log
+recipe data** diagnostic button is an explicit exception: when a user
 presses it, recipe data reported by the machine is written to the local Home
 Assistant log for protocol troubleshooting. Review and sanitize that output
 before sharing it.

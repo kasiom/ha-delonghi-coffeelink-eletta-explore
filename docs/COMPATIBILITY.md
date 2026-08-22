@@ -59,6 +59,11 @@ machine state, as required by Eletta's non-ACK command property. The machine
 returned to standby and the Home Assistant system log contained no integration
 error.
 
+Candidate 1.3.0-beta.7 keeps the physically verified beta.6 protocol and model
+mappings unchanged. Its diagnostic-button naming, entity defaults and
+documentation changes do not broaden the compatibility claim; beta.6 remains
+the supervised physical-command baseline.
+
 ## Verified Eletta behavior
 
 - Account setup, reauthentication, hybrid DSS/polling and cloud-outage recovery

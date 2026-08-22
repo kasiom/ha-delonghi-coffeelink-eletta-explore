@@ -130,6 +130,22 @@ def test_dynamic_recipe_button_has_localized_placeholder_name() -> None:
     assert czech["entity"]["button"]["start_recipe"]["name"] == ("Recept {recipe_id}")
 
 
+def test_recipe_diagnostics_button_has_clear_localized_name() -> None:
+    english = _load(COMPONENT / "translations" / "en.json")
+    czech = _load(COMPONENT / "translations" / "cs.json")
+
+    assert english["entity"]["button"]["dump_recipes"]["name"] == "Log recipe data"
+    assert czech["entity"]["button"]["dump_recipes"]["name"] == "Zapsat data receptů"
+
+
+def test_cloud_refresh_button_has_clear_localized_name() -> None:
+    english = _load(COMPONENT / "translations" / "en.json")
+    czech = _load(COMPONENT / "translations" / "cs.json")
+
+    assert english["entity"]["button"]["synchronize"]["name"] == "Refresh cloud data"
+    assert czech["entity"]["button"]["synchronize"]["name"] == "Načíst data z cloudu"
+
+
 def test_all_runtime_entity_translation_keys_exist_in_both_languages() -> None:
     const_path = COMPONENT / "const.py"
     counters = _literal_value(const_path, "COUNTER_SENSORS")

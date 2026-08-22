@@ -9,6 +9,7 @@ from __future__ import annotations
 import asyncio
 import base64
 import logging
+import sys
 import types
 from collections.abc import Coroutine
 from typing import Any
@@ -436,7 +437,9 @@ def test_streaming_command_confirmation_uses_event_then_single_fallback_refresh(
     run(scenario())
 
 
-def test_confirmation_tracker_covers_races_timeouts_polling_and_shutdown() -> None:
+def test_confirmation_tracker_covers_races_timeouts_polling_and_shutdown(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     async def scenario() -> None:
         tracker = cm.CommandConfirmationTracker()
         loop = asyncio.get_running_loop()
@@ -484,6 +487,11 @@ def test_confirmation_tracker_covers_races_timeouts_polling_and_shutdown() -> No
             nonlocal refresh_count
             refresh_count += 1
 
+        # Keep the polling branch deterministic even if a busy CI runner pauses
+        # the process longer than the real one-second test deadline.
+        confirmation_module = sys.modules[cm.CommandConfirmationTracker.__module__]
+        monkeypatch.setattr(confirmation_module, "monotonic", lambda: 0.0)
+        monkeypatch.setattr(confirmation_module.asyncio, "sleep", AsyncMock())
         assert (
             await tracker.async_wait(
                 changed=lambda: refresh_count >= 2,
