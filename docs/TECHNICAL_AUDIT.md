@@ -1,8 +1,8 @@
 # Technical audit
 
-Audit date: 2026-08-21
+Audit date: 2026-08-22
 
-Audited release: 1.2.1 stable; 1.3.0-beta.6 prerelease
+Audited release: 1.2.1 stable; 1.3.0-beta.7 prerelease candidate
 
 ## Verdict
 
@@ -71,6 +71,16 @@ The stream recovered to `streaming`, received 40 datapoint events through the
 physical cycle, the machine returned to standby and the Home Assistant system
 log contained no integration error.
 
+Prerelease candidate 1.3.0-beta.7 retains all beta.6 command, protocol and model
+paths. It gives the two manual diagnostic buttons concise English/Czech labels,
+classifies both as diagnostic and disables them for new registrations. Existing
+entity identities and registry choices remain unchanged. The exact candidate was
+deployed with backup, hash and configuration validation, loaded without a
+relevant integration error and was verified with both diagnostic buttons
+disabled. Its public HACS, hassfest, Python 3.14 and actual Home Assistant 2026.8.2
+checks pass. No new appliance-command acceptance was required because beta.7 does
+not change an appliance-command path; beta.6 remains the physical baseline.
+
 The beta isolated suite covers every executable line and branch in all 19 Python
 modules. A second suite loads the integration through actual Home Assistant
 2026.8.2 interfaces. These results establish strong software confidence, but
@@ -82,8 +92,8 @@ tested Eletta Explore model and documented acceptance evidence.
 
 - Published and installed release: 1.2.1; physical command-acceptance baseline:
   1.2.0.
-- Installed release candidate: 1.3.0-beta.6 on branch
-  `feature/cloud-dss-hybrid`; not pushed to GitHub or published.
+- Installed release candidate: 1.3.0-beta.7 from the draft pull-request branch
+  `feature/recipe-diagnostics-label`; pushed to GitHub but not released.
 - Home Assistant: 2026.8.2.
 - Python: 3.14.6.
 - Home Assistant OS: 18.2.
@@ -105,7 +115,10 @@ tested Eletta Explore model and documented acceptance evidence.
   Beta.6 was subsequently deployed with the same backup, hash, configuration
   and clean-restart safeguards. Its read-only synchronization restored DSS
   streaming after restart, and its supervised command cycle completed without
-  an integration error before returning the machine to standby.
+  an integration error before returning the machine to standby. Beta.7 then
+  passed the same backed-up deployment and configuration safeguards; both
+  manual diagnostic buttons were verified disabled and the integration log
+  contained no relevant error.
 - Post-restart command state: unknown, by design until Home Assistant issues a
   command.
 - Coffee Link session behavior: free after deployment and the backward-compatible
@@ -126,9 +139,8 @@ Assistant quality certification.
 Repository layout, manifest metadata, brand assets and release guidance were
 checked against the current
 [HACS integration publishing requirements](https://www.hacs.xyz/docs/publish/integration/).
-The repository is public. Release 1.2.1 completed HACS, hassfest and full-suite
-validation. Beta.6 has completed the local checks listed below; its public CI
-checks remain pending until the candidate branch is pushed. A request for
+The repository is public. Release 1.2.1 and candidate beta.7 completed HACS,
+hassfest, Python 3.14 and actual-Home-Assistant validation. A request for
 inclusion in the default
 HACS catalog is open as
 [hacs/default#10136](https://github.com/hacs/default/pull/10136); custom-repository
@@ -141,10 +153,10 @@ shipped.
 
 | Check | Result |
 |---|---|
-| Unit and integration-isolation tests | 373 passed |
+| Unit and integration-isolation tests | 375 passed |
 | Actual Home Assistant runtime tests | 3 passed |
 | Python modules measured | 19 |
-| Statements | 2,665 / 2,665 |
+| Statements | 2,667 / 2,667 |
 | Branches | 860 / 860 |
 | Line coverage | 100% |
 | Branch coverage | 100% |
@@ -154,9 +166,9 @@ shipped.
 | Python compilation | passed |
 | English/Czech leaf-key parity | 189 / 189 |
 | Translation placeholders | synchronized |
-| Public HACS repository validation | 1.2.1 passed; beta.6 pending public CI |
-| Home Assistant hassfest | 1.2.1 passed; beta.6 pending public CI |
-| Manifest version | 1.3.0-beta.6 (installed prerelease candidate) |
+| Public HACS repository validation | 1.2.1 and beta.7 passed |
+| Home Assistant hassfest | 1.2.1 and beta.7 passed |
+| Manifest version | 1.3.0-beta.7 (installed prerelease candidate) |
 
 Tests use deterministic local doubles and make no calls to a real account or
 vendor endpoint. Covered behavior includes authentication refresh and failure

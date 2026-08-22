@@ -8,12 +8,12 @@ připojené přes Coffee Link a platformu Ayla IoT.
 | Položka | Stav |
 |---|---|
 | Aktuální vydání | 1.2.1 – nainstalováno přes HACS a ověřeno načtení v cílovém Home Assistantu |
-| Předběžné vydání | 1.3.0-beta.6 – automatické testy, testy ve skutečném HA, zálohované nasazení a ověření bez ovládání kávovaru prošly |
+| Předběžné vydání | 1.3.0-beta.7 – automatické testy, testy ve skutečném HA, zálohované nasazení a ověření bez ovládání kávovaru prošly |
 | Fyzické ověření příkazů | 1.3.0-beta.6 – probuzení, Cold Brew Start/Stop a pohotovostní režim na ověřeném kávovaru Eletta prošly |
 | Ověřený kávovar | Eletta Explore ECAM450.65.G (`DL-striker-cb`, oblast EU) |
 | Home Assistant | 2026.8.2 nebo novější |
 | Jazyky | čeština a angličtina |
-| Automatické testy | 373 izolovaných testů se 100% pokrytím + 3 testy ve skutečném Home Assistantu |
+| Automatické testy | 375 izolovaných testů se 100% pokrytím + 3 testy ve skutečném Home Assistantu |
 | Distribuce | vlastní repozitář HACS nebo ruční instalace z vydání na GitHubu; zařazení do výchozího katalogu se posuzuje |
 
 Profil PrimaDonna Soul zůstává v kódu pro zkoušky kompatibility, neprošel však
@@ -52,6 +52,21 @@ nezapisuje.
 Výchozí stav entity použije Home Assistant jen při jejím prvním zaregistrování.
 Aktualizace proto nevypne podrobná počitadla, která už má stávající instalace
 zapnutá; lze je spravovat jednotlivě na stránce **Entity** daného zařízení.
+
+## Zásobník na sedlinu a reset čítače
+
+**Naplnění zásobníku sedliny** přebírá vypočítané procento z cloudu výrobce;
+nejde o přímé fyzické měření hladiny. **Zásobník na sedlinu** zobrazuje aktuální
+alarm plného nebo chybějícího zásobníku a je rozhodující pro upozornění,
+bezpečnostní kontroly a automatizace. Obě hodnoty se proto mohou dočasně lišit.
+
+Čítač se spolehlivě vynuluje pouze při probuzeném kávovaru. Počkejte na stav
+**Připraveno**, vyjměte celou odkapávací misku se zásobníkem na několik sekund,
+zásobník vyprázdněte a obě části vraťte. Neprovádějte to během přípravy nápoje
+nebo proplachování. Vyprázdnění v pohotovostním režimu nemusí kávovar zaznamenat.
+Poté vyčkejte na cloudovou aktualizaci; pro diagnostiku lze dočasně povolit
+deaktivovanou entitu **Načíst data z cloudu**. Viz
+[oficiální pokyny De'Longhi](https://www.delonghi.com/en-us/faqs/The-grounds-container-light-is-on-but-my-ground-container-is-not-full./a/16760).
 
 ## Instalace
 

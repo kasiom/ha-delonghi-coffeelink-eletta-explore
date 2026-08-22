@@ -14,6 +14,9 @@ All notable user-visible changes are documented here. The project follows
 - Rename the manual cloud refresh button to **Refresh cloud data** in English
   and **Načíst data z cloudu** in Czech, classify it as diagnostic and disable
   it by default without changing its entity identity or refresh behaviour.
+- Document the difference between the calculated grounds-container percentage
+  and the authoritative full/missing alarm, including the manufacturer-required
+  awake-machine procedure for resetting the grounds counter.
 
 ## [1.3.0-beta.6] - 2026-08-21
 
