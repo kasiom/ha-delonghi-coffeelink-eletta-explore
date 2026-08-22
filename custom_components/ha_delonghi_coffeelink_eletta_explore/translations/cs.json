@@ -145,7 +145,7 @@
       "stop": { "name": "Zastavit přípravu nápoje" },
       "synchronize": { "name": "Synchronizovat data" },
       "start_recipe": { "name": "Recept {recipe_id}" },
-      "dump_recipes": { "name": "Vypsat data receptů" }
+      "dump_recipes": { "name": "Zapsat data receptů" }
     },
     "binary_sensor": {
       "connection_status": { "name": "Připojení ke cloudu" },

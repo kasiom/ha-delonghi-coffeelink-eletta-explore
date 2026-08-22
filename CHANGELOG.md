@@ -6,6 +6,12 @@ All notable user-visible changes are documented here. The project follows
 
 ## [Unreleased]
 
+### Changed
+
+- Rename the disabled recipe diagnostic button to **Log recipe data** in
+  English and **Zapsat data receptů** in Czech; keep its entity identity,
+  diagnostic category and disabled-by-default behaviour unchanged.
+
 ## [1.3.0-beta.6] - 2026-08-21
 
 ### Changed

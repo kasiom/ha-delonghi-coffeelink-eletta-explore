@@ -293,7 +293,7 @@
         "name": "Recipe {recipe_id}"
       },
       "dump_recipes": {
-        "name": "Dump recipe datapoints"
+        "name": "Log recipe data"
       }
     },
     "binary_sensor": {

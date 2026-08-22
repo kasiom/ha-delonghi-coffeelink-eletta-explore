@@ -1026,6 +1026,9 @@ def test_button_actions_availability_and_metadata():
 
         assert translated._attr_translation_key == "start_espresso"
         assert custom._attr_translation_placeholders == {"recipe_id": "999"}
+        assert dump._attr_translation_key == "dump_recipes"
+        assert dump._attr_entity_category == "diagnostic"
+        assert dump._attr_entity_registry_enabled_default is False
         assert wake.available is False
         assert standby.available is False
         assert synchronize.available is False
