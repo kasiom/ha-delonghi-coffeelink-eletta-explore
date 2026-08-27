@@ -23,12 +23,12 @@ platform. It combines near-real-time cloud push with an automatic polling fallba
 | Item | Status |
 |---|---|
 | Current release | 1.2.1; installed through HACS and verified to load on the target Home Assistant |
-| Prerelease | 1.3.0-beta.7; automated, actual-HA runtime, backed-up deployment and read-only validation passed |
+| Prerelease | 1.3.0-beta.8 candidate; isolated validation passed, actual-HA deployment pending |
 | Physical command acceptance | 1.3.0-beta.6; supervised Wake, Cold Brew Start/Stop and Standby passed on the verified Eletta |
 | Verified machine | Eletta Explore ECAM450.65.G (`DL-striker-cb`, EU region) |
 | Home Assistant | 2026.8.2 or newer |
 | Languages | English and Czech |
-| Automated tests | 375 isolated tests at 100% line/branch coverage + 3 actual Home Assistant runtime tests |
+| Automated tests | 384 isolated tests at 100% line/branch coverage + 3 actual Home Assistant runtime tests |
 | Distribution | HACS custom repository or manual installation from a GitHub release; default-catalog review is pending |
 
 The PrimaDonna Soul profile remains available for compatibility testing, but it
@@ -62,8 +62,8 @@ experimental. See [Compatibility and known limitations](docs/COMPATIBILITY.md).
   grounds container.
 - CRC, command identity and device-signature validation before learned commands
   are stored or replayed.
-- Bounded retries for temporary cloud failures without treating an outage as a
-  wrong password.
+- Serialized refresh-token recovery and bounded retries for temporary cloud
+  failures without treating an expired session or outage as a wrong password.
 - Privacy-safe downloadable diagnostics with credentials, device identifiers and
   raw command frames removed.
 - English/Czech entity, state, exception and Repairs translations with icons

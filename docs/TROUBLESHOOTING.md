@@ -5,9 +5,12 @@
 - Confirm that the official Coffee Link app works with the same account.
 - Check Home Assistant internet access and vendor-cloud availability before
   changing credentials.
-- Temporary timeouts, rate limits and server errors are retried and must not
-  start reauthentication. A genuine credential rejection starts the Home
-  Assistant reauthentication flow.
+- A rejected Ayla session is renewed automatically through its in-memory refresh
+  token or, if needed, one silent login with the saved credentials. The refused
+  cloud request is replayed once.
+- Temporary timeouts, rate limits, token-exchange failures and server errors do
+  not start reauthentication. Home Assistant asks for the password only when
+  Gigya explicitly rejects the saved account credentials.
 
 ## Beverage button is missing
 

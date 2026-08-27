@@ -1290,6 +1290,7 @@ def test_authentication_http_401_is_credential_error():
                 "https://example.invalid/login",
                 data={},
                 operation="Login",
+                credential_rejection=True,
             )
 
     asyncio.run(scenario())

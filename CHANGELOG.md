@@ -6,6 +6,16 @@ All notable user-visible changes are documented here. The project follows
 
 ## [Unreleased]
 
+### Fixed
+
+- Transparently renew a server-rejected Ayla access token through the in-memory
+  refresh token, with a full-login fallback, and replay the refused request
+  exactly once.
+- Start Home Assistant reauthentication only when Gigya explicitly rejects the
+  saved account credentials. Expired sessions, rejected token exchanges and
+  persistent cloud authorization failures now remain availability errors instead
+  of incorrectly asking for the password again.
+
 ### Changed
 
 - Rename the disabled recipe diagnostic button to **Log recipe data** in

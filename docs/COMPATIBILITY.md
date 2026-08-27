@@ -64,6 +64,12 @@ mappings unchanged. Its diagnostic-button naming, entity defaults and
 documentation changes do not broaden the compatibility claim; beta.6 remains
 the supervised physical-command baseline.
 
+Candidate 1.3.0-beta.8 changes only cloud-session recovery. It does not alter
+device discovery, model profiles, property mappings, learned recipes or command
+frames. A rejected short-lived Ayla token is renewed and its refused request is
+replayed once, while only a direct saved-password rejection can request Home
+Assistant reauthentication. The same compatibility boundaries therefore apply.
+
 ## Verified Eletta behavior
 
 - Account setup, reauthentication, hybrid DSS/polling and cloud-outage recovery

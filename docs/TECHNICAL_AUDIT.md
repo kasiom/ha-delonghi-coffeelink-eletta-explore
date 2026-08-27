@@ -1,8 +1,8 @@
 # Technical audit
 
-Audit date: 2026-08-22
+Audit date: 2026-08-27
 
-Audited release: 1.2.1 stable; 1.3.0-beta.7 prerelease candidate
+Audited release: 1.2.1 stable; 1.3.0-beta.8 prerelease candidate
 
 ## Verdict
 
@@ -81,6 +81,17 @@ disabled. Its public HACS, hassfest, Python 3.14 and actual Home Assistant 2026.
 checks pass. No new appliance-command acceptance was required because beta.7 does
 not change an appliance-command path; beta.6 remains the physical baseline.
 
+Prerelease candidate 1.3.0-beta.8 retains the beta.7 entity model and appliance
+command paths. It renews a server-rejected Ayla access token under one
+account-wide lock, using the in-memory refresh token first and one full-login
+fallback only when that refresh token has been revoked. The refused request is
+replayed exactly once. Only an explicit Gigya rejection of the saved password
+starts Home Assistant reauthentication; session expiry, failed token exchanges,
+cloud outages and persistent authorization failures remain availability errors.
+Its isolated suite, linting, formatting, compilation and focused strict typing
+pass locally. Actual-Home-Assistant deployment and public CI remain pending;
+beta.7 remains the installed candidate and beta.6 the physical-command baseline.
+
 The beta isolated suite covers every executable line and branch in all 19 Python
 modules. A second suite loads the integration through actual Home Assistant
 2026.8.2 interfaces. These results establish strong software confidence, but
@@ -153,11 +164,11 @@ shipped.
 
 | Check | Result |
 |---|---|
-| Unit and integration-isolation tests | 375 passed |
+| Unit and integration-isolation tests | 384 passed |
 | Actual Home Assistant runtime tests | 3 passed |
 | Python modules measured | 19 |
-| Statements | 2,667 / 2,667 |
-| Branches | 860 / 860 |
+| Statements | 2,724 / 2,724 |
+| Branches | 882 / 882 |
 | Line coverage | 100% |
 | Branch coverage | 100% |
 | Ruff | passed |
@@ -168,7 +179,7 @@ shipped.
 | Translation placeholders | synchronized |
 | Public HACS repository validation | 1.2.1 and beta.7 passed |
 | Home Assistant hassfest | 1.2.1 and beta.7 passed |
-| Manifest version | 1.3.0-beta.7 (installed prerelease candidate) |
+| Manifest version | 1.3.0-beta.8 (local prerelease candidate; deployment pending) |
 
 Tests use deterministic local doubles and make no calls to a real account or
 vendor endpoint. Covered behavior includes authentication refresh and failure
