@@ -23,7 +23,7 @@ platform. It combines near-real-time cloud push with an automatic polling fallba
 | Item | Status |
 |---|---|
 | Current release | 1.2.1; installed through HACS and verified to load on the target Home Assistant |
-| Prerelease | 1.3.0-beta.8 candidate; isolated validation passed, actual-HA deployment pending |
+| Prerelease | 1.3.0-beta.8 candidate; automated validation passed, target-HA deployment pending |
 | Physical command acceptance | 1.3.0-beta.6; supervised Wake, Cold Brew Start/Stop and Standby passed on the verified Eletta |
 | Verified machine | Eletta Explore ECAM450.65.G (`DL-striker-cb`, EU region) |
 | Home Assistant | 2026.8.2 or newer |

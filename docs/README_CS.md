@@ -8,7 +8,7 @@ připojené přes Coffee Link a platformu Ayla IoT.
 | Položka | Stav |
 |---|---|
 | Aktuální vydání | 1.2.1 – nainstalováno přes HACS a ověřeno načtení v cílovém Home Assistantu |
-| Předběžné vydání | kandidát 1.3.0-beta.8 – izolované kontroly prošly, nasazení ve skutečném HA čeká na provedení |
+| Předběžné vydání | kandidát 1.3.0-beta.8 – automatické kontroly prošly, nasazení v cílovém HA čeká na provedení |
 | Fyzické ověření příkazů | 1.3.0-beta.6 – probuzení, Cold Brew Start/Stop a pohotovostní režim na ověřeném kávovaru Eletta prošly |
 | Ověřený kávovar | Eletta Explore ECAM450.65.G (`DL-striker-cb`, oblast EU) |
 | Home Assistant | 2026.8.2 nebo novější |

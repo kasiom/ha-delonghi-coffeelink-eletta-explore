@@ -88,9 +88,10 @@ fallback only when that refresh token has been revoked. The refused request is
 replayed exactly once. Only an explicit Gigya rejection of the saved password
 starts Home Assistant reauthentication; session expiry, failed token exchanges,
 cloud outages and persistent authorization failures remain availability errors.
-Its isolated suite, linting, formatting, compilation and focused strict typing
-pass locally. Actual-Home-Assistant deployment and public CI remain pending;
-beta.7 remains the installed candidate and beta.6 the physical-command baseline.
+Its isolated suite, linting, formatting, compilation, strict typing, HACS,
+hassfest and three tests against Home Assistant 2026.8.2 pass in public CI.
+Deployment to the target Home Assistant remains pending; beta.7 remains the
+installed candidate and beta.6 the physical-command baseline.
 
 The beta isolated suite covers every executable line and branch in all 19 Python
 modules. A second suite loads the integration through actual Home Assistant
@@ -150,7 +151,7 @@ Assistant quality certification.
 Repository layout, manifest metadata, brand assets and release guidance were
 checked against the current
 [HACS integration publishing requirements](https://www.hacs.xyz/docs/publish/integration/).
-The repository is public. Release 1.2.1 and candidate beta.7 completed HACS,
+The repository is public. Release 1.2.1 and candidate beta.8 completed HACS,
 hassfest, Python 3.14 and actual-Home-Assistant validation. A request for
 inclusion in the default
 HACS catalog is open as
@@ -177,9 +178,9 @@ shipped.
 | Python compilation | passed |
 | English/Czech leaf-key parity | 189 / 189 |
 | Translation placeholders | synchronized |
-| Public HACS repository validation | 1.2.1 and beta.7 passed |
-| Home Assistant hassfest | 1.2.1 and beta.7 passed |
-| Manifest version | 1.3.0-beta.8 (local prerelease candidate; deployment pending) |
+| Public HACS repository validation | 1.2.1 and beta.8 passed |
+| Home Assistant hassfest | 1.2.1 and beta.8 passed |
+| Manifest version | 1.3.0-beta.8 (GitHub-validated candidate; target deployment pending) |
 
 Tests use deterministic local doubles and make no calls to a real account or
 vendor endpoint. Covered behavior includes authentication refresh and failure
