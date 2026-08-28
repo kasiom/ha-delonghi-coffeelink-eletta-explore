@@ -38,7 +38,7 @@ acceptance on every model claimed as supported.
 
 1. Merge or push the reviewed version commit to `main`.
 2. Wait for Validate, HACS and hassfest to complete successfully.
-3. Create an annotated SemVer prerelease tag such as `v1.3.0-beta.8` pointing at
+3. Create an annotated SemVer prerelease tag such as `v1.3.0-beta.9` pointing at
    that exact commit.
 4. Publish a non-draft GitHub release marked as a prerelease. Do not mark it as
    the latest stable release. Include concise highlights, validation evidence,

@@ -6,8 +6,27 @@ All notable user-visible changes are documented here. The project follows
 
 ## [Unreleased]
 
+## [1.3.0-beta.9] - 2026-08-28
+
+### Added
+
+- Refresh Eletta's device-to-cloud snapshot cooperatively at startup, once per
+  hour and after a completed beverage command. The integration sends Coffee
+  Link's idempotent `03 02` request, waits up to ten seconds for a relevant DSS
+  update and performs an authoritative property reconciliation.
+- Add privacy-safe runtime diagnostics for snapshot attempts, successes, trigger,
+  ACK status and whether the counter snapshot changed. No new entity or recorder
+  history is created.
+
 ### Fixed
 
+- Make **Refresh cloud data** request a new snapshot from the appliance instead
+  of merely rereading the vendor's possibly stale cloud cache.
+- Check the live Coffee Link session holder before every cloud-session claim.
+  Automatic refresh is deferred while the coffee maker is offline, preparing a
+  drink, processing another Home Assistant command or held by a foreign session.
+- Keep automatic snapshot traffic separate from **Last Command Status** so
+  maintenance refreshes cannot appear as user-issued appliance commands.
 - Transparently renew a server-rejected Ayla access token through the in-memory
   refresh token, with a full-login fallback, and replay the refused request
   exactly once.
@@ -487,7 +506,8 @@ All notable user-visible changes are documented here. The project follows
 - Initial standalone version derived from substantially modified MIT-licensed
   Coffee Link integration work.
 
-[Unreleased]: https://github.com/kasiom/ha-delonghi-coffeelink-eletta-explore/compare/v1.3.0-beta.6...HEAD
+[Unreleased]: https://github.com/kasiom/ha-delonghi-coffeelink-eletta-explore/compare/v1.3.0-beta.9...HEAD
+[1.3.0-beta.9]: https://github.com/kasiom/ha-delonghi-coffeelink-eletta-explore/compare/v1.3.0-beta.6...v1.3.0-beta.9
 [1.3.0-beta.6]: https://github.com/kasiom/ha-delonghi-coffeelink-eletta-explore/compare/v1.2.1...v1.3.0-beta.6
 [1.2.1]: https://github.com/kasiom/ha-delonghi-coffeelink-eletta-explore/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/kasiom/ha-delonghi-coffeelink-eletta-explore/releases/tag/v1.2.0

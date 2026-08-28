@@ -52,10 +52,17 @@ which one. Home Assistant will not take over a foreign active session.
 
 ## Counters look stale
 
-Temporarily enable the disabled diagnostic entity **Refresh cloud data**, press
-it, wait at least ten seconds and refresh the entity. The button requests a fresh
-cloud session and property read, but the machine or vendor cloud can still publish
-counters later. Keep the button disabled when it is not needed.
+Wait for the next cooperative refresh (normally no more than one hour). To test
+immediately, temporarily enable **Refresh cloud data** and press it once. The
+button asks the appliance to republish its snapshot, waits up to ten seconds and
+then reconciles every cloud property. It stays disabled by default because the
+automatic lifecycle normally makes manual use unnecessary.
+
+Download diagnostics and inspect `cloud_snapshot_refresh` if the value remains
+stale. `completed_updated` proves that the observed counter snapshot advanced;
+`completed_unchanged` means the request completed but the appliance published no
+different counter value or timestamp. A `skipped_*` result states the safety
+reason for deferral. Keep the button disabled when it is not needed.
 
 ## Grounds fill is 100% while the grounds container is OK
 

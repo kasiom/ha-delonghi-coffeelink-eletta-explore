@@ -8,12 +8,12 @@ připojené přes Coffee Link a platformu Ayla IoT.
 | Položka | Stav |
 |---|---|
 | Aktuální vydání | 1.2.1 – nainstalováno přes HACS a ověřeno načtení v cílovém Home Assistantu |
-| Předběžné vydání | kandidát 1.3.0-beta.8 – automatické kontroly prošly, nasazení v cílovém HA čeká na provedení |
+| Předběžné vydání | kandidát 1.3.0-beta.9 – automatické kontroly a živé ověření v cílovém HA prošly; čeká na veřejné CI |
 | Fyzické ověření příkazů | 1.3.0-beta.6 – probuzení, Cold Brew Start/Stop a pohotovostní režim na ověřeném kávovaru Eletta prošly |
 | Ověřený kávovar | Eletta Explore ECAM450.65.G (`DL-striker-cb`, oblast EU) |
 | Home Assistant | 2026.8.2 nebo novější |
 | Jazyky | čeština a angličtina |
-| Automatické testy | 384 izolovaných testů se 100% pokrytím + 3 testy ve skutečném Home Assistantu |
+| Automatické testy | 391 izolovaných testů se 100% pokrytím + 3 testy ve skutečném Home Assistantu |
 | Distribuce | vlastní repozitář HACS nebo ruční instalace z vydání na GitHubu; zařazení do výchozího katalogu se posuzuje |
 
 Profil PrimaDonna Soul zůstává v kódu pro zkoušky kompatibility, neprošel však
@@ -26,6 +26,9 @@ stejným fyzickým ověřením a je označen jako experimentální.
   potvrzení datového bodu; příkazový kanál ověřeného modelu Eletta podporu ACK
   nemá, proto se stejně jako v Coffee Link potvrzuje změnou stavu kávovaru;
 - automatický návrat k 30sekundovému dotazování při výpadku streamu;
+- bezpečné vyžádání nového snímku přímo z kávovaru po spuštění integrace,
+  jednou za hodinu a po dokončeném příkazu nápoje; při přípravě, výpadku nebo
+  cizí relaci se požadavek odloží;
 - počitadla nápojů, vody, filtru, odvápnění a zásobníku sedliny;
 - souhrnné statistiky se stejným významem pro Eletta/Striker a starší větev
   PrimaDonna Soul; u neznámého modelu se význam interních polí neodhaduje;
@@ -111,5 +114,6 @@ zkontrolujte správný šálek, připojené příslušenství a prostor kolem k�
 Integraci nepoužívejte k bezobslužnému vzdálenému výdeji.
 
 Další informace: [použití a bezpečnost](USAGE.md),
+[obnova cloudového snímku](CLOUD_SNAPSHOT_REFRESH_CS.md),
 [kompatibilita](COMPATIBILITY.md), [řešení potíží](TROUBLESHOOTING.md) a
 [ochrana soukromí](PRIVACY.md).

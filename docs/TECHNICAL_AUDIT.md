@@ -1,8 +1,8 @@
 # Technical audit
 
-Audit date: 2026-08-27
+Audit date: 2026-08-28
 
-Audited release: 1.2.1 stable; 1.3.0-beta.8 prerelease candidate
+Audited release: 1.2.1 stable; 1.3.0-beta.9 prerelease candidate
 
 ## Verdict
 
@@ -93,6 +93,24 @@ hassfest and three tests against Home Assistant 2026.8.2 pass in public CI.
 Deployment to the target Home Assistant remains pending; beta.7 remains the
 installed candidate and beta.6 the physical-command baseline.
 
+Prerelease candidate 1.3.0-beta.9 adds the missing device-to-cloud snapshot
+lifecycle observed in Coffee Link 4.9.6. A read-only live comparison proved that
+ordinary cloud reads could retain zero filter usage and filtered-water volume;
+opening Coffee Link remotely caused the appliance snapshot to advance without
+LAN access. The candidate therefore sends Coffee Link's idempotent `03 02`
+request 30 seconds after setup, hourly and after completed beverage commands.
+It first checks live session ownership, defers while offline or preparing, waits
+up to ten seconds for a counter DSS event and then performs an authoritative
+property reconciliation. It does not wake the appliance, dispense a drink or
+change Last Command Status. Unsupported profiles retain read-only behavior.
+The exact beta.9 candidate was then deployed with a complete text-file backup,
+SHA-256 verification, a valid Home Assistant configuration check and a clean
+restart. Its first unattended startup refresh completed successfully while the
+machine remained in standby: four live DSS datapoint events were received,
+diagnostics reported `completed_unchanged`, and the current filter values
+remained 4%, 4.323 L and two installed filters. No mobile-app launch or appliance
+command was used for this acceptance.
+
 The beta isolated suite covers every executable line and branch in all 19 Python
 modules. A second suite loads the integration through actual Home Assistant
 2026.8.2 interfaces. These results establish strong software confidence, but
@@ -104,8 +122,8 @@ tested Eletta Explore model and documented acceptance evidence.
 
 - Published and installed release: 1.2.1; physical command-acceptance baseline:
   1.2.0.
-- Installed release candidate: 1.3.0-beta.7 from the draft pull-request branch
-  `feature/recipe-diagnostics-label`; pushed to GitHub but not released.
+- Installed release candidate: 1.3.0-beta.9 from the current draft pull-request
+  line; public CI remains pending.
 - Home Assistant: 2026.8.2.
 - Python: 3.14.6.
 - Home Assistant OS: 18.2.
@@ -130,7 +148,10 @@ tested Eletta Explore model and documented acceptance evidence.
   an integration error before returning the machine to standby. Beta.7 then
   passed the same backed-up deployment and configuration safeguards; both
   manual diagnostic buttons were verified disabled and the integration log
-  contained no relevant error.
+  contained no relevant error. Beta.9 then passed backup, hash and configuration
+  checks, a clean restart and unattended snapshot acceptance. It received four
+  DSS events, left the machine in standby and recorded no relevant integration
+  error.
 - Post-restart command state: unknown, by design until Home Assistant issues a
   command.
 - Coffee Link session behavior: free after deployment and the backward-compatible
@@ -165,11 +186,11 @@ shipped.
 
 | Check | Result |
 |---|---|
-| Unit and integration-isolation tests | 384 passed |
+| Unit and integration-isolation tests | 391 passed |
 | Actual Home Assistant runtime tests | 3 passed |
 | Python modules measured | 19 |
-| Statements | 2,724 / 2,724 |
-| Branches | 882 / 882 |
+| Statements | 2,865 / 2,865 |
+| Branches | 940 / 940 |
 | Line coverage | 100% |
 | Branch coverage | 100% |
 | Ruff | passed |
@@ -180,7 +201,7 @@ shipped.
 | Translation placeholders | synchronized |
 | Public HACS repository validation | 1.2.1 and beta.8 passed |
 | Home Assistant hassfest | 1.2.1 and beta.8 passed |
-| Manifest version | 1.3.0-beta.8 (GitHub-validated candidate; target deployment pending) |
+| Manifest version | 1.3.0-beta.9 (target deployment passed; public CI pending) |
 
 Tests use deterministic local doubles and make no calls to a real account or
 vendor endpoint. Covered behavior includes authentication refresh and failure
@@ -199,8 +220,9 @@ fails validation.
 
 | Area | Evidence | Status |
 |---|---|---|
-| Installation and restart | 1.2.0 passed clean restart; 1.2.1 installed through HACS; beta.4, beta.5 and beta.6 backed up, installed and loaded locally | verified through beta.6 |
-| Hybrid cloud updates | Beta.4 through beta.6 DSS streamed; beta.6 received 40 live datapoint events through the physical cycle; fallback covered deterministically | live + automated |
+| Installation and restart | 1.2.0 passed clean restart; 1.2.1 installed through HACS; beta.4 through beta.7 and beta.9 backed up, installed and loaded locally | verified through beta.9 |
+| Hybrid cloud updates | Beta.4 through beta.6 DSS streamed; beta.6 received 40 live datapoint events through the physical cycle; beta.9 received four events during unattended snapshot refresh; fallback covered deterministically | live + automated |
+| Automatic cloud snapshot | beta.9 startup request completed with `completed_unchanged`, current counters and standby preserved, without opening Coffee Link | verified on Eletta |
 | Command confirmation capability | Eletta cloud declared `ack_enabled: false`; live stream produced datapoints and zero datapoint ACKs; ACK-enabled matching/rejection remains covered deterministically | live on Eletta + automated |
 | Wake | beta.6 changed standby → waking up → ready; cloud-state confirmation completed in 4.5 s and ready was reached in 43.2 s | verified on Eletta |
 | Standby | beta.6 changed ready → going to sleep → standby; cloud-state confirmation completed in 5.4 s and standby was reached in 11.6 s | verified on Eletta |

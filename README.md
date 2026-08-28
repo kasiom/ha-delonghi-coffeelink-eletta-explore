@@ -23,12 +23,12 @@ platform. It combines near-real-time cloud push with an automatic polling fallba
 | Item | Status |
 |---|---|
 | Current release | 1.2.1; installed through HACS and verified to load on the target Home Assistant |
-| Prerelease | 1.3.0-beta.8 candidate; automated validation passed, target-HA deployment pending |
+| Prerelease | 1.3.0-beta.9 candidate; automated validation and target-HA live acceptance passed; public CI pending |
 | Physical command acceptance | 1.3.0-beta.6; supervised Wake, Cold Brew Start/Stop and Standby passed on the verified Eletta |
 | Verified machine | Eletta Explore ECAM450.65.G (`DL-striker-cb`, EU region) |
 | Home Assistant | 2026.8.2 or newer |
 | Languages | English and Czech |
-| Automated tests | 384 isolated tests at 100% line/branch coverage + 3 actual Home Assistant runtime tests |
+| Automated tests | 391 isolated tests at 100% line/branch coverage + 3 actual Home Assistant runtime tests |
 | Distribution | HACS custom repository or manual installation from a GitHub release; default-catalog review is pending |
 
 The PrimaDonna Soul profile remains available for compatibility testing, but it
@@ -46,6 +46,10 @@ experimental. See [Compatibility and known limitations](docs/COMPATIBILITY.md).
   ACK support, exact datapoint acknowledgements; protected by event ordering and
   an automatic 30-second polling fallback. Eletta's non-ACK command channel is
   confirmed from the resulting machine state, matching Coffee Link behavior.
+- Cooperative device-to-cloud snapshot refresh: after startup, hourly and after
+  completed beverage commands. It follows Coffee Link's safe refresh request,
+  defers to active work or foreign sessions and never starts a beverage or wakes
+  the appliance.
 - Beverage, water, filter, descaling and grounds-container statistics with
   appropriate Home Assistant units and state classes.
 - Model-aware Coffee Link summary formulas: Eletta/Striker and the legacy
@@ -136,6 +140,8 @@ after every discarded command has been learned again.
 - [Český přehled](docs/README_CS.md)
 - [Installation and updates](docs/INSTALLATION.md)
 - [Usage and safety](docs/USAGE.md)
+- [Cloud snapshot refresh](docs/CLOUD_SNAPSHOT_REFRESH.md)
+- [Obnova cloudového snímku – česky](docs/CLOUD_SNAPSHOT_REFRESH_CS.md)
 - [Compatibility and known limitations](docs/COMPATIBILITY.md)
 - [Troubleshooting](docs/TROUBLESHOOTING.md)
 - [Privacy and cloud data](docs/PRIVACY.md)

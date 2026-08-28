@@ -70,6 +70,18 @@ frames. A rejected short-lived Ayla token is renewed and its refused request is
 replayed once, while only a direct saved-password rejection can request Home
 Assistant reauthentication. The same compatibility boundaries therefore apply.
 
+Candidate 1.3.0-beta.9 corrects the cloud-snapshot lifecycle on validated Eletta
+profiles. Coffee Link's `03 02` device refresh is sent cooperatively rather than
+holding the session continuously: after startup, hourly and after a completed
+beverage command. It is skipped while the appliance is busy, offline or visibly
+owned by a foreign session. Profiles without the Eletta cloud-session signature
+retain read-only property reconciliation and are not sent this model-specific
+automatic request. The exact candidate passed a backed-up deployment, clean
+restart and unattended startup refresh on the verified Eletta: four DSS events
+were received, diagnostics reported `completed_unchanged`, the machine remained
+in standby and the current filter counters were preserved. Counter mappings and
+compatibility claims are unchanged.
+
 ## Verified Eletta behavior
 
 - Account setup, reauthentication, hybrid DSS/polling and cloud-outage recovery

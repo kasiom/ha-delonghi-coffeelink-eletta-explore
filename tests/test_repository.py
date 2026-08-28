@@ -27,7 +27,7 @@ def test_release_metadata_quality_scale_and_workflows_are_consistent() -> None:
         "&category=integration"
     )
 
-    assert manifest["version"] == "1.3.0-beta.8"
+    assert manifest["version"] == "1.3.0-beta.9"
     assert hacs["homeassistant"] == "2026.8.2"
     assert all(hacs_link in document for document in (readme, readme_cs, installation))
     assert "Private acceptance testing" not in readme

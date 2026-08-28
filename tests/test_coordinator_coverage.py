@@ -576,7 +576,7 @@ def test_with_cloud_session_cached_verification_and_confirmed_send() -> None:
 
         with pytest.raises(HomeAssistantError, match="could not be verified"):
             await coordinator._with_cloud_session(send)
-        with pytest.raises(HomeAssistantError, match="could not be verified"):
+        with pytest.raises(HomeAssistantError, match="Another application"):
             await coordinator._with_cloud_session(send)
 
         coordinator._fetch_app_id_live = AsyncMock(return_value=(coordinator._integration_app_id, True))
@@ -586,6 +586,18 @@ def test_with_cloud_session_cached_verification_and_confirmed_send() -> None:
         coordinator._session_confirmed = True
         await coordinator._with_cloud_session(send)
         assert send.await_count == 2
+
+    run(scenario())
+
+
+def test_with_cloud_session_rejects_missing_live_holder_during_fresh_window() -> None:
+    async def scenario() -> None:
+        coordinator, _client = _coordinator("DL-striker-cb")
+        coordinator.connected_property = "connected"
+        coordinator._fetch_app_id_live = AsyncMock(return_value=(None, True))
+        coordinator._session_is_fresh = Mock(return_value=True)
+        with pytest.raises(HomeAssistantError, match="could not be verified"):
+            await coordinator._with_cloud_session(AsyncMock())
 
     run(scenario())
 
