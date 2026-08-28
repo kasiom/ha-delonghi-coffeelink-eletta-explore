@@ -123,7 +123,7 @@ tested Eletta Explore model and documented acceptance evidence.
 - Published and installed release: 1.2.1; physical command-acceptance baseline:
   1.2.0.
 - Installed release candidate: 1.3.0-beta.9 from the current draft pull-request
-  line; public CI remains pending.
+  line; public CI passed.
 - Home Assistant: 2026.8.2.
 - Python: 3.14.6.
 - Home Assistant OS: 18.2.
@@ -172,7 +172,7 @@ Assistant quality certification.
 Repository layout, manifest metadata, brand assets and release guidance were
 checked against the current
 [HACS integration publishing requirements](https://www.hacs.xyz/docs/publish/integration/).
-The repository is public. Release 1.2.1 and candidate beta.8 completed HACS,
+The repository is public. Release 1.2.1 and candidate beta.9 completed HACS,
 hassfest, Python 3.14 and actual-Home-Assistant validation. A request for
 inclusion in the default
 HACS catalog is open as
@@ -199,9 +199,9 @@ shipped.
 | Python compilation | passed |
 | English/Czech leaf-key parity | 189 / 189 |
 | Translation placeholders | synchronized |
-| Public HACS repository validation | 1.2.1 and beta.8 passed |
-| Home Assistant hassfest | 1.2.1 and beta.8 passed |
-| Manifest version | 1.3.0-beta.9 (target deployment passed; public CI pending) |
+| Public HACS repository validation | 1.2.1 and beta.9 passed |
+| Home Assistant hassfest | 1.2.1 and beta.9 passed |
+| Manifest version | 1.3.0-beta.9 (public CI and target deployment passed) |
 
 Tests use deterministic local doubles and make no calls to a real account or
 vendor endpoint. Covered behavior includes authentication refresh and failure
