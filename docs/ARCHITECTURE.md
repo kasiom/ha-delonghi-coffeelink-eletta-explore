@@ -32,8 +32,13 @@ used by Coffee Link. A timeout triggers one authoritative reconciliation; when
 the stream is unavailable, the bounded polling confirmation path remains in
 place. The push channel is therefore an improvement rather than a new single
 point of failure.
-Temporary authentication infrastructure failures remain availability errors;
-only an actual credential rejection starts Home Assistant reauthentication.
+When Ayla rejects an access token, one account-wide authentication lock
+serializes its renewal. The client first uses the in-memory refresh token, falls
+back to one full login when that token has been revoked and replays the refused
+request exactly once. Temporary authentication infrastructure failures, failed
+token exchanges and persistent authorization errors remain availability errors;
+only a direct Gigya rejection of the saved password starts Home Assistant
+reauthentication.
 
 ## Provenance and acknowledgements
 

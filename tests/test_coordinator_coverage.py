@@ -9,6 +9,7 @@ from __future__ import annotations
 import asyncio
 import base64
 import logging
+import sys
 import types
 from collections.abc import Coroutine
 from typing import Any
@@ -436,7 +437,9 @@ def test_streaming_command_confirmation_uses_event_then_single_fallback_refresh(
     run(scenario())
 
 
-def test_confirmation_tracker_covers_races_timeouts_polling_and_shutdown() -> None:
+def test_confirmation_tracker_covers_races_timeouts_polling_and_shutdown(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     async def scenario() -> None:
         tracker = cm.CommandConfirmationTracker()
         loop = asyncio.get_running_loop()
@@ -484,6 +487,11 @@ def test_confirmation_tracker_covers_races_timeouts_polling_and_shutdown() -> No
             nonlocal refresh_count
             refresh_count += 1
 
+        # Keep the polling branch deterministic even if a busy CI runner pauses
+        # the process longer than the real one-second test deadline.
+        confirmation_module = sys.modules[cm.CommandConfirmationTracker.__module__]
+        monkeypatch.setattr(confirmation_module, "monotonic", lambda: 0.0)
+        monkeypatch.setattr(confirmation_module.asyncio, "sleep", AsyncMock())
         assert (
             await tracker.async_wait(
                 changed=lambda: refresh_count >= 2,
@@ -568,7 +576,7 @@ def test_with_cloud_session_cached_verification_and_confirmed_send() -> None:
 
         with pytest.raises(HomeAssistantError, match="could not be verified"):
             await coordinator._with_cloud_session(send)
-        with pytest.raises(HomeAssistantError, match="could not be verified"):
+        with pytest.raises(HomeAssistantError, match="Another application"):
             await coordinator._with_cloud_session(send)
 
         coordinator._fetch_app_id_live = AsyncMock(return_value=(coordinator._integration_app_id, True))
@@ -578,6 +586,18 @@ def test_with_cloud_session_cached_verification_and_confirmed_send() -> None:
         coordinator._session_confirmed = True
         await coordinator._with_cloud_session(send)
         assert send.await_count == 2
+
+    run(scenario())
+
+
+def test_with_cloud_session_rejects_missing_live_holder_during_fresh_window() -> None:
+    async def scenario() -> None:
+        coordinator, _client = _coordinator("DL-striker-cb")
+        coordinator.connected_property = "connected"
+        coordinator._fetch_app_id_live = AsyncMock(return_value=(None, True))
+        coordinator._session_is_fresh = Mock(return_value=True)
+        with pytest.raises(HomeAssistantError, match="could not be verified"):
+            await coordinator._with_cloud_session(AsyncMock())
 
     run(scenario())
 

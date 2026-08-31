@@ -287,13 +287,13 @@
         "name": "Stop"
       },
       "synchronize": {
-        "name": "Synchronize data"
+        "name": "Refresh cloud data"
       },
       "start_recipe": {
         "name": "Recipe {recipe_id}"
       },
       "dump_recipes": {
-        "name": "Dump recipe datapoints"
+        "name": "Log recipe data"
       }
     },
     "binary_sensor": {

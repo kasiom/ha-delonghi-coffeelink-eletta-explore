@@ -1,7 +1,8 @@
 """Authentication and API client for De'Longhi Coffee Link – Eletta Explore via Ayla cloud.
 
 Auth chain: Gigya email/password login -> Gigya JWT (HMAC-SHA1 signed request)
- -> Ayla SSO sign-in -> Ayla access_token.
+ -> Ayla SSO sign-in -> Ayla access and refresh tokens. Rejected short-lived
+ access tokens are renewed in memory before a full login is attempted.
 """
 
 from __future__ import annotations
@@ -60,6 +61,15 @@ class CloudError(Exception):
         self.http_status = http_status
 
 
+class _AccessTokenRejected(Exception):
+    """Internal signal that an authenticated Ayla request rejected its token."""
+
+    def __init__(self, status: int, token: str | None) -> None:
+        super().__init__(f"Ayla access token rejected (HTTP {status})")
+        self.status = status
+        self.token = token
+
+
 class RateLimitError(CloudError):
     """Raised when Ayla asks the client to defer further requests."""
 
@@ -88,6 +98,7 @@ class DelonghiAylaClient:
         self._email = email
         self._password = password
         self._access_token: str | None = None
+        self._refresh_token: str | None = None
         self._expires_at: float = 0
         self._auth_lock = asyncio.Lock()
         self._devices_lock = asyncio.Lock()
@@ -114,29 +125,52 @@ class DelonghiAylaClient:
         async with self._auth_lock:
             if self._access_token and monotonic() <= self._expires_at - 30:
                 return
+            if await self._async_refresh_access_token_locked():
+                return
+            await self._async_authenticate_locked()
+
+    async def _async_reauthenticate_after_rejection(self, rejected_token: str | None) -> None:
+        """Replace a server-rejected token once without duplicate concurrent logins."""
+        async with self._auth_lock:
+            if self._access_token and self._access_token != rejected_token:
+                return
+            self._access_token = None
+            self._expires_at = 0
+            if await self._async_refresh_access_token_locked():
+                return
             await self._async_authenticate_locked()
 
     async def _authentication_request(
         self,
         url: str,
         *,
-        data: dict[str, str],
+        data: dict[str, Any] | None = None,
+        json_body: dict[str, Any] | None = None,
         ok_status: frozenset[int] = frozenset({200}),
         operation: str,
+        credential_rejection: bool = False,
     ) -> dict[str, Any]:
         """POST an authentication request with transient-error classification.
 
-        Credential rejection is intentionally limited to HTTP 400/401/403.
-        Rate limits, server failures, timeouts and invalid upstream responses are
-        cloud availability errors and must never trigger Home Assistant reauth.
+        Only the direct Gigya password login may classify HTTP 400/401/403 as
+        invalid credentials.  Rejected refresh, JWT and Ayla exchange requests
+        are cloud/session failures and must never trigger Home Assistant reauth.
         """
+        if (data is None) == (json_body is None):
+            raise ValueError("authentication request requires exactly one request body")
         last_error: CloudError | None = None
         for attempt in range(CLOUD_HTTP_RETRY_COUNT + 1):
             try:
+                request_kwargs: dict[str, Any] = {
+                    "timeout": aiohttp.ClientTimeout(total=CLOUD_HTTP_TIMEOUT),
+                }
+                if data is not None:
+                    request_kwargs["data"] = data
+                else:
+                    request_kwargs["json"] = json_body
                 async with self._session.post(
                     url,
-                    data=data,
-                    timeout=aiohttp.ClientTimeout(total=CLOUD_HTTP_TIMEOUT),
+                    **request_kwargs,
                 ) as resp:
                     text = await resp.text()
                     if resp.status == 429:
@@ -145,7 +179,12 @@ class DelonghiAylaClient:
                             retry_after=self._sanitized_retry_after(resp.headers.get("Retry-After")),
                         )
                     if resp.status in {400, 401, 403}:
-                        raise AuthError(f"{operation} rejected the credentials (HTTP {resp.status})")
+                        if credential_rejection:
+                            raise AuthError(f"{operation} rejected the credentials (HTTP {resp.status})")
+                        raise CloudError(
+                            f"{operation} rejected the request (HTTP {resp.status})",
+                            http_status=resp.status,
+                        )
                     if resp.status in CLOUD_TRANSIENT_HTTP_CODES and attempt < CLOUD_HTTP_RETRY_COUNT:
                         await asyncio.sleep(CLOUD_HTTP_RETRY_BACKOFF * (2**attempt))
                         continue
@@ -231,6 +270,7 @@ class DelonghiAylaClient:
         extra_headers: dict[str, str] | None = None,
         ok_status: frozenset[int] | set[int] | None = None,
         op: str = "",
+        _retry_auth: bool = True,
     ) -> Any:
         """Perform an authenticated Ayla request with bounded retries."""
         await self.async_ensure_auth()
@@ -241,6 +281,7 @@ class DelonghiAylaClient:
         for attempt in range(CLOUD_HTTP_RETRY_COUNT + 1):
             started = time.monotonic()
             try:
+                request_token = self._access_token
                 async with self._session.request(
                     method,
                     url,
@@ -264,9 +305,7 @@ class DelonghiAylaClient:
                     )
 
                     if resp.status in (401, 403):
-                        self._access_token = None
-                        self._expires_at = 0
-                        raise AuthError(f"{safe_operation} rejected the cloud credentials (HTTP {resp.status})")
+                        raise _AccessTokenRejected(resp.status, request_token)
 
                     if resp.status == 429:
                         raise RateLimitError(
@@ -313,6 +352,23 @@ class DelonghiAylaClient:
                             f"{safe_operation}: expected JSON, got {resp.content_type!r} ({len(text)} bytes)",
                             http_status=resp.status,
                         ) from err
+            except _AccessTokenRejected as err:
+                if _retry_auth:
+                    await self._async_reauthenticate_after_rejection(err.token)
+                    return await self._request_json(
+                        method,
+                        url,
+                        json_body=json_body,
+                        data=data,
+                        extra_headers=extra_headers,
+                        ok_status=ok_status,
+                        op=op,
+                        _retry_auth=False,
+                    )
+                raise CloudError(
+                    f"{safe_operation} remained unauthorized after automatic token renewal (HTTP {err.status})",
+                    http_status=err.status,
+                ) from err
             except (TimeoutError, aiohttp.ClientError) as err:
                 elapsed_ms = (time.monotonic() - started) * 1000
                 last_error = CloudError(f"{safe_operation} network error after {elapsed_ms:.0f}ms ({type(err).__name__})")
@@ -346,6 +402,7 @@ class DelonghiAylaClient:
                 "targetEnv": "mobile",
             },
             operation="Gigya login",
+            credential_rejection=True,
         )
         if body.get("errorCode") != 0:
             error_code = body.get("errorCode")
@@ -392,10 +449,59 @@ class DelonghiAylaClient:
             ok_status=frozenset({200, 201}),
             operation="Ayla SSO",
         )
-        if "access_token" not in body:
-            raise AuthError("Ayla SSO response did not contain an access token")
-        self._access_token = body["access_token"]
-        self._expires_at = monotonic() + body.get("expires_in", 3600)
+        self._store_ayla_tokens(body, operation="Ayla SSO")
+
+    @staticmethod
+    def _token_ttl(value: Any) -> float:
+        """Return a usable relative token lifetime from an untrusted response."""
+        try:
+            ttl = float(value)
+        except TypeError, ValueError:
+            return 3600.0
+        return ttl if isfinite(ttl) and ttl > 0 else 3600.0
+
+    def _store_ayla_tokens(
+        self,
+        body: dict[str, Any],
+        *,
+        operation: str,
+        keep_refresh_token: bool = False,
+    ) -> None:
+        """Validate and store an Ayla token response without exposing secrets."""
+        access_token = body.get("access_token")
+        if not isinstance(access_token, str) or not access_token:
+            raise CloudError(f"{operation} response did not contain an access token")
+        refresh_token = body.get("refresh_token")
+        self._access_token = access_token
+        if isinstance(refresh_token, str) and refresh_token:
+            self._refresh_token = refresh_token
+        elif not keep_refresh_token:
+            self._refresh_token = None
+        self._expires_at = monotonic() + self._token_ttl(body.get("expires_in", 3600))
+
+    async def _async_refresh_access_token_locked(self) -> bool:
+        """Use Ayla's refresh token while the caller owns the authentication lock."""
+        if not self._refresh_token:
+            return False
+        refresh_token = self._refresh_token
+        try:
+            body = await self._authentication_request(
+                f"{AYLA_EU_USER_URL}/users/refresh_token.json",
+                json_body={"user": {"refresh_token": refresh_token}},
+                ok_status=frozenset({200, 201}),
+                operation="Ayla token refresh",
+            )
+        except CloudError as err:
+            if err.http_status not in {400, 401, 403}:
+                raise
+            self._refresh_token = None
+            return False
+        self._store_ayla_tokens(
+            body,
+            operation="Ayla token refresh",
+            keep_refresh_token=True,
+        )
+        return True
 
     async def async_get_devices(self, *, max_age: float = 0) -> list[AylaDevice]:
         """List account devices, optionally sharing a bounded account-wide cache."""

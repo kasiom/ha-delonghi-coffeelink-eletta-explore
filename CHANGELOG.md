@@ -6,6 +6,49 @@ All notable user-visible changes are documented here. The project follows
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-08-31
+
+### Added
+
+- Add a project-neutral support link and an inherited GitHub Sponsor button;
+  financial details remain centralized on the privacy-friendly support page.
+- Refresh Eletta's device-to-cloud snapshot cooperatively at startup, once per
+  hour and after a completed beverage command. The integration sends Coffee
+  Link's idempotent `03 02` request, waits up to ten seconds for a relevant DSS
+  update and performs an authoritative property reconciliation.
+- Add privacy-safe runtime diagnostics for snapshot attempts, successes, trigger,
+  ACK status and whether the counter snapshot changed. No new entity or recorder
+  history is created.
+
+### Fixed
+
+- Make **Refresh cloud data** request a new snapshot from the appliance instead
+  of merely rereading the vendor's possibly stale cloud cache.
+- Check the live Coffee Link session holder before every cloud-session claim.
+  Automatic refresh is deferred while the coffee maker is offline, preparing a
+  drink, processing another Home Assistant command or held by a foreign session.
+- Keep automatic snapshot traffic separate from **Last Command Status** so
+  maintenance refreshes cannot appear as user-issued appliance commands.
+- Transparently renew a server-rejected Ayla access token through the in-memory
+  refresh token, with a full-login fallback, and replay the refused request
+  exactly once.
+- Start Home Assistant reauthentication only when Gigya explicitly rejects the
+  saved account credentials. Expired sessions, rejected token exchanges and
+  persistent cloud authorization failures now remain availability errors instead
+  of incorrectly asking for the password again.
+
+### Changed
+
+- Rename the disabled recipe diagnostic button to **Log recipe data** in
+  English and **Zapsat data receptů** in Czech; keep its entity identity,
+  diagnostic category and disabled-by-default behaviour unchanged.
+- Rename the manual cloud refresh button to **Refresh cloud data** in English
+  and **Načíst data z cloudu** in Czech, classify it as diagnostic and disable
+  it by default without changing its entity identity or refresh behaviour.
+- Document the difference between the calculated grounds-container percentage
+  and the authoritative full/missing alarm, including the manufacturer-required
+  awake-machine procedure for resetting the grounds counter.
+
 ## [1.3.0-beta.6] - 2026-08-21
 
 ### Changed
@@ -465,7 +508,8 @@ All notable user-visible changes are documented here. The project follows
 - Initial standalone version derived from substantially modified MIT-licensed
   Coffee Link integration work.
 
-[Unreleased]: https://github.com/kasiom/ha-delonghi-coffeelink-eletta-explore/compare/v1.3.0-beta.6...HEAD
+[Unreleased]: https://github.com/kasiom/ha-delonghi-coffeelink-eletta-explore/compare/v1.3.0...HEAD
+[1.3.0]: https://github.com/kasiom/ha-delonghi-coffeelink-eletta-explore/compare/v1.2.1...v1.3.0
 [1.3.0-beta.6]: https://github.com/kasiom/ha-delonghi-coffeelink-eletta-explore/compare/v1.2.1...v1.3.0-beta.6
 [1.2.1]: https://github.com/kasiom/ha-delonghi-coffeelink-eletta-explore/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/kasiom/ha-delonghi-coffeelink-eletta-explore/releases/tag/v1.2.0

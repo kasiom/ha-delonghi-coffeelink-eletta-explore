@@ -3,17 +3,21 @@
 from __future__ import annotations
 
 import asyncio
+import types
 from collections.abc import Coroutine
+from contextlib import suppress
 from typing import Any
 from unittest.mock import AsyncMock, Mock
 
 import pytest
 from test_reliability import (
+    ConfigEntryAuthFailed,
     HomeAssistantError,
     _coordinator,
     ayla_client,
     const,
     coordinator_module,
+    errors_module,
 )
 
 cm = coordinator_module
@@ -236,6 +240,264 @@ def test_dss_sequence_ack_cache_and_event_application(
         assert len(coordinator._recent_dss_acks) <= 32
 
     run(waiter_scenario())
+
+
+def test_statistics_snapshot_helpers_and_dss_notification() -> None:
+    coordinator, _client = _coordinator("DL-striker-cb")
+    assert coordinator._statistics_snapshot_marker(None) is None
+    assert coordinator._statistics_snapshot_marker({"app_id": {"value": 1}, "d500_bad": "value"}) is None
+    first = coordinator._statistics_snapshot_marker(
+        {
+            "d553_water_tot_qty": {"value": 100, "dataUpdatedAt": "one"},
+            "d555_water_filter_qty": {"value": 10, "updated_at": "two"},
+        }
+    )
+    second = coordinator._statistics_snapshot_marker(
+        {
+            "d553_water_tot_qty": {"value": 101, "data_updated_at": "three"},
+            "d555_water_filter_qty": {"value": 10},
+        }
+    )
+    assert first is not None and second is not None and first != second
+
+    for monitor, preparing in (
+        ({}, False),
+        ({"status": 7, "step": 0}, False),
+        ({"status": 7, "step": 3}, True),
+        ({"status": 10, "step": 0}, True),
+    ):
+        coordinator.monitor = monitor
+        assert coordinator._machine_is_preparing() is preparing
+
+    coordinator._dss_sequences.clear()
+    assert not coordinator._statistics_update_event.is_set()
+    coordinator.handle_dss_event(_dss_event(property_name="d553_water_tot_qty"))
+    assert coordinator._statistics_update_event.is_set()
+
+
+def test_snapshot_refresh_write_tracks_exact_ack_without_touching_command_state() -> None:
+    async def scenario() -> None:
+        coordinator, client = _coordinator("DL-striker-cb")
+        coordinator.command_property = None
+        client.async_set_property_value = AsyncMock(return_value=None)
+        await coordinator._send_statistics_refresh()
+        assert client.async_set_property_value.await_args.args[1] == const.COMMAND_PROPERTY_CANDIDATES[0]
+        assert coordinator.last_command_result is None
+
+        coordinator.command_property = "app_data_request"
+        coordinator.data = {"app_data_request": {"ack_enabled": True}}
+        client.async_set_property_value = AsyncMock(return_value={"datapoint": {"id": "dp-ok"}})
+        coordinator._async_wait_for_dss_ack = AsyncMock(return_value=(True, 202))
+        await coordinator._send_statistics_refresh()
+        assert coordinator.last_statistics_sync_ack_status == 202
+        assert coordinator.last_command_result is None
+
+        coordinator._async_wait_for_dss_ack = AsyncMock(return_value=(False, None))
+        await coordinator._send_statistics_refresh()
+        assert coordinator.last_statistics_sync_ack_status == 202
+
+        coordinator._async_wait_for_dss_ack = AsyncMock(return_value=(True, 409))
+        with pytest.raises(HomeAssistantError, match="rejected"):
+            await coordinator._send_statistics_refresh()
+
+    run(scenario())
+
+
+def test_cloud_snapshot_refresh_success_skip_and_manual_error_paths() -> None:
+    async def scenario() -> None:
+        coordinator, client = _coordinator("DL-striker-cb")
+        coordinator.connected_property = "app_device_connected"
+        coordinator.learned_start_frames[1] = "DRGD8AECAQAoAgQIABsBCn5oaiRo7xEiM0Q="
+        coordinator._restore_device_app_id()
+        coordinator.data = {"d553_water_tot_qty": {"value": 100, "data_updated_at": "old"}}
+        coordinator.monitor = {"status": 7, "step": 0}
+        client.async_set_property_value = AsyncMock(return_value=None)
+
+        async def with_session(send: Any) -> None:
+            await send()
+            coordinator._statistics_update_event.set()
+
+        async def refresh_changed() -> None:
+            coordinator.data = {"d553_water_tot_qty": {"value": 101, "data_updated_at": "new"}}
+
+        coordinator._with_cloud_session = with_session
+        coordinator.async_request_refresh = refresh_changed
+        assert await coordinator.async_synchronize_statistics() == "completed_updated"
+        assert coordinator.statistics_sync_attempts == 1
+        assert coordinator.statistics_sync_successes == 1
+        assert coordinator.last_statistics_sync_trigger == "manual"
+        assert coordinator.last_statistics_sync_snapshot_changed is True
+        assert coordinator.last_statistics_sync_attempt_at.endswith("+00:00")
+        assert coordinator.last_statistics_sync_success_at.endswith("+00:00")
+        assert coordinator.last_command_result is None
+        client.async_set_property_value.assert_awaited_once()
+
+        coordinator._statistics_update_event.set()
+        coordinator.async_request_refresh = AsyncMock()
+        assert await coordinator.async_synchronize_statistics(trigger="test") == "completed_unchanged"
+
+        coordinator.data = {}
+        coordinator.profile = types.SimpleNamespace(uses_cloud_session=False)
+        assert await coordinator.async_synchronize_statistics() == "completed_unverified"
+
+        coordinator.device.connection_status = "offline"
+        assert await coordinator.async_synchronize_statistics(automatic=True) == "skipped_offline"
+        with pytest.raises(HomeAssistantError, match="not connected"):
+            await coordinator.async_synchronize_statistics()
+
+        coordinator.device.connection_status = "online"
+        coordinator.profile = types.SimpleNamespace(uses_cloud_session=True)
+        coordinator.connected_property = None
+        assert await coordinator.async_synchronize_statistics(automatic=True) == "skipped_unsupported"
+        with pytest.raises(HomeAssistantError, match="has been learned"):
+            await coordinator.async_synchronize_statistics()
+
+    run(scenario())
+
+
+def test_cloud_snapshot_refresh_busy_foreign_and_failure_paths() -> None:
+    async def scenario() -> None:
+        coordinator, _client = _coordinator("DL-striker-cb")
+        coordinator.connected_property = "app_device_connected"
+        coordinator.learned_start_frames[1] = "DRGD8AECAQAoAgQIABsBCn5oaiRo7xEiM0Q="
+        coordinator.monitor = {"status": 7, "step": 2}
+        assert await coordinator.async_synchronize_statistics(automatic=True) == "skipped_busy"
+        with pytest.raises(HomeAssistantError, match="still in progress"):
+            await coordinator.async_synchronize_statistics()
+
+        coordinator.monitor = {"status": 7, "step": 0}
+        await coordinator._command_lock.acquire()
+        assert await coordinator.async_synchronize_statistics(automatic=True) == "skipped_busy"
+        coordinator._command_lock.release()
+
+        checks = iter([False, True])
+        coordinator._machine_is_preparing = Mock(side_effect=lambda: next(checks))
+        assert await coordinator.async_synchronize_statistics(automatic=True) == "skipped_busy"
+
+        checks = iter([False, True])
+        coordinator._machine_is_preparing = Mock(side_effect=lambda: next(checks))
+        with pytest.raises(HomeAssistantError, match="still in progress"):
+            await coordinator.async_synchronize_statistics()
+
+        coordinator._machine_is_preparing = Mock(return_value=False)
+        coordinator._with_cloud_session = AsyncMock(side_effect=errors_module.translated_error("cloud_session_in_use"))
+        assert await coordinator.async_synchronize_statistics(automatic=True) == "skipped_foreign_session"
+        with pytest.raises(HomeAssistantError, match="Coffee Link cloud session"):
+            await coordinator.async_synchronize_statistics()
+
+        coordinator._with_cloud_session = AsyncMock(side_effect=ayla_client.CloudError("cloud"))
+        assert await coordinator.async_synchronize_statistics(automatic=True) == "failed"
+        with pytest.raises(HomeAssistantError, match="cloud command could not"):
+            await coordinator.async_synchronize_statistics()
+
+        coordinator._with_cloud_session = AsyncMock(side_effect=ayla_client.AuthError("auth"))
+        with pytest.raises(Exception, match="credentials"):
+            await coordinator.async_synchronize_statistics()
+
+        coordinator._with_cloud_session = AsyncMock(side_effect=ConfigEntryAuthFailed("reauth"))
+        assert await coordinator.async_synchronize_statistics(automatic=True) == "failed_authentication"
+        with pytest.raises(ConfigEntryAuthFailed):
+            await coordinator.async_synchronize_statistics()
+
+    run(scenario())
+
+
+def test_snapshot_refresh_timeout_falls_back_to_poll_and_post_command_uses_it(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def scenario() -> None:
+        coordinator, _client = _coordinator("DL-striker-cb")
+        coordinator.connected_property = "app_device_connected"
+        coordinator.learned_start_frames[1] = "DRGD8AECAQAoAgQIABsBCn5oaiRo7xEiM0Q="
+        coordinator.monitor = {"status": 7, "step": 0}
+        coordinator.data = {"d553_water_tot_qty": {"value": 100}}
+        coordinator._with_cloud_session = AsyncMock()
+        coordinator._statistics_update_event.wait = AsyncMock(side_effect=TimeoutError)
+        coordinator.async_request_refresh = AsyncMock()
+        assert await coordinator.async_synchronize_statistics() == "completed_unchanged"
+        coordinator.async_request_refresh.assert_awaited_once()
+
+        coordinator.async_synchronize_statistics = AsyncMock(return_value="completed_updated")
+        coordinator.async_request_refresh.reset_mock()
+        monkeypatch.setattr(cm, "POST_COMMAND_REFRESH_DELAY", 0)
+        coordinator._schedule_post_command_refresh()
+        await coordinator._post_command_refresh_task
+        coordinator.async_synchronize_statistics.assert_awaited_once_with(automatic=True, trigger="post_command")
+        coordinator.async_request_refresh.assert_not_awaited()
+
+        coordinator.async_synchronize_statistics = AsyncMock(return_value="skipped_busy")
+        coordinator._post_command_refresh_task = None
+        coordinator._schedule_post_command_refresh()
+        await coordinator._post_command_refresh_task
+        coordinator.async_request_refresh.assert_awaited_once()
+
+    run(scenario())
+
+
+def test_automatic_snapshot_scheduling_intervals_exceptions_and_shutdown(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def scenario() -> None:
+        original_sleep = asyncio.sleep
+        coordinator, _client = _coordinator()
+        coordinator._schedule_automatic_statistics_sync(100)
+        assert coordinator._automatic_statistics_sync_task is None
+
+        coordinator, _client = _coordinator("DL-striker-cb")
+        coordinator._schedule_automatic_statistics_sync(100)
+        assert coordinator._automatic_statistics_sync_task is None
+        coordinator.connected_property = "app_device_connected"
+        coordinator._schedule_automatic_statistics_sync(100)
+        assert coordinator._automatic_statistics_sync_task is None
+        coordinator.learned_start_frames[1] = "DRGD8AECAQAoAgQIABsBCn5oaiRo7xEiM0Q="
+        coordinator.device.connection_status = "offline"
+        coordinator._schedule_automatic_statistics_sync(100)
+        assert coordinator._automatic_statistics_sync_task is None
+
+        coordinator.device.connection_status = "online"
+        sleeps: list[float] = []
+
+        async def capture_sleep(delay: float) -> None:
+            sleeps.append(delay)
+
+        monkeypatch.setattr(cm.asyncio, "sleep", capture_sleep)
+        coordinator.async_synchronize_statistics = AsyncMock()
+        coordinator._schedule_automatic_statistics_sync(100)
+        active = coordinator._automatic_statistics_sync_task
+        coordinator._schedule_automatic_statistics_sync(100)
+        assert coordinator._automatic_statistics_sync_task is active
+        await active
+        assert sleeps == [const.STATISTICS_SYNC_STARTUP_DELAY]
+        coordinator.async_synchronize_statistics.assert_awaited_once_with(automatic=True, trigger="automatic")
+
+        coordinator._last_statistics_sync_attempt_monotonic = 100
+        coordinator.last_statistics_sync_result = "completed_updated"
+        coordinator._schedule_automatic_statistics_sync(200)
+        await coordinator._automatic_statistics_sync_task
+        assert sleeps[-1] == const.STATISTICS_SYNC_INTERVAL - 100
+
+        coordinator.last_statistics_sync_result = "failed"
+        coordinator.async_synchronize_statistics = AsyncMock(side_effect=RuntimeError("optional"))
+        coordinator._schedule_automatic_statistics_sync(700)
+        await coordinator._automatic_statistics_sync_task
+        assert sleeps[-1] == 0
+
+        async def blocking_sleep(_delay: float) -> None:
+            await asyncio.Event().wait()
+
+        monkeypatch.setattr(cm.asyncio, "sleep", blocking_sleep)
+        coordinator.async_synchronize_statistics = AsyncMock()
+        coordinator._automatic_statistics_sync_task = None
+        coordinator._last_statistics_sync_attempt_monotonic = None
+        coordinator._schedule_automatic_statistics_sync(800)
+        task = coordinator._automatic_statistics_sync_task
+        await original_sleep(0)
+        await coordinator.async_shutdown()
+        with suppress(asyncio.CancelledError):
+            await task
+        assert coordinator._automatic_statistics_sync_task is None
+
+    run(scenario())
 
 
 def test_exact_dss_ack_wait_paths(monkeypatch: pytest.MonkeyPatch) -> None:

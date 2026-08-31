@@ -307,6 +307,7 @@ async def test_authentication_request_success_and_rejections() -> None:
         posts=[
             FakeResponse(body={"ok": True}),
             FakeResponse(status=401, body={"error": "bad"}),
+            FakeResponse(status=403, body={"error": "bad password"}),
             FakeResponse(status=418, body={"error": "tea"}),
         ]
     )
@@ -316,8 +317,16 @@ async def test_authentication_request_success_and_rejections() -> None:
     assert session.post_calls[0][1]["data"] == {"x": "y"}
     assert isinstance(session.post_calls[0][1]["timeout"], aiohttp.ClientTimeout)
 
-    with pytest.raises(ac.AuthError, match="HTTP 401"):
-        await client._authentication_request("https://auth.test/login", data={}, operation="Login")
+    with pytest.raises(ac.CloudError, match="HTTP 401") as session_error:
+        await client._authentication_request("https://auth.test/login", data={}, operation="Token exchange")
+    assert session_error.value.http_status == 401
+    with pytest.raises(ac.AuthError, match="HTTP 403"):
+        await client._authentication_request(
+            "https://auth.test/login",
+            data={},
+            operation="Login",
+            credential_rejection=True,
+        )
     with pytest.raises(ac.CloudError, match="HTTP 418") as err:
         await client._authentication_request("https://auth.test/login", data={}, operation="Login")
     assert err.value.http_status == 418
@@ -479,19 +488,64 @@ async def test_request_json_auth_and_non_ok(monkeypatch: pytest.MonkeyPatch) -> 
     session = FakeSession(
         requests=[
             FakeResponse(status=403, body={}),
+            FakeResponse(body={"renewed": True}),
             FakeResponse(status=409, raw_text="conflict"),
         ]
     )
     client = make_client(session)
     authenticated(client)
     monkeypatch.setattr(client, "async_ensure_auth", AsyncMock())
-    with pytest.raises(ac.AuthError, match="write rejected.*HTTP 403"):
-        await client._request_json("POST", "https://api.test", op="write")
-    assert client._access_token is None
-    assert client._expires_at == 0
+    renewal = AsyncMock(side_effect=lambda _token: setattr(client, "_access_token", "renewed-access"))
+    monkeypatch.setattr(client, "_async_reauthenticate_after_rejection", renewal)
+
+    assert await client._request_json("POST", "https://api.test", op="write") == {"renewed": True}
+    renewal.assert_awaited_once_with("access")
+    assert session.request_calls[0][2]["headers"]["Authorization"] == "auth_token access"
+    assert session.request_calls[1][2]["headers"]["Authorization"] == "auth_token renewed-access"
+
     with pytest.raises(ac.CloudError, match=r"write failed \(HTTP 409\)") as err:
         await client._request_json("POST", "https://api.test", op="write")
     assert err.value.http_status == 409
+
+
+@async_test
+async def test_request_json_persistent_rejection_is_cloud_error_not_reauth(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    session = FakeSession(
+        requests=[
+            FakeResponse(status=401, body={}),
+            FakeResponse(status=403, body={}),
+        ]
+    )
+    client = make_client(session)
+    authenticated(client)
+    monkeypatch.setattr(client, "async_ensure_auth", AsyncMock())
+    renewal = AsyncMock(side_effect=lambda _token: setattr(client, "_access_token", "renewed-access"))
+    monkeypatch.setattr(client, "_async_reauthenticate_after_rejection", renewal)
+
+    with pytest.raises(ac.CloudError, match="remained unauthorized.*HTTP 403") as err:
+        await client._request_json("GET", "https://api.test", op="read")
+
+    assert err.value.http_status == 403
+    renewal.assert_awaited_once_with("access")
+
+
+@async_test
+async def test_request_json_only_prompts_reauth_when_fresh_login_rejects_password(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client = make_client(FakeSession(requests=[FakeResponse(status=401, body={})]))
+    authenticated(client)
+    monkeypatch.setattr(client, "async_ensure_auth", AsyncMock())
+    monkeypatch.setattr(
+        client,
+        "_async_reauthenticate_after_rejection",
+        AsyncMock(side_effect=ac.AuthError("Gigya login rejected the credentials")),
+    )
+
+    with pytest.raises(ac.AuthError, match="Gigya login rejected"):
+        await client._request_json("GET", "https://api.test", op="read")
 
 
 @async_test
@@ -667,10 +721,154 @@ async def test_ayla_sso_success_and_missing_token(monkeypatch: pytest.MonkeyPatc
     monkeypatch.setattr(ac, "monotonic", lambda: 1000)
     await client._ayla_sso_sign_in("jwt")
     assert (client._access_token, client._expires_at) == ("access", 1090)
+    assert client._refresh_token == "refresh"
     await client._ayla_sso_sign_in("jwt-2")
     assert client._expires_at == 4600
-    with pytest.raises(ac.AuthError, match="did not contain an access token"):
+    assert client._refresh_token is None
+    with pytest.raises(ac.CloudError, match="did not contain an access token"):
         await client._ayla_sso_sign_in("jwt-3")
+
+
+@async_test
+async def test_refresh_token_renews_access_and_preserves_or_rotates_refresh(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    session = FakeSession(
+        posts=[
+            FakeResponse(body={"access_token": "access-2", "expires_in": "120"}),
+            FakeResponse(
+                body={
+                    "access_token": "access-3",
+                    "refresh_token": "refresh-3",
+                    "expires_in": 180,
+                }
+            ),
+        ]
+    )
+    client = make_client(session)
+    client._refresh_token = "refresh-1"
+    monkeypatch.setattr(ac, "monotonic", lambda: 1000)
+
+    assert await client._async_refresh_access_token_locked() is True
+    assert (client._access_token, client._refresh_token, client._expires_at) == (
+        "access-2",
+        "refresh-1",
+        1120,
+    )
+    assert session.post_calls[0][0].endswith("/users/refresh_token.json")
+    assert session.post_calls[0][1]["json"] == {"user": {"refresh_token": "refresh-1"}}
+    assert "data" not in session.post_calls[0][1]
+
+    assert await client._async_refresh_access_token_locked() is True
+    assert (client._access_token, client._refresh_token, client._expires_at) == (
+        "access-3",
+        "refresh-3",
+        1180,
+    )
+
+
+@async_test
+async def test_rejected_refresh_token_falls_back_to_one_full_login(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client = make_client(FakeSession(posts=[FakeResponse(status=401, body={})]))
+    client._refresh_token = "revoked-refresh"
+    full_login = AsyncMock(side_effect=lambda: setattr(client, "_access_token", "fresh-login"))
+    monkeypatch.setattr(client, "_async_authenticate_locked", full_login)
+
+    await client.async_ensure_auth()
+
+    assert client._refresh_token is None
+    assert client._access_token == "fresh-login"
+    full_login.assert_awaited_once_with()
+
+
+@async_test
+async def test_transient_refresh_failure_remains_cloud_error(
+    no_delays: AsyncMock,
+) -> None:
+    client = make_client(FakeSession(posts=[FakeResponse(status=503, body={}) for _ in range(3)]))
+    client._refresh_token = "still-valid-refresh"
+
+    with pytest.raises(ac.CloudError, match="HTTP 503") as err:
+        await client._async_refresh_access_token_locked()
+
+    assert err.value.http_status == 503
+    assert client._refresh_token == "still-valid-refresh"
+    assert no_delays.await_count == 2
+
+
+@async_test
+async def test_auth_recovery_helpers_cover_refresh_and_full_login_paths(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client = make_client()
+    refresh = AsyncMock(return_value=True)
+    full_login = AsyncMock()
+    monkeypatch.setattr(client, "_async_refresh_access_token_locked", refresh)
+    monkeypatch.setattr(client, "_async_authenticate_locked", full_login)
+
+    await client.async_ensure_auth()
+    refresh.assert_awaited_once_with()
+    full_login.assert_not_awaited()
+
+    client._access_token = "rejected"
+    refresh.reset_mock()
+    refresh.return_value = False
+    await client._async_reauthenticate_after_rejection("rejected")
+    refresh.assert_awaited_once_with()
+    full_login.assert_awaited_once_with()
+
+
+@async_test
+async def test_authentication_request_requires_exactly_one_body() -> None:
+    client = make_client()
+    with pytest.raises(ValueError, match="exactly one"):
+        await client._authentication_request("https://auth.test", operation="test")
+    with pytest.raises(ValueError, match="exactly one"):
+        await client._authentication_request(
+            "https://auth.test",
+            data={},
+            json_body={},
+            operation="test",
+        )
+
+
+def test_token_ttl_sanitizes_invalid_values() -> None:
+    assert ac.DelonghiAylaClient._token_ttl(None) == 3600
+    assert ac.DelonghiAylaClient._token_ttl("invalid") == 3600
+    assert ac.DelonghiAylaClient._token_ttl(float("nan")) == 3600
+    assert ac.DelonghiAylaClient._token_ttl(0) == 3600
+    assert ac.DelonghiAylaClient._token_ttl("90") == 90
+
+
+@async_test
+async def test_concurrent_rejected_token_recovery_performs_one_renewal(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client = make_client()
+    authenticated(client)
+    started = asyncio.Event()
+    release = asyncio.Event()
+    calls = 0
+
+    async def renew() -> bool:
+        nonlocal calls
+        calls += 1
+        started.set()
+        await release.wait()
+        client._access_token = "renewed-once"
+        return True
+
+    monkeypatch.setattr(client, "_async_refresh_access_token_locked", renew)
+    first = asyncio.create_task(client._async_reauthenticate_after_rejection("access"))
+    await started.wait()
+    second = asyncio.create_task(client._async_reauthenticate_after_rejection("access"))
+    release.set()
+    await asyncio.gather(first, second)
+
+    assert calls == 1
+    assert client._access_token == "renewed-once"
 
 
 @async_test

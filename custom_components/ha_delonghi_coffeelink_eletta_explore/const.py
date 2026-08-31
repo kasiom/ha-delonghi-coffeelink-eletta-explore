@@ -20,7 +20,10 @@ DEFAULT_SCAN_INTERVAL = 30  # seconds
 DSS_FALLBACK_SCAN_INTERVAL = 300  # full reconciliation while push is healthy
 DEVICE_METADATA_REFRESH_INTERVAL = 600  # seconds
 CONNECTION_INFO_REFRESH_INTERVAL = 3600  # seconds; diagnostic only
-STATISTICS_SYNC_SETTLE_DELAY = 7  # seconds
+STATISTICS_SYNC_SETTLE_DELAY = 10  # Coffee Link waits ten seconds for the new device snapshot
+STATISTICS_SYNC_STARTUP_DELAY = 30  # let the initial poll and DSS stream settle first
+STATISTICS_SYNC_INTERVAL = 3600  # cooperative refresh; do not hold the mobile-app session continuously
+STATISTICS_SYNC_RETRY_INTERVAL = 300  # retry a skipped/failed refresh without cloud-request churn
 POST_COMMAND_REFRESH_DELAY = 8  # seconds
 
 # Ayla Data Stream Service (DSS). Coffee Link 4.9.6 enables this service and

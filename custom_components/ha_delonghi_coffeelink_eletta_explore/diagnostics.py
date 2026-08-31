@@ -44,6 +44,16 @@ async def async_get_config_entry_diagnostics(hass: HomeAssistant, entry: Delongh
                     "last_update_success": coordinator.last_update_success,
                     "cloud_update_mode": coordinator.dss_state,
                     "dss_events_received": coordinator.dss_events_received,
+                    "cloud_snapshot_refresh": {
+                        "attempts": coordinator.statistics_sync_attempts,
+                        "successes": coordinator.statistics_sync_successes,
+                        "last_attempt_at": coordinator.last_statistics_sync_attempt_at,
+                        "last_success_at": coordinator.last_statistics_sync_success_at,
+                        "last_result": coordinator.last_statistics_sync_result,
+                        "last_trigger": coordinator.last_statistics_sync_trigger,
+                        "snapshot_changed": coordinator.last_statistics_sync_snapshot_changed,
+                        "ack_status": coordinator.last_statistics_sync_ack_status,
+                    },
                     "last_command_result": coordinator.last_command_result,
                     "active_beverage_known": coordinator.active_beverage_id is not None,
                     "monitor": {

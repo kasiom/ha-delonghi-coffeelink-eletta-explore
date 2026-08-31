@@ -7,13 +7,12 @@ připojené přes Coffee Link a platformu Ayla IoT.
 
 | Položka | Stav |
 |---|---|
-| Aktuální vydání | 1.2.1 – nainstalováno přes HACS a ověřeno načtení v cílovém Home Assistantu |
-| Předběžné vydání | 1.3.0-beta.6 – automatické testy, testy ve skutečném HA, zálohované nasazení a ověření bez ovládání kávovaru prošly |
+| Aktuální vydání | 1.3.0 – automatické kontroly, veřejné CI a živé ověření v cílovém HA prošly |
 | Fyzické ověření příkazů | 1.3.0-beta.6 – probuzení, Cold Brew Start/Stop a pohotovostní režim na ověřeném kávovaru Eletta prošly |
 | Ověřený kávovar | Eletta Explore ECAM450.65.G (`DL-striker-cb`, oblast EU) |
 | Home Assistant | 2026.8.2 nebo novější |
 | Jazyky | čeština a angličtina |
-| Automatické testy | 373 izolovaných testů se 100% pokrytím + 3 testy ve skutečném Home Assistantu |
+| Automatické testy | 391 izolovaných testů se 100% pokrytím + 3 testy ve skutečném Home Assistantu |
 | Distribuce | vlastní repozitář HACS nebo ruční instalace z vydání na GitHubu; zařazení do výchozího katalogu se posuzuje |
 
 Profil PrimaDonna Soul zůstává v kódu pro zkoušky kompatibility, neprošel však
@@ -26,6 +25,9 @@ stejným fyzickým ověřením a je označen jako experimentální.
   potvrzení datového bodu; příkazový kanál ověřeného modelu Eletta podporu ACK
   nemá, proto se stejně jako v Coffee Link potvrzuje změnou stavu kávovaru;
 - automatický návrat k 30sekundovému dotazování při výpadku streamu;
+- bezpečné vyžádání nového snímku přímo z kávovaru po spuštění integrace,
+  jednou za hodinu a po dokončeném příkazu nápoje; při přípravě, výpadku nebo
+  cizí relaci se požadavek odloží;
 - počitadla nápojů, vody, filtru, odvápnění a zásobníku sedliny;
 - souhrnné statistiky se stejným významem pro Eletta/Striker a starší větev
   PrimaDonna Soul; u neznámého modelu se význam interních polí neodhaduje;
@@ -36,6 +38,7 @@ stejným fyzickým ověřením a je označen jako experimentální.
   kávovaru;
 - zapnutí, pohotovostní režim, synchronizaci dat a bezpečné zastavení;
 - rozpoznání kolize relace Coffee Link a stav posledního příkazu Home Assistantu;
+- automatické obnovení krátkodobé cloudové relace bez výzvy k zadání hesla;
 - kontrolu připravenosti, nádržky na vodu a zásobníku sedliny před přípravou;
 - ověření kontrolního součtu, typu příkazu, nápoje a podpisu zařízení;
 - diagnostiku bez přihlašovacích údajů, identifikátorů zařízení a surových příkazů;
@@ -52,6 +55,21 @@ nezapisuje.
 Výchozí stav entity použije Home Assistant jen při jejím prvním zaregistrování.
 Aktualizace proto nevypne podrobná počitadla, která už má stávající instalace
 zapnutá; lze je spravovat jednotlivě na stránce **Entity** daného zařízení.
+
+## Zásobník na sedlinu a reset čítače
+
+**Naplnění zásobníku sedliny** přebírá vypočítané procento z cloudu výrobce;
+nejde o přímé fyzické měření hladiny. **Zásobník na sedlinu** zobrazuje aktuální
+alarm plného nebo chybějícího zásobníku a je rozhodující pro upozornění,
+bezpečnostní kontroly a automatizace. Obě hodnoty se proto mohou dočasně lišit.
+
+Čítač se spolehlivě vynuluje pouze při probuzeném kávovaru. Počkejte na stav
+**Připraveno**, vyjměte celou odkapávací misku se zásobníkem na několik sekund,
+zásobník vyprázdněte a obě části vraťte. Neprovádějte to během přípravy nápoje
+nebo proplachování. Vyprázdnění v pohotovostním režimu nemusí kávovar zaznamenat.
+Poté vyčkejte na cloudovou aktualizaci; pro diagnostiku lze dočasně povolit
+deaktivovanou entitu **Načíst data z cloudu**. Viz
+[oficiální pokyny De'Longhi](https://www.delonghi.com/en-us/faqs/The-grounds-container-light-is-on-but-my-ground-container-is-not-full./a/16760).
 
 ## Instalace
 
@@ -88,6 +106,12 @@ naučení stejného receptu nahradí jeho starší příkaz.
 Tlačítko **Zastavit přípravu nápoje** je dostupné jen tehdy, když integrace zná
 právě připravovaný nápoj i jeho platný příkaz pro zastavení.
 
+## Podpora projektu
+
+Pokud je pro vás tento nezávislý projekt užitečný, můžete jej dobrovolně podpořit
+na společné [stránce podpory](https://kasiom.github.io/support/). Podpora nemá
+vliv na přístup k vydáním, řešení hlášení, priority funkcí ani licenci MIT.
+
 ## Bezpečnost
 
 Vzdálený příkaz může spustit výdej horké vody, kávy, mléka nebo páry. Vždy
@@ -95,5 +119,6 @@ zkontrolujte správný šálek, připojené příslušenství a prostor kolem k�
 Integraci nepoužívejte k bezobslužnému vzdálenému výdeji.
 
 Další informace: [použití a bezpečnost](USAGE.md),
+[obnova cloudového snímku](CLOUD_SNAPSHOT_REFRESH_CS.md),
 [kompatibilita](COMPATIBILITY.md), [řešení potíží](TROUBLESHOOTING.md) a
 [ochrana soukromí](PRIVACY.md).

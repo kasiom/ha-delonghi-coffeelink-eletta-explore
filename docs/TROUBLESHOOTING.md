@@ -5,9 +5,12 @@
 - Confirm that the official Coffee Link app works with the same account.
 - Check Home Assistant internet access and vendor-cloud availability before
   changing credentials.
-- Temporary timeouts, rate limits and server errors are retried and must not
-  start reauthentication. A genuine credential rejection starts the Home
-  Assistant reauthentication flow.
+- A rejected Ayla session is renewed automatically through its in-memory refresh
+  token or, if needed, one silent login with the saved credentials. The refused
+  cloud request is replayed once.
+- Temporary timeouts, rate limits, token-exchange failures and server errors do
+  not start reauthentication. Home Assistant asks for the password only when
+  Gigya explicitly rejects the saved account credentials.
 
 ## Beverage button is missing
 
@@ -49,9 +52,37 @@ which one. Home Assistant will not take over a foreign active session.
 
 ## Counters look stale
 
-Press **Synchronize Data**, wait at least ten seconds and refresh the entity. The
-button requests a fresh cloud session and property read, but the machine or vendor
-cloud can still publish counters later.
+Wait for the next cooperative refresh (normally no more than one hour). To test
+immediately, temporarily enable **Refresh cloud data** and press it once. The
+button asks the appliance to republish its snapshot, waits up to ten seconds and
+then reconciles every cloud property. It stays disabled by default because the
+automatic lifecycle normally makes manual use unnecessary.
+
+Download diagnostics and inspect `cloud_snapshot_refresh` if the value remains
+stale. `completed_updated` proves that the observed counter snapshot advanced;
+`completed_unchanged` means the request completed but the appliance published no
+different counter value or timestamp. A `skipped_*` result states the safety
+reason for deferral. Keep the button disabled when it is not needed.
+
+## Grounds fill is 100% while the grounds container is OK
+
+These entities report separate vendor signals. **Grounds container fill** mirrors
+a calculated cloud maintenance percentage; it is an estimate, not a physical
+level measurement. **Grounds container** reports the machine's current full or
+missing alarm and is the authoritative entity for notifications, safety checks
+and automations. The percentage and alarm can therefore temporarily disagree.
+
+The machine recognizes an emptied container only while it is awake. To reset its
+grounds counter reliably:
+
+1. wake the machine and wait until it is ready;
+2. remove the complete drip tray and grounds container for several seconds;
+3. empty and clean the grounds container, then reinsert both parts;
+4. wait for the next cloud update, or temporarily use **Refresh cloud data**.
+
+Do not remove the tray while a beverage or rinse is running. Emptying the
+container in standby or while the machine is off may not reset the counter. See
+[De'Longhi's official reset guidance](https://www.delonghi.com/en-us/faqs/The-grounds-container-light-is-on-but-my-ground-container-is-not-full./a/16760).
 
 ## Machine status appears wrong
 

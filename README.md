@@ -22,13 +22,12 @@ platform. It combines near-real-time cloud push with an automatic polling fallba
 
 | Item | Status |
 |---|---|
-| Current release | 1.2.1; installed through HACS and verified to load on the target Home Assistant |
-| Prerelease | 1.3.0-beta.6; automated, actual-HA runtime, backed-up deployment and read-only validation passed |
+| Current release | 1.3.0; automated validation, public CI and target-HA live acceptance passed |
 | Physical command acceptance | 1.3.0-beta.6; supervised Wake, Cold Brew Start/Stop and Standby passed on the verified Eletta |
 | Verified machine | Eletta Explore ECAM450.65.G (`DL-striker-cb`, EU region) |
 | Home Assistant | 2026.8.2 or newer |
 | Languages | English and Czech |
-| Automated tests | 373 isolated tests at 100% line/branch coverage + 3 actual Home Assistant runtime tests |
+| Automated tests | 391 isolated tests at 100% line/branch coverage + 3 actual Home Assistant runtime tests |
 | Distribution | HACS custom repository or manual installation from a GitHub release; default-catalog review is pending |
 
 The PrimaDonna Soul profile remains available for compatibility testing, but it
@@ -46,6 +45,10 @@ experimental. See [Compatibility and known limitations](docs/COMPATIBILITY.md).
   ACK support, exact datapoint acknowledgements; protected by event ordering and
   an automatic 30-second polling fallback. Eletta's non-ACK command channel is
   confirmed from the resulting machine state, matching Coffee Link behavior.
+- Cooperative device-to-cloud snapshot refresh: after startup, hourly and after
+  completed beverage commands. It follows Coffee Link's safe refresh request,
+  defers to active work or foreign sessions and never starts a beverage or wakes
+  the appliance.
 - Beverage, water, filter, descaling and grounds-container statistics with
   appropriate Home Assistant units and state classes.
 - Model-aware Coffee Link summary formulas: Eletta/Striker and the legacy
@@ -62,8 +65,8 @@ experimental. See [Compatibility and known limitations](docs/COMPATIBILITY.md).
   grounds container.
 - CRC, command identity and device-signature validation before learned commands
   are stored or replayed.
-- Bounded retries for temporary cloud failures without treating an outage as a
-  wrong password.
+- Serialized refresh-token recovery and bounded retries for temporary cloud
+  failures without treating an expired session or outage as a wrong password.
 - Privacy-safe downloadable diagnostics with credentials, device identifiers and
   raw command frames removed.
 - English/Czech entity, state, exception and Repairs translations with icons
@@ -136,6 +139,8 @@ after every discarded command has been learned again.
 - [Český přehled](docs/README_CS.md)
 - [Installation and updates](docs/INSTALLATION.md)
 - [Usage and safety](docs/USAGE.md)
+- [Cloud snapshot refresh](docs/CLOUD_SNAPSHOT_REFRESH.md)
+- [Obnova cloudového snímku – česky](docs/CLOUD_SNAPSHOT_REFRESH_CS.md)
 - [Compatibility and known limitations](docs/COMPATIBILITY.md)
 - [Troubleshooting](docs/TROUBLESHOOTING.md)
 - [Privacy and cloud data](docs/PRIVACY.md)
@@ -153,6 +158,11 @@ Use the supplied issue forms for reproducible bug reports and feature requests.
 Before publishing diagnostics or logs, remove credentials, e-mail addresses,
 serial numbers, DSNs, tokens and raw command frames. See
 [CONTRIBUTING.md](CONTRIBUTING.md).
+
+If this independent project is useful to you, optional financial support is
+available through the shared [project support page](https://kasiom.github.io/support/).
+Support is entirely voluntary and does not affect access to releases, issue
+handling, feature priorities or the MIT license.
 
 ## License and disclaimer
 

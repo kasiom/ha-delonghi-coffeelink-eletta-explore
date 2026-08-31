@@ -7,6 +7,7 @@ import hashlib
 import logging
 from collections import deque
 from collections.abc import Awaitable, Callable
+from contextlib import suppress
 from datetime import UTC, datetime, timedelta
 from time import monotonic
 from typing import TYPE_CHECKING, Any, NoReturn
@@ -73,7 +74,10 @@ from .const import (
     RECIPE_STORE_SAVE_DELAY,
     RECIPE_STORE_VERSION,
     RESPONSE_PROPERTY_CANDIDATES,
+    STATISTICS_SYNC_INTERVAL,
+    STATISTICS_SYNC_RETRY_INTERVAL,
     STATISTICS_SYNC_SETTLE_DELAY,
+    STATISTICS_SYNC_STARTUP_DELAY,
 )
 from .dss import DssEvent
 from .errors import translated_auth_error, translated_error
@@ -137,6 +141,17 @@ class DelonghiCoordinator(DataUpdateCoordinator[AylaProperties]):
         self._connection_info_supported: bool | None = None
         self.connection_info: dict[str, Any] = {}
         self._post_command_refresh_task: asyncio.Task[None] | None = None
+        self._automatic_statistics_sync_task: asyncio.Task[None] | None = None
+        self._statistics_update_event = asyncio.Event()
+        self._last_statistics_sync_attempt_monotonic: float | None = None
+        self.last_statistics_sync_attempt_at: str | None = None
+        self.last_statistics_sync_success_at: str | None = None
+        self.last_statistics_sync_result: str | None = None
+        self.last_statistics_sync_trigger: str | None = None
+        self.last_statistics_sync_snapshot_changed: bool | None = None
+        self.last_statistics_sync_ack_status: int | None = None
+        self.statistics_sync_attempts = 0
+        self.statistics_sync_successes = 0
         self._dss_fallback_refresh_task: asyncio.Task[None] | None = None
         self.dss_state = "polling"
         self.dss_events_received = 0
@@ -191,6 +206,9 @@ class DelonghiCoordinator(DataUpdateCoordinator[AylaProperties]):
         if self._post_command_refresh_task:
             self._post_command_refresh_task.cancel()
             self._post_command_refresh_task = None
+        if self._automatic_statistics_sync_task:
+            self._automatic_statistics_sync_task.cancel()
+            self._automatic_statistics_sync_task = None
         if self._dss_fallback_refresh_task:
             self._dss_fallback_refresh_task.cancel()
             self._dss_fallback_refresh_task = None
@@ -242,6 +260,7 @@ class DelonghiCoordinator(DataUpdateCoordinator[AylaProperties]):
                         break
                 self._device_list_callback(devices)
                 self._last_device_metadata_refresh = now
+            self._schedule_automatic_statistics_sync(now)
             return props
         except AuthError as err:
             raise translated_auth_error() from err
@@ -468,6 +487,8 @@ class DelonghiCoordinator(DataUpdateCoordinator[AylaProperties]):
             self._update_session_from_props(data)
         if property_name == self.response_property:
             confirmation_state_changed = True
+        if self._is_statistics_property(property_name):
+            self._statistics_update_event.set()
         if confirmation_state_changed:
             self._notify_command_state_waiters()
         self.dss_events_received += 1
@@ -768,15 +789,171 @@ class DelonghiCoordinator(DataUpdateCoordinator[AylaProperties]):
             "beverage_name": beverage_name,
         }
 
-    async def async_synchronize_statistics(self) -> None:
-        """Request a fresh device session and then refetch cloud statistics."""
+    @staticmethod
+    def _is_statistics_property(property_name: str) -> bool:
+        """Return whether a property belongs to Coffee Link's counter snapshot."""
+        return property_name.startswith(("d5", "d7"))
 
-        async def _noop() -> None:
+    @classmethod
+    def _statistics_snapshot_marker(cls, props: AylaProperties | None) -> str | None:
+        """Return a private digest used only to verify that a snapshot advanced."""
+        if not isinstance(props, dict):
             return None
+        snapshot: list[tuple[str, Any, Any]] = []
+        for property_name, prop in sorted(props.items()):
+            if not cls._is_statistics_property(property_name) or not isinstance(prop, dict):
+                continue
+            updated_at = prop.get("data_updated_at", prop.get("dataUpdatedAt", prop.get("updated_at")))
+            snapshot.append((property_name, updated_at, prop.get("value")))
+        if not snapshot:
+            return None
+        return hashlib.sha256(repr(snapshot).encode()).hexdigest()
 
-        await self._with_cloud_session(_noop)
-        await asyncio.sleep(STATISTICS_SYNC_SETTLE_DELAY)
-        await self.async_request_refresh()
+    def _machine_is_preparing(self) -> bool:
+        """Return true only while the live monitor reports an active preparation."""
+        status = self.monitor.get("status")
+        step = self.monitor.get("step", self.monitor.get("action"))
+        return bool((status == 7 and step not in (None, 0)) or status in {5, 10, 11, 16, 17})
+
+    def _record_statistics_sync(
+        self,
+        result: str,
+        *,
+        trigger: str,
+        success: bool = False,
+        snapshot_changed: bool | None = None,
+    ) -> str:
+        """Record privacy-safe runtime diagnostics without creating HA history."""
+        self.last_statistics_sync_result = result
+        self.last_statistics_sync_trigger = trigger
+        self.last_statistics_sync_snapshot_changed = snapshot_changed
+        if success:
+            self.statistics_sync_successes += 1
+            self.last_statistics_sync_success_at = datetime.now(UTC).isoformat()
+        self.async_update_listeners()
+        return result
+
+    async def _send_statistics_refresh(self) -> None:
+        """Send Coffee Link's idempotent 03 02 snapshot request without command-state side effects."""
+        prop = self.command_property or COMMAND_PROPERTY_CANDIDATES[0]
+        value = build_session_refresh_encoded(self._integration_app_id)
+        self._record_sent(value)
+        _LOGGER.info("Requesting a fresh cloud snapshot via %s", prop)
+        result = await self.client.async_set_property_value(self.device.dsn, prop, value)
+        datapoint = result.get("datapoint", result) if isinstance(result, dict) else {}
+        datapoint_id = datapoint.get("id") if isinstance(datapoint, dict) else None
+        if datapoint_id is None or self.command_ack_enabled is not True:
+            return
+        ack_received, ack_status = await self._async_wait_for_dss_ack(str(datapoint_id))
+        if ack_received:
+            self.last_statistics_sync_ack_status = ack_status
+        if ack_received and ack_status is not None and ack_status >= 400:
+            raise translated_error("command_rejected_by_device")
+
+    async def async_synchronize_statistics(
+        self,
+        *,
+        automatic: bool = False,
+        trigger: str = "manual",
+    ) -> str:
+        """Ask the machine for a new cloud snapshot, then verify and refetch it."""
+        self.statistics_sync_attempts += 1
+        self._last_statistics_sync_attempt_monotonic = monotonic()
+        self.last_statistics_sync_attempt_at = datetime.now(UTC).isoformat()
+        self.last_statistics_sync_ack_status = None
+
+        if str(self.device.connection_status).strip().lower() != "online":
+            if automatic:
+                return self._record_statistics_sync("skipped_offline", trigger=trigger)
+            raise translated_error("coffee_maker_not_connected")
+        if self._command_lock.locked() or self._machine_is_preparing():
+            if automatic:
+                return self._record_statistics_sync("skipped_busy", trigger=trigger)
+            raise translated_error("command_in_progress")
+
+        before = self._statistics_snapshot_marker(self.data)
+        self._statistics_update_event.clear()
+        try:
+            if self.profile.uses_cloud_session:
+                if not self.connected_property or not self.has_device_signature():
+                    if automatic:
+                        return self._record_statistics_sync("skipped_unsupported", trigger=trigger)
+                    raise translated_error("command_not_learned")
+                async with self._command_lock:
+                    if self._machine_is_preparing():
+                        if automatic:
+                            return self._record_statistics_sync("skipped_busy", trigger=trigger)
+                        raise translated_error("command_in_progress")
+                    await self._with_cloud_session(self._send_statistics_refresh)
+                # Polling remains authoritative when DSS is unavailable or the
+                # appliance republishes byte-identical counter values.
+                with suppress(TimeoutError):
+                    await asyncio.wait_for(self._statistics_update_event.wait(), STATISTICS_SYNC_SETTLE_DELAY)
+            await self.async_request_refresh()
+        except ConfigEntryAuthFailed:
+            self._record_statistics_sync("failed_authentication", trigger=trigger)
+            if automatic:
+                _LOGGER.warning("Automatic cloud snapshot refresh needs reauthentication")
+                return "failed_authentication"
+            raise
+        except HomeAssistantError as err:
+            result = "skipped_foreign_session" if err.translation_key == "cloud_session_in_use" else "failed"
+            self._record_statistics_sync(result, trigger=trigger)
+            if automatic:
+                _LOGGER.debug("Automatic cloud snapshot refresh deferred: %s", err)
+                return result
+            raise
+        except (AuthError, CloudError, TimeoutError) as err:
+            self._record_statistics_sync("failed", trigger=trigger)
+            if automatic:
+                _LOGGER.debug("Automatic cloud snapshot refresh failed", exc_info=True)
+                return "failed"
+            if isinstance(err, AuthError):
+                raise translated_auth_error() from err
+            raise translated_error("cloud_command_failed") from err
+
+        after = self._statistics_snapshot_marker(self.data)
+        changed = None if before is None or after is None else before != after
+        result = "completed_unverified" if changed is None else ("completed_updated" if changed else "completed_unchanged")
+        return self._record_statistics_sync(result, trigger=trigger, success=True, snapshot_changed=changed)
+
+    def _schedule_automatic_statistics_sync(self, now: float) -> None:
+        """Schedule one cooperative snapshot refresh; never keep the app session alive."""
+        task = self._automatic_statistics_sync_task
+        if task is not None and not task.done():
+            return
+        if (
+            not self.profile.uses_cloud_session
+            or not self.connected_property
+            or not self.has_device_signature()
+            or str(self.device.connection_status).strip().lower() != "online"
+        ):
+            return
+
+        delay: float
+        if self._last_statistics_sync_attempt_monotonic is None:
+            delay = float(STATISTICS_SYNC_STARTUP_DELAY)
+        else:
+            retry = self.last_statistics_sync_result is not None and not self.last_statistics_sync_result.startswith("completed_")
+            interval = STATISTICS_SYNC_RETRY_INTERVAL if retry else STATISTICS_SYNC_INTERVAL
+            delay = max(0.0, interval - (now - self._last_statistics_sync_attempt_monotonic))
+
+        async def _delayed_sync() -> None:
+            try:
+                await asyncio.sleep(delay)
+                await self.async_synchronize_statistics(automatic=True, trigger="automatic")
+            except asyncio.CancelledError:
+                raise
+            except Exception:  # noqa: BLE001 - polling must survive optional automation
+                _LOGGER.debug("Automatic cloud snapshot refresh task failed", exc_info=True)
+            finally:
+                self._automatic_statistics_sync_task = None
+
+        self._automatic_statistics_sync_task = self.config_entry.async_create_background_task(
+            self.hass,
+            _delayed_sync(),
+            f"{DOMAIN}_automatic_statistics_sync_{self._device_log_id}",
+        )
 
     def _schedule_post_command_refresh(self) -> None:
         """Refresh counters after the cloud has had time to persist a command."""
@@ -786,6 +963,10 @@ class DelonghiCoordinator(DataUpdateCoordinator[AylaProperties]):
         async def _delayed_refresh() -> None:
             try:
                 await asyncio.sleep(POST_COMMAND_REFRESH_DELAY)
+                if self.profile.uses_cloud_session and not self._machine_is_preparing():
+                    result = await self.async_synchronize_statistics(automatic=True, trigger="post_command")
+                    if result.startswith("completed_"):
+                        return
                 await self.async_request_refresh()
             except asyncio.CancelledError:
                 raise
@@ -907,21 +1088,23 @@ class DelonghiCoordinator(DataUpdateCoordinator[AylaProperties]):
             return
 
         async with self._session_connect_lock:
-            app_id = await self._read_app_id()
+            # Never claim a session from a cached ``app_id`` value. Coffee Link
+            # may have opened the mobile session since the last reconciliation.
+            app_id, fetch_ok = await self._fetch_app_id_live()
+            if not fetch_ok:
+                raise translated_error("cached_session_unverified")
             self._revert_foreign_app_id_if_session_clear(app_id)
 
             if app_id not in (None, 0) and app_id != self._integration_app_id:
                 raise translated_error("cloud_session_in_use")
             elif self._session_is_fresh(app_id):
-                if not self._session_confirmed:
-                    live_app_id, fetch_ok = await self._fetch_app_id_live()
-                    if not fetch_ok or live_app_id != self._integration_app_id:
-                        raise translated_error("cached_session_unverified")
+                if app_id != self._integration_app_id:
+                    raise translated_error("cached_session_unverified")
+                self._session_confirmed = True
             else:
                 await self._post_cloud_session()
                 await asyncio.sleep(CONNECT_SETTLE_DELAY)
                 if not await self._wait_for_session_confirmed():
-                    self._set_last_command_result("timed_out", completed=True)
                     raise translated_error("cloud_session_timeout")
                 self._last_connect_at = monotonic()
 
@@ -1331,8 +1514,10 @@ class DelonghiCoordinator(DataUpdateCoordinator[AylaProperties]):
             except AuthError as err:
                 self._set_last_command_result("rejected", completed=True)
                 raise translated_auth_error() from err
-            except HomeAssistantError:
-                if self.last_command_result != "timed_out":
+            except HomeAssistantError as err:
+                if err.translation_key == "cloud_session_timeout":
+                    self._set_last_command_result("timed_out", completed=True)
+                elif self.last_command_result != "timed_out":
                     self._set_last_command_result("rejected", completed=True)
                 raise
             except (TimeoutError, CloudError) as err:

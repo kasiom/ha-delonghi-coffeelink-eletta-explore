@@ -143,9 +143,9 @@
       "wake": { "name": "Zapnout" },
       "standby": { "name": "Pohotovostní režim" },
       "stop": { "name": "Zastavit přípravu nápoje" },
-      "synchronize": { "name": "Synchronizovat data" },
+      "synchronize": { "name": "Načíst data z cloudu" },
       "start_recipe": { "name": "Recept {recipe_id}" },
-      "dump_recipes": { "name": "Vypsat data receptů" }
+      "dump_recipes": { "name": "Zapsat data receptů" }
     },
     "binary_sensor": {
       "connection_status": { "name": "Připojení ke cloudu" },

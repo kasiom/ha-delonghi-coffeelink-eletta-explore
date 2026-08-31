@@ -411,12 +411,16 @@ class FakeClient:
     def __init__(self):
         self.writes: list[tuple[str, str, str]] = []
         self.connect_posts = 0
+        self.app_id = 0
 
     async def async_set_property_value(self, dsn, prop, value):
         self.writes.append((dsn, prop, value))
 
     async def async_post_cloud_session(self, dsn, prop, app_id):
         self.connect_posts += 1
+
+    async def async_get_property_resilient(self, dsn, prop):
+        return {"value": self.app_id}
 
     async def async_get_connection_info(self, dsn):
         return {}
@@ -1026,6 +1030,12 @@ def test_button_actions_availability_and_metadata():
 
         assert translated._attr_translation_key == "start_espresso"
         assert custom._attr_translation_placeholders == {"recipe_id": "999"}
+        assert synchronize._attr_translation_key == "synchronize"
+        assert synchronize._attr_entity_category == "diagnostic"
+        assert synchronize._attr_entity_registry_enabled_default is False
+        assert dump._attr_translation_key == "dump_recipes"
+        assert dump._attr_entity_category == "diagnostic"
+        assert dump._attr_entity_registry_enabled_default is False
         assert wake.available is False
         assert standby.available is False
         assert synchronize.available is False
@@ -1284,6 +1294,7 @@ def test_authentication_http_401_is_credential_error():
                 "https://example.invalid/login",
                 data={},
                 operation="Login",
+                credential_rejection=True,
             )
 
     asyncio.run(scenario())
@@ -1525,6 +1536,7 @@ def test_foreign_cloud_session_is_not_adopted():
         coordinator, client = _coordinator("DL-striker-cb")
         coordinator.connected_property = "app_device_connected"
         coordinator.data = {const.APP_ID_PROPERTY: {"value": 123456}}
+        client.app_id = 123456
         coordinator.monitor = {"status": 7, "action": 0, "alarms": 0, "switches": 0}
         coordinator.learned_start_frames[0x01] = "DRGD8AECAQAoAgQIABsBCn5oaiRo7xEiM0Q="
 

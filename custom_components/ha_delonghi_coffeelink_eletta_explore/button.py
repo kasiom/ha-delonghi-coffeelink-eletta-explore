@@ -231,6 +231,9 @@ class DelonghiStopButton(_Base):
 class DelonghiSynchronizeButton(_Base):
     """Acquire a safe cloud session and request fresh counters/state."""
 
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_entity_registry_enabled_default = False
+
     def __init__(self, coord: DelonghiCoordinator) -> None:
         super().__init__(coord)
         self._attr_unique_id = f"{coord.device.dsn}_synchronize"

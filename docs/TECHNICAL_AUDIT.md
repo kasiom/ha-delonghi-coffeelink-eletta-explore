@@ -1,8 +1,8 @@
 # Technical audit
 
-Audit date: 2026-08-21
+Audit date: 2026-08-31
 
-Audited release: 1.2.1 stable; 1.3.0-beta.6 prerelease
+Audited release: 1.3.0 stable
 
 ## Verdict
 
@@ -71,7 +71,56 @@ The stream recovered to `streaming`, received 40 datapoint events through the
 physical cycle, the machine returned to standby and the Home Assistant system
 log contained no integration error.
 
-The beta isolated suite covers every executable line and branch in all 19 Python
+Prerelease candidate 1.3.0-beta.7 retains all beta.6 command, protocol and model
+paths. It gives the two manual diagnostic buttons concise English/Czech labels,
+classifies both as diagnostic and disables them for new registrations. Existing
+entity identities and registry choices remain unchanged. The exact candidate was
+deployed with backup, hash and configuration validation, loaded without a
+relevant integration error and was verified with both diagnostic buttons
+disabled. Its public HACS, hassfest, Python 3.14 and actual Home Assistant 2026.8.2
+checks pass. No new appliance-command acceptance was required because beta.7 does
+not change an appliance-command path; beta.6 remains the physical baseline.
+
+Prerelease candidate 1.3.0-beta.8 retains the beta.7 entity model and appliance
+command paths. It renews a server-rejected Ayla access token under one
+account-wide lock, using the in-memory refresh token first and one full-login
+fallback only when that refresh token has been revoked. The refused request is
+replayed exactly once. Only an explicit Gigya rejection of the saved password
+starts Home Assistant reauthentication; session expiry, failed token exchanges,
+cloud outages and persistent authorization failures remain availability errors.
+Its isolated suite, linting, formatting, compilation, strict typing, HACS,
+hassfest and three tests against Home Assistant 2026.8.2 pass in public CI.
+Deployment to the target Home Assistant remains pending; beta.7 remains the
+installed candidate and beta.6 the physical-command baseline.
+
+Prerelease candidate 1.3.0-beta.9 adds the missing device-to-cloud snapshot
+lifecycle observed in Coffee Link 4.9.6. A read-only live comparison proved that
+ordinary cloud reads could retain zero filter usage and filtered-water volume;
+opening Coffee Link remotely caused the appliance snapshot to advance without
+LAN access. The candidate therefore sends Coffee Link's idempotent `03 02`
+request 30 seconds after setup, hourly and after completed beverage commands.
+It first checks live session ownership, defers while offline or preparing, waits
+up to ten seconds for a counter DSS event and then performs an authoritative
+property reconciliation. It does not wake the appliance, dispense a drink or
+change Last Command Status. Unsupported profiles retain read-only behavior.
+The exact beta.9 candidate was then deployed with a complete text-file backup,
+SHA-256 verification, a valid Home Assistant configuration check and a clean
+restart. Its first unattended startup refresh completed successfully while the
+machine remained in standby: four live DSS datapoint events were received,
+diagnostics reported `completed_unchanged`, and the current filter values
+remained 4%, 4.323 L and two installed filters. No mobile-app launch or appliance
+command was used for this acceptance.
+
+Stable 1.3.0 promotes the exact beta.9 runtime after an additional live soak.
+Recorder history confirms that, after the coffee maker returned online at
+07:12 CEST on 2026-08-31, automatic sessions started at approximately hourly
+intervals and every session returned to free after about five minutes. No
+sessions were forced while the appliance was unplugged. Filter usage advanced
+from 4% to 6%, filtered-water volume from 4.323 L to 6.297 L and total water
+from 217.395 L to 218.382 L. The integration remained streaming and the Home
+Assistant system log contained no related error.
+
+The release isolated suite covers every executable line and branch in all 19 Python
 modules. A second suite loads the integration through actual Home Assistant
 2026.8.2 interfaces. These results establish strong software confidence, but
 they do not prove every vendor-cloud response, model or physical beverage path.
@@ -80,10 +129,8 @@ tested Eletta Explore model and documented acceptance evidence.
 
 ## Audited environment
 
-- Published and installed release: 1.2.1; physical command-acceptance baseline:
-  1.2.0.
-- Installed release candidate: 1.3.0-beta.6 on branch
-  `feature/cloud-dss-hybrid`; not pushed to GitHub or published.
+- Published and installed release: 1.3.0; physical command-acceptance baseline:
+  1.3.0-beta.6, whose command paths are retained unchanged.
 - Home Assistant: 2026.8.2.
 - Python: 3.14.6.
 - Home Assistant OS: 18.2.
@@ -105,7 +152,15 @@ tested Eletta Explore model and documented acceptance evidence.
   Beta.6 was subsequently deployed with the same backup, hash, configuration
   and clean-restart safeguards. Its read-only synchronization restored DSS
   streaming after restart, and its supervised command cycle completed without
-  an integration error before returning the machine to standby.
+  an integration error before returning the machine to standby. Beta.7 then
+  passed the same backed-up deployment and configuration safeguards; both
+  manual diagnostic buttons were verified disabled and the integration log
+  contained no relevant error. Beta.9 then passed backup, hash and configuration
+  checks, a clean restart and unattended snapshot acceptance. It received four
+  DSS events, left the machine in standby and recorded no relevant integration
+  error. The subsequent 1.3.0 soak confirmed hourly sessions, automatic release,
+  offline deferral and advancing water/filter counters without a related log
+  error.
 - Post-restart command state: unknown, by design until Home Assistant issues a
   command.
 - Coffee Link session behavior: free after deployment and the backward-compatible
@@ -126,9 +181,8 @@ Assistant quality certification.
 Repository layout, manifest metadata, brand assets and release guidance were
 checked against the current
 [HACS integration publishing requirements](https://www.hacs.xyz/docs/publish/integration/).
-The repository is public. Release 1.2.1 completed HACS, hassfest and full-suite
-validation. Beta.6 has completed the local checks listed below; its public CI
-checks remain pending until the candidate branch is pushed. A request for
+The repository is public. Release 1.2.1, candidate beta.9 and stable 1.3.0 completed HACS,
+hassfest, Python 3.14 and actual-Home-Assistant validation. A request for
 inclusion in the default
 HACS catalog is open as
 [hacs/default#10136](https://github.com/hacs/default/pull/10136); custom-repository
@@ -141,11 +195,11 @@ shipped.
 
 | Check | Result |
 |---|---|
-| Unit and integration-isolation tests | 373 passed |
+| Unit and integration-isolation tests | 391 passed |
 | Actual Home Assistant runtime tests | 3 passed |
 | Python modules measured | 19 |
-| Statements | 2,665 / 2,665 |
-| Branches | 860 / 860 |
+| Statements | 2,865 / 2,865 |
+| Branches | 940 / 940 |
 | Line coverage | 100% |
 | Branch coverage | 100% |
 | Ruff | passed |
@@ -154,9 +208,9 @@ shipped.
 | Python compilation | passed |
 | English/Czech leaf-key parity | 189 / 189 |
 | Translation placeholders | synchronized |
-| Public HACS repository validation | 1.2.1 passed; beta.6 pending public CI |
-| Home Assistant hassfest | 1.2.1 passed; beta.6 pending public CI |
-| Manifest version | 1.3.0-beta.6 (installed prerelease candidate) |
+| Public HACS repository validation | 1.2.1, beta.9 and 1.3.0 passed |
+| Home Assistant hassfest | 1.2.1, beta.9 and 1.3.0 passed |
+| Manifest version | 1.3.0 (public CI and target deployment passed) |
 
 Tests use deterministic local doubles and make no calls to a real account or
 vendor endpoint. Covered behavior includes authentication refresh and failure
@@ -175,8 +229,9 @@ fails validation.
 
 | Area | Evidence | Status |
 |---|---|---|
-| Installation and restart | 1.2.0 passed clean restart; 1.2.1 installed through HACS; beta.4, beta.5 and beta.6 backed up, installed and loaded locally | verified through beta.6 |
-| Hybrid cloud updates | Beta.4 through beta.6 DSS streamed; beta.6 received 40 live datapoint events through the physical cycle; fallback covered deterministically | live + automated |
+| Installation and restart | 1.2.0 passed clean restart; 1.2.1 installed through HACS; beta.4 through beta.7, beta.9 and stable 1.3.0 backed up, installed and loaded locally | verified through 1.3.0 |
+| Hybrid cloud updates | Beta.4 through beta.6 DSS streamed; beta.6 received 40 live datapoint events through the physical cycle; beta.9 received four events during unattended snapshot refresh; fallback covered deterministically | live + automated |
+| Automatic cloud snapshot | beta.9 startup request completed with `completed_unchanged`; the 1.3.0 soak then confirmed hourly acquisition, automatic release, offline deferral and advancing counters | verified on Eletta |
 | Command confirmation capability | Eletta cloud declared `ack_enabled: false`; live stream produced datapoints and zero datapoint ACKs; ACK-enabled matching/rejection remains covered deterministically | live on Eletta + automated |
 | Wake | beta.6 changed standby → waking up → ready; cloud-state confirmation completed in 4.5 s and ready was reached in 43.2 s | verified on Eletta |
 | Standby | beta.6 changed ready → going to sleep → standby; cloud-state confirmation completed in 5.4 s and standby was reached in 11.6 s | verified on Eletta |

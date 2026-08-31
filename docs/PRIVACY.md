@@ -11,6 +11,9 @@ coffee maker over the local network.
 - Learned recipe frames in Home Assistant Store.
 - Entity states and statistics according to Recorder configuration.
 
+Short-lived Ayla access and refresh tokens are retained only in memory while the
+integration is loaded. They are not written to Home Assistant Store.
+
 ## Sent to vendor services
 
 - Account credentials during Gigya authentication.
@@ -21,9 +24,10 @@ coffee maker over the local network.
 
 ## Diagnostics
 
-Downloadable diagnostics exclude the account e-mail and password, access tokens,
-DSN, raw command/response values and app identifier. Property names and sanitized
-operational metadata remain so maintainers can diagnose compatibility.
+Downloadable diagnostics exclude the account e-mail and password, access and
+refresh tokens, DSN, raw command/response values and app identifier. Property
+names and sanitized operational metadata remain so maintainers can diagnose
+compatibility.
 The DSS stream key and Wi-Fi network name are never stored, logged or included in
 diagnostics. Connection diagnostics contain only the connectivity type and an
 optional RSSI value.
@@ -32,8 +36,8 @@ optional RSSI value.
 
 Routine cloud logs use operation names and a short one-way device reference;
 they do not include request URLs, DSNs, upstream response bodies or network-error
-text. Retry details are emitted at debug level. The disabled-by-default **Dump
-Recipe Datapoints** diagnostic button is an explicit exception: when a user
+text. Retry details are emitted at debug level. The disabled-by-default **Log
+recipe data** diagnostic button is an explicit exception: when a user
 presses it, recipe data reported by the machine is written to the local Home
 Assistant log for protocol troubleshooting. Review and sanitize that output
 before sharing it.

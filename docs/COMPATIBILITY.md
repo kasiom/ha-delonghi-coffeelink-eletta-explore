@@ -59,6 +59,29 @@ machine state, as required by Eletta's non-ACK command property. The machine
 returned to standby and the Home Assistant system log contained no integration
 error.
 
+Candidate 1.3.0-beta.7 keeps the physically verified beta.6 protocol and model
+mappings unchanged. Its diagnostic-button naming, entity defaults and
+documentation changes do not broaden the compatibility claim; beta.6 remains
+the supervised physical-command baseline.
+
+Candidate 1.3.0-beta.8 changes only cloud-session recovery. It does not alter
+device discovery, model profiles, property mappings, learned recipes or command
+frames. A rejected short-lived Ayla token is renewed and its refused request is
+replayed once, while only a direct saved-password rejection can request Home
+Assistant reauthentication. The same compatibility boundaries therefore apply.
+
+Stable 1.3.0 promotes the validated 1.3.0-beta.9 cloud-snapshot lifecycle on
+Eletta profiles. Coffee Link's `03 02` device refresh is sent cooperatively rather than
+holding the session continuously: after startup, hourly and after a completed
+beverage command. It is skipped while the appliance is busy, offline or visibly
+owned by a foreign session. Profiles without the Eletta cloud-session signature
+retain read-only property reconciliation and are not sent this model-specific
+automatic request. The exact candidate passed a backed-up deployment, clean
+restart and unattended startup refresh on the verified Eletta: four DSS events
+were received, diagnostics reported `completed_unchanged`, the machine remained
+in standby and the current filter counters were preserved. Counter mappings and
+compatibility claims are unchanged.
+
 ## Verified Eletta behavior
 
 - Account setup, reauthentication, hybrid DSS/polling and cloud-outage recovery
