@@ -7,8 +7,7 @@ připojené přes Coffee Link a platformu Ayla IoT.
 
 | Položka | Stav |
 |---|---|
-| Aktuální vydání | 1.2.1 – nainstalováno přes HACS a ověřeno načtení v cílovém Home Assistantu |
-| Předběžné vydání | kandidát 1.3.0-beta.9 – automatické kontroly, veřejné CI a živé ověření v cílovém HA prošly |
+| Aktuální vydání | 1.3.0 – automatické kontroly, veřejné CI a živé ověření v cílovém HA prošly |
 | Fyzické ověření příkazů | 1.3.0-beta.6 – probuzení, Cold Brew Start/Stop a pohotovostní režim na ověřeném kávovaru Eletta prošly |
 | Ověřený kávovar | Eletta Explore ECAM450.65.G (`DL-striker-cb`, oblast EU) |
 | Home Assistant | 2026.8.2 nebo novější |
@@ -106,6 +105,12 @@ naučení stejného receptu nahradí jeho starší příkaz.
 
 Tlačítko **Zastavit přípravu nápoje** je dostupné jen tehdy, když integrace zná
 právě připravovaný nápoj i jeho platný příkaz pro zastavení.
+
+## Podpora projektu
+
+Pokud je pro vás tento nezávislý projekt užitečný, můžete jej dobrovolně podpořit
+na společné [stránce podpory](https://kasiom.github.io/support/). Podpora nemá
+vliv na přístup k vydáním, řešení hlášení, priority funkcí ani licenci MIT.
 
 ## Bezpečnost
 

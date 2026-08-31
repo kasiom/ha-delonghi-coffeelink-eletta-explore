@@ -6,10 +6,12 @@ All notable user-visible changes are documented here. The project follows
 
 ## [Unreleased]
 
-## [1.3.0-beta.9] - 2026-08-28
+## [1.3.0] - 2026-08-31
 
 ### Added
 
+- Add a project-neutral support link and an inherited GitHub Sponsor button;
+  financial details remain centralized on the privacy-friendly support page.
 - Refresh Eletta's device-to-cloud snapshot cooperatively at startup, once per
   hour and after a completed beverage command. The integration sends Coffee
   Link's idempotent `03 02` request, waits up to ten seconds for a relevant DSS
@@ -506,8 +508,8 @@ All notable user-visible changes are documented here. The project follows
 - Initial standalone version derived from substantially modified MIT-licensed
   Coffee Link integration work.
 
-[Unreleased]: https://github.com/kasiom/ha-delonghi-coffeelink-eletta-explore/compare/v1.3.0-beta.9...HEAD
-[1.3.0-beta.9]: https://github.com/kasiom/ha-delonghi-coffeelink-eletta-explore/compare/v1.3.0-beta.6...v1.3.0-beta.9
+[Unreleased]: https://github.com/kasiom/ha-delonghi-coffeelink-eletta-explore/compare/v1.3.0...HEAD
+[1.3.0]: https://github.com/kasiom/ha-delonghi-coffeelink-eletta-explore/compare/v1.2.1...v1.3.0
 [1.3.0-beta.6]: https://github.com/kasiom/ha-delonghi-coffeelink-eletta-explore/compare/v1.2.1...v1.3.0-beta.6
 [1.2.1]: https://github.com/kasiom/ha-delonghi-coffeelink-eletta-explore/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/kasiom/ha-delonghi-coffeelink-eletta-explore/releases/tag/v1.2.0

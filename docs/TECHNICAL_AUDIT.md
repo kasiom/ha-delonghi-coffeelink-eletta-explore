@@ -1,8 +1,8 @@
 # Technical audit
 
-Audit date: 2026-08-28
+Audit date: 2026-08-31
 
-Audited release: 1.2.1 stable; 1.3.0-beta.9 prerelease candidate
+Audited release: 1.3.0 stable
 
 ## Verdict
 
@@ -111,7 +111,16 @@ diagnostics reported `completed_unchanged`, and the current filter values
 remained 4%, 4.323 L and two installed filters. No mobile-app launch or appliance
 command was used for this acceptance.
 
-The beta isolated suite covers every executable line and branch in all 19 Python
+Stable 1.3.0 promotes the exact beta.9 runtime after an additional live soak.
+Recorder history confirms that, after the coffee maker returned online at
+07:12 CEST on 2026-08-31, automatic sessions started at approximately hourly
+intervals and every session returned to free after about five minutes. No
+sessions were forced while the appliance was unplugged. Filter usage advanced
+from 4% to 6%, filtered-water volume from 4.323 L to 6.297 L and total water
+from 217.395 L to 218.382 L. The integration remained streaming and the Home
+Assistant system log contained no related error.
+
+The release isolated suite covers every executable line and branch in all 19 Python
 modules. A second suite loads the integration through actual Home Assistant
 2026.8.2 interfaces. These results establish strong software confidence, but
 they do not prove every vendor-cloud response, model or physical beverage path.
@@ -120,10 +129,8 @@ tested Eletta Explore model and documented acceptance evidence.
 
 ## Audited environment
 
-- Published and installed release: 1.2.1; physical command-acceptance baseline:
-  1.2.0.
-- Installed release candidate: 1.3.0-beta.9 from the current draft pull-request
-  line; public CI passed.
+- Published and installed release: 1.3.0; physical command-acceptance baseline:
+  1.3.0-beta.6, whose command paths are retained unchanged.
 - Home Assistant: 2026.8.2.
 - Python: 3.14.6.
 - Home Assistant OS: 18.2.
@@ -151,6 +158,8 @@ tested Eletta Explore model and documented acceptance evidence.
   contained no relevant error. Beta.9 then passed backup, hash and configuration
   checks, a clean restart and unattended snapshot acceptance. It received four
   DSS events, left the machine in standby and recorded no relevant integration
+  error. The subsequent 1.3.0 soak confirmed hourly sessions, automatic release,
+  offline deferral and advancing water/filter counters without a related log
   error.
 - Post-restart command state: unknown, by design until Home Assistant issues a
   command.
@@ -172,7 +181,7 @@ Assistant quality certification.
 Repository layout, manifest metadata, brand assets and release guidance were
 checked against the current
 [HACS integration publishing requirements](https://www.hacs.xyz/docs/publish/integration/).
-The repository is public. Release 1.2.1 and candidate beta.9 completed HACS,
+The repository is public. Release 1.2.1, candidate beta.9 and stable 1.3.0 completed HACS,
 hassfest, Python 3.14 and actual-Home-Assistant validation. A request for
 inclusion in the default
 HACS catalog is open as
@@ -199,9 +208,9 @@ shipped.
 | Python compilation | passed |
 | English/Czech leaf-key parity | 189 / 189 |
 | Translation placeholders | synchronized |
-| Public HACS repository validation | 1.2.1 and beta.9 passed |
-| Home Assistant hassfest | 1.2.1 and beta.9 passed |
-| Manifest version | 1.3.0-beta.9 (public CI and target deployment passed) |
+| Public HACS repository validation | 1.2.1, beta.9 and 1.3.0 passed |
+| Home Assistant hassfest | 1.2.1, beta.9 and 1.3.0 passed |
+| Manifest version | 1.3.0 (public CI and target deployment passed) |
 
 Tests use deterministic local doubles and make no calls to a real account or
 vendor endpoint. Covered behavior includes authentication refresh and failure
@@ -220,9 +229,9 @@ fails validation.
 
 | Area | Evidence | Status |
 |---|---|---|
-| Installation and restart | 1.2.0 passed clean restart; 1.2.1 installed through HACS; beta.4 through beta.7 and beta.9 backed up, installed and loaded locally | verified through beta.9 |
+| Installation and restart | 1.2.0 passed clean restart; 1.2.1 installed through HACS; beta.4 through beta.7, beta.9 and stable 1.3.0 backed up, installed and loaded locally | verified through 1.3.0 |
 | Hybrid cloud updates | Beta.4 through beta.6 DSS streamed; beta.6 received 40 live datapoint events through the physical cycle; beta.9 received four events during unattended snapshot refresh; fallback covered deterministically | live + automated |
-| Automatic cloud snapshot | beta.9 startup request completed with `completed_unchanged`, current counters and standby preserved, without opening Coffee Link | verified on Eletta |
+| Automatic cloud snapshot | beta.9 startup request completed with `completed_unchanged`; the 1.3.0 soak then confirmed hourly acquisition, automatic release, offline deferral and advancing counters | verified on Eletta |
 | Command confirmation capability | Eletta cloud declared `ack_enabled: false`; live stream produced datapoints and zero datapoint ACKs; ACK-enabled matching/rejection remains covered deterministically | live on Eletta + automated |
 | Wake | beta.6 changed standby → waking up → ready; cloud-state confirmation completed in 4.5 s and ready was reached in 43.2 s | verified on Eletta |
 | Standby | beta.6 changed ready → going to sleep → standby; cloud-state confirmation completed in 5.4 s and standby was reached in 11.6 s | verified on Eletta |

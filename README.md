@@ -22,8 +22,7 @@ platform. It combines near-real-time cloud push with an automatic polling fallba
 
 | Item | Status |
 |---|---|
-| Current release | 1.2.1; installed through HACS and verified to load on the target Home Assistant |
-| Prerelease | 1.3.0-beta.9 candidate; automated validation, public CI and target-HA live acceptance passed |
+| Current release | 1.3.0; automated validation, public CI and target-HA live acceptance passed |
 | Physical command acceptance | 1.3.0-beta.6; supervised Wake, Cold Brew Start/Stop and Standby passed on the verified Eletta |
 | Verified machine | Eletta Explore ECAM450.65.G (`DL-striker-cb`, EU region) |
 | Home Assistant | 2026.8.2 or newer |
@@ -159,6 +158,11 @@ Use the supplied issue forms for reproducible bug reports and feature requests.
 Before publishing diagnostics or logs, remove credentials, e-mail addresses,
 serial numbers, DSNs, tokens and raw command frames. See
 [CONTRIBUTING.md](CONTRIBUTING.md).
+
+If this independent project is useful to you, optional financial support is
+available through the shared [project support page](https://kasiom.github.io/support/).
+Support is entirely voluntary and does not affect access to releases, issue
+handling, feature priorities or the MIT license.
 
 ## License and disclaimer
 
