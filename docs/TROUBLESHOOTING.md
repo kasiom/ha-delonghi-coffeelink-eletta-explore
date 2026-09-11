@@ -12,6 +12,16 @@
   not start reauthentication. Home Assistant asks for the password only when
   Gigya explicitly rejects the saved account credentials.
 
+## DSS stream falls back to polling
+
+Polling continues while the push stream reconnects. The first fallback warning
+includes the error type, connection phase (`subscription`, `websocket_connect`
+or `stream_receive`) and HTTP status when available. It deliberately omits the
+exception message and private stream details. A rate-limit response with a
+positive Retry-After interval delays the next reconnect by at least that interval;
+it never shortens the normal reconnect backoff. This does not repair a vendor
+outage, but avoids retrying before the server permits it.
+
 ## Beverage button is missing
 
 - Prepare the recipe once from Coffee Link while Home Assistant is running.
