@@ -182,16 +182,19 @@ class AylaDssManager:
     async def _async_run(self) -> None:
         delay = float(DSS_RECONNECT_MIN_DELAY)
         while not self._stopping:
+            phase = "subscription"
             try:
                 self._set_state("connecting")
                 subscription = await self._client.async_create_dss_subscription()
                 stream_key = self._client.dss_subscription_stream_key(subscription)
                 if not stream_key:
                     raise CloudError("DSS subscription did not contain a stream key")
+                phase = "websocket_connect"
                 self._websocket = await self._client.async_open_dss_websocket(stream_key)
                 self.last_error_type = None
                 self._set_state("streaming")
                 delay = float(DSS_RECONNECT_MIN_DELAY)
+                phase = "stream_receive"
                 await self._async_receive()
                 if not self._stopping:
                     raise CloudError("DSS stream closed")
@@ -199,12 +202,17 @@ class AylaDssManager:
                 raise
             except (AuthError, CloudError, TimeoutError, aiohttp.ClientError) as err:
                 self.last_error_type = type(err).__name__
+                retry_after = getattr(err, "retry_after", 0)
+                if isinstance(retry_after, (int, float)) and retry_after > 0:
+                    delay = max(delay, float(retry_after))
                 self.reconnect_count += 1
                 self._set_state("polling")
                 if self.reconnect_count == 1:
                     _LOGGER.warning(
-                        "Ayla DSS stream unavailable; using polling fallback (error_type=%s)",
+                        "Ayla DSS stream unavailable; using polling fallback (error_type=%s, phase=%s, http_status=%s)",
                         self.last_error_type,
+                        phase,
+                        getattr(err, "http_status", getattr(err, "status", None)),
                     )
                 else:
                     _LOGGER.debug(

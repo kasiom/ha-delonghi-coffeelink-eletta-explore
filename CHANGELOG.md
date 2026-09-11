@@ -6,6 +6,15 @@ All notable user-visible changes are documented here. The project follows
 
 ## [Unreleased]
 
+## [1.3.1-beta.1] - 2026-09-11
+
+### Fixed
+
+- Respect the cloud's Retry-After interval when reconnecting an Ayla DSS stream
+  after rate limiting, while retaining the polling fallback.
+- Include the connection phase and HTTP status in the first DSS fallback warning
+  without logging exception messages, credentials, stream keys or account data.
+
 ## [1.3.0] - 2026-08-31
 
 ### Added
@@ -508,7 +517,8 @@ All notable user-visible changes are documented here. The project follows
 - Initial standalone version derived from substantially modified MIT-licensed
   Coffee Link integration work.
 
-[Unreleased]: https://github.com/kasiom/ha-delonghi-coffeelink-eletta-explore/compare/v1.3.0...HEAD
+[Unreleased]: https://github.com/kasiom/ha-delonghi-coffeelink-eletta-explore/compare/v1.3.1-beta.1...HEAD
+[1.3.1-beta.1]: https://github.com/kasiom/ha-delonghi-coffeelink-eletta-explore/compare/v1.3.0...v1.3.1-beta.1
 [1.3.0]: https://github.com/kasiom/ha-delonghi-coffeelink-eletta-explore/compare/v1.2.1...v1.3.0
 [1.3.0-beta.6]: https://github.com/kasiom/ha-delonghi-coffeelink-eletta-explore/compare/v1.2.1...v1.3.0-beta.6
 [1.2.1]: https://github.com/kasiom/ha-delonghi-coffeelink-eletta-explore/compare/v1.2.0...v1.2.1

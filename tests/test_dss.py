@@ -351,3 +351,52 @@ def test_supervisor_creates_fresh_subscription_after_stream_loss(monkeypatch):
         ]
 
     run(scenario())
+
+
+@pytest.mark.parametrize("retry_after", [120, 120.5, 1, 0, -1, None, "invalid"])
+def test_supervisor_respects_retry_after_without_shortening_backoff(monkeypatch, retry_after):
+    async def scenario():
+        manager = dss.AylaDssManager(object(), FakeEntry(), FakeClient(), [FakeCoordinator()])
+        error = dss.CloudError("private details", http_status=429)
+        error.retry_after = retry_after
+        manager._client.async_create_dss_subscription = AsyncMock(side_effect=error)
+        delays = []
+
+        async def stop_after_delay(delay):
+            delays.append(delay)
+            manager._stopping = True
+
+        monkeypatch.setattr(dss.asyncio, "sleep", stop_after_delay)
+        monkeypatch.setattr(dss.random, "uniform", lambda _start, _end: 0)
+        await manager._async_run()
+        expected = float(const.DSS_RECONNECT_MIN_DELAY)
+        if isinstance(retry_after, (int, float)) and retry_after > 0:
+            expected = max(expected, retry_after)
+        assert delays == [expected]
+        assert manager.state == "polling"
+
+    run(scenario())
+
+
+@pytest.mark.parametrize("phase", ["subscription", "websocket_connect", "stream_receive"])
+def test_fallback_warning_identifies_phase_without_private_error_text(monkeypatch, caplog, phase):
+    async def scenario():
+        manager = dss.AylaDssManager(object(), FakeEntry(), FakeClient(FakeWebSocket()), [FakeCoordinator()])
+        error = dss.CloudError("private-stream-key-do-not-log", http_status=503)
+        target = {
+            "subscription": (manager._client, "async_create_dss_subscription"),
+            "websocket_connect": (manager._client, "async_open_dss_websocket"),
+            "stream_receive": (manager, "_async_receive"),
+        }[phase]
+        monkeypatch.setattr(*target, AsyncMock(side_effect=error))
+
+        async def stop_after_delay(_delay):
+            manager._stopping = True
+
+        monkeypatch.setattr(dss.asyncio, "sleep", stop_after_delay)
+        await manager._async_run()
+        assert f"phase={phase}" in caplog.text
+        assert "http_status=503" in caplog.text
+        assert "private-stream-key-do-not-log" not in caplog.text
+
+    run(scenario())
