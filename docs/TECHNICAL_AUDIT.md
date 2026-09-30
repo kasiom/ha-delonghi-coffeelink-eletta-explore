@@ -1,8 +1,8 @@
 # Technical audit
 
-Audit date: 2026-08-31
+Audit date: 2026-09-30
 
-Audited release: 1.3.0 stable
+Audited release: 1.3.1 stable
 
 ## Verdict
 
@@ -120,6 +120,16 @@ from 4% to 6%, filtered-water volume from 4.323 L to 6.297 L and total water
 from 217.395 L to 218.382 L. The integration remained streaming and the Home
 Assistant system log contained no related error.
 
+Stable 1.3.1 promotes the exact 1.3.1-beta.1 reconnect patch. The patch honors a
+positive vendor `Retry-After` interval without shortening the established DSS
+backoff and adds privacy-safe connection phase and HTTP status fields to the
+first polling-fallback warning. The exact prerelease was installed through HACS
+on the target Home Assistant 2026.9.4 on 2026-09-30. The integration loaded with
+the Eletta online, DSS streaming and no serious system-log entry. The Coffee Link
+session changed automatically from active to free after approximately five
+minutes; five live DSS datapoint events were observed, the stream recovered from
+one reconnect and reported no current error. No appliance command was sent.
+
 The release isolated suite covers every executable line and branch in all 19 Python
 modules. A second suite loads the integration through actual Home Assistant
 2026.8.2 interfaces. These results establish strong software confidence, but
@@ -129,9 +139,9 @@ tested Eletta Explore model and documented acceptance evidence.
 
 ## Audited environment
 
-- Published and installed release: 1.3.0; physical command-acceptance baseline:
+- Published and installed release: 1.3.1; physical command-acceptance baseline:
   1.3.0-beta.6, whose command paths are retained unchanged.
-- Home Assistant: 2026.8.2.
+- Home Assistant: 2026.9.4 (CI compatibility floor: 2026.8.2).
 - Python: 3.14.6.
 - Home Assistant OS: 18.2.
 - Physical device: De'Longhi Eletta Explore ECAM450.65.G.
@@ -181,8 +191,9 @@ Assistant quality certification.
 Repository layout, manifest metadata, brand assets and release guidance were
 checked against the current
 [HACS integration publishing requirements](https://www.hacs.xyz/docs/publish/integration/).
-The repository is public. Release 1.2.1, candidate beta.9 and stable 1.3.0 completed HACS,
-hassfest, Python 3.14 and actual-Home-Assistant validation. A request for
+The repository is public. Release 1.2.1, candidate beta.9, stable 1.3.0 and the
+1.3.1 candidate completed HACS, hassfest, Python 3.14 and
+actual-Home-Assistant validation. A request for
 inclusion in the default
 HACS catalog is open as
 [hacs/default#10136](https://github.com/hacs/default/pull/10136); custom-repository
@@ -195,7 +206,7 @@ shipped.
 
 | Check | Result |
 |---|---|
-| Unit and integration-isolation tests | 391 passed |
+| Unit and integration-isolation tests | 401 passed |
 | Actual Home Assistant runtime tests | 3 passed |
 | Python modules measured | 19 |
 | Statements | 2,865 / 2,865 |
@@ -208,9 +219,9 @@ shipped.
 | Python compilation | passed |
 | English/Czech leaf-key parity | 189 / 189 |
 | Translation placeholders | synchronized |
-| Public HACS repository validation | 1.2.1, beta.9 and 1.3.0 passed |
-| Home Assistant hassfest | 1.2.1, beta.9 and 1.3.0 passed |
-| Manifest version | 1.3.0 (public CI and target deployment passed) |
+| Public HACS repository validation | 1.2.1, beta.9, 1.3.0 and the 1.3.1 candidate passed |
+| Home Assistant hassfest | 1.2.1, beta.9, 1.3.0 and the 1.3.1 candidate passed |
+| Manifest version | 1.3.1 (candidate CI and target deployment passed) |
 
 Tests use deterministic local doubles and make no calls to a real account or
 vendor endpoint. Covered behavior includes authentication refresh and failure
@@ -229,8 +240,8 @@ fails validation.
 
 | Area | Evidence | Status |
 |---|---|---|
-| Installation and restart | 1.2.0 passed clean restart; 1.2.1 installed through HACS; beta.4 through beta.7, beta.9 and stable 1.3.0 backed up, installed and loaded locally | verified through 1.3.0 |
-| Hybrid cloud updates | Beta.4 through beta.6 DSS streamed; beta.6 received 40 live datapoint events through the physical cycle; beta.9 received four events during unattended snapshot refresh; fallback covered deterministically | live + automated |
+| Installation and restart | 1.2.0 passed clean restart; 1.2.1 installed through HACS; beta.4 through beta.7, beta.9, stable 1.3.0 and 1.3.1-beta.1 backed up, installed and loaded locally | verified through 1.3.1 |
+| Hybrid cloud updates | Beta.4 through beta.6 DSS streamed; beta.6 received 40 live datapoint events through the physical cycle; beta.9 received four events during unattended snapshot refresh; 1.3.1-beta.1 streamed five events and recovered from one reconnect without a current error; fallback covered deterministically | live + automated |
 | Automatic cloud snapshot | beta.9 startup request completed with `completed_unchanged`; the 1.3.0 soak then confirmed hourly acquisition, automatic release, offline deferral and advancing counters | verified on Eletta |
 | Command confirmation capability | Eletta cloud declared `ack_enabled: false`; live stream produced datapoints and zero datapoint ACKs; ACK-enabled matching/rejection remains covered deterministically | live on Eletta + automated |
 | Wake | beta.6 changed standby → waking up → ready; cloud-state confirmation completed in 4.5 s and ready was reached in 43.2 s | verified on Eletta |
@@ -239,7 +250,7 @@ fails validation.
 | Cold Brew start | beta.6 entered preparation, enabled context-aware Stop, reported the friendly Cold Brew name and confirmed in 6.0 s | verified on Eletta |
 | Cold Brew Stop | beta.6 confirmed Stop in 1.5 s, returned to ready and disabled Stop | verified on Eletta |
 | Last Command Status | pending → sent → acknowledged; unknown after restart by design; app traffic kept separate | verified |
-| Coffee Link Session | free after deployment; history retained | verified |
+| Coffee Link Session | 1.3.1-beta.1 changed automatically from active to free after about five minutes; history retained | verified |
 | Other beverage recipes | automated protocol paths only | physical matrix incomplete |
 | Foreign-session conflict | deterministic automated coverage | controlled live conflict pending |
 | Fault and outage paths | deterministic automated coverage | controlled live faults pending |
@@ -315,12 +326,11 @@ prepared.
 
 Completed:
 
-- the repository is public and release `v1.2.1` is published from commit
-  `1b13ce9`;
+- the repository is public and stable releases through `v1.3.1` are published;
 - public HACS repository validation, hassfest, the complete test suite and real
   Home Assistant interface tests passed for the release;
-- release 1.2.1 was installed through HACS and verified to load on the target
-  Home Assistant;
+- release candidates through 1.3.1 were installed through HACS and verified to
+  load on the target Home Assistant;
 - private vulnerability reporting and protected `main` branch rules are enabled;
 - repository history contains the reviewed clean baseline, current releases and
   synthetic protocol fixtures;
@@ -334,11 +344,9 @@ Completed:
 
 Open follow-up:
 
-1. Push the reviewed beta.6 candidate, require Validate, HACS and hassfest to
-   pass, then create a GitHub prerelease from the exact tested commit.
-2. Monitor the HACS catalog review and respond only when a maintainer requests a
+1. Monitor the HACS catalog review and respond only when a maintainer requests a
    change or when material new information is required.
-3. After catalog acceptance, replace the temporary custom-repository-first
+2. After catalog acceptance, replace the temporary custom-repository-first
    installation wording with the normal catalog search flow.
-4. Never rewrite a published release tag. If a release needs correction, publish
+3. Never rewrite a published release tag. If a release needs correction, publish
    a new patch version and retain the previous release history.

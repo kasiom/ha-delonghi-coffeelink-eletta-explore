@@ -22,12 +22,12 @@ platform. It combines near-real-time cloud push with an automatic polling fallba
 
 | Item | Status |
 |---|---|
-| Current release | 1.3.0; automated validation, public CI and target-HA live acceptance passed |
+| Current release | 1.3.1; automated validation, public CI and target-HA live acceptance passed |
 | Physical command acceptance | 1.3.0-beta.6; supervised Wake, Cold Brew Start/Stop and Standby passed on the verified Eletta |
 | Verified machine | Eletta Explore ECAM450.65.G (`DL-striker-cb`, EU region) |
 | Home Assistant | 2026.8.2 or newer |
 | Languages | English and Czech |
-| Automated tests | 391 isolated tests at 100% line/branch coverage + 3 actual Home Assistant runtime tests |
+| Automated tests | 401 isolated tests at 100% line/branch coverage + 3 actual Home Assistant runtime tests |
 | Distribution | HACS custom repository or manual installation from a GitHub release; default-catalog review is pending |
 
 The PrimaDonna Soul profile remains available for compatibility testing, but it

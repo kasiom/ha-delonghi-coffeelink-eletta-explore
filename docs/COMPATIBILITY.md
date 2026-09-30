@@ -82,6 +82,14 @@ were received, diagnostics reported `completed_unchanged`, the machine remained
 in standby and the current filter counters were preserved. Counter mappings and
 compatibility claims are unchanged.
 
+Stable 1.3.1 changes only DSS reconnect diagnostics and rate-limit timing. It
+honors a positive vendor `Retry-After` interval without shortening the existing
+backoff and reports the failing connection phase and HTTP status without private
+exception text. The exact prerelease was installed through HACS on Home Assistant
+2026.9.4 and kept the verified Eletta online and streaming; its Coffee Link
+session returned automatically from active to free after the normal five-minute
+window. No appliance command, entity mapping or compatibility boundary changed.
+
 ## Verified Eletta behavior
 
 - Account setup, reauthentication, hybrid DSS/polling and cloud-outage recovery
