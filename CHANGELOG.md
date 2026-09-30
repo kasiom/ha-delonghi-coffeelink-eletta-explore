@@ -6,7 +6,7 @@ All notable user-visible changes are documented here. The project follows
 
 ## [Unreleased]
 
-## [1.3.1-beta.1] - 2026-09-11
+## [1.3.1] - 2026-09-30
 
 ### Fixed
 
@@ -14,6 +14,15 @@ All notable user-visible changes are documented here. The project follows
   after rate limiting, while retaining the polling fallback.
 - Include the connection phase and HTTP status in the first DSS fallback warning
   without logging exception messages, credentials, stream keys or account data.
+
+### Validation
+
+- Pass 401 isolated tests with 100% line and branch coverage, three tests against
+  actual Home Assistant interfaces, Ruff, strict mypy, HACS and hassfest.
+- Install the exact prerelease through HACS on Home Assistant 2026.9.4. The
+  integration loaded without a serious log entry, kept the Eletta online and DSS
+  streaming, and released its Coffee Link session automatically after the normal
+  five-minute window. No appliance command was sent during this acceptance.
 
 ## [1.3.0] - 2026-08-31
 
@@ -517,8 +526,8 @@ All notable user-visible changes are documented here. The project follows
 - Initial standalone version derived from substantially modified MIT-licensed
   Coffee Link integration work.
 
-[Unreleased]: https://github.com/kasiom/ha-delonghi-coffeelink-eletta-explore/compare/v1.3.1-beta.1...HEAD
-[1.3.1-beta.1]: https://github.com/kasiom/ha-delonghi-coffeelink-eletta-explore/compare/v1.3.0...v1.3.1-beta.1
+[Unreleased]: https://github.com/kasiom/ha-delonghi-coffeelink-eletta-explore/compare/v1.3.1...HEAD
+[1.3.1]: https://github.com/kasiom/ha-delonghi-coffeelink-eletta-explore/compare/v1.3.0...v1.3.1
 [1.3.0]: https://github.com/kasiom/ha-delonghi-coffeelink-eletta-explore/compare/v1.2.1...v1.3.0
 [1.3.0-beta.6]: https://github.com/kasiom/ha-delonghi-coffeelink-eletta-explore/compare/v1.2.1...v1.3.0-beta.6
 [1.2.1]: https://github.com/kasiom/ha-delonghi-coffeelink-eletta-explore/compare/v1.2.0...v1.2.1
