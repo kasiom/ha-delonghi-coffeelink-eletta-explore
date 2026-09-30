@@ -17,7 +17,7 @@ All notable user-visible changes are documented here. The project follows
 
 ### Validation
 
-- Pass 401 isolated tests with 100% line and branch coverage, three tests against
+- Pass 402 isolated tests with 100% line and branch coverage, three tests against
   actual Home Assistant interfaces, Ruff, strict mypy, HACS and hassfest.
 - Install the exact prerelease through HACS on Home Assistant 2026.9.4. The
   integration loaded without a serious log entry, kept the Eletta online and DSS

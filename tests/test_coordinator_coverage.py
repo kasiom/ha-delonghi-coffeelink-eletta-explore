@@ -503,6 +503,24 @@ def test_confirmation_tracker_covers_races_timeouts_polling_and_shutdown(
             is True
         )
 
+        # Cover an expired polling interval deterministically instead of relying
+        # on scheduler timing to cross the deadline between the loop check and
+        # the remaining-time calculation.
+        clock = iter([0.0, 0.0, 2.0, 2.0])
+        monkeypatch.setattr(confirmation_module, "monotonic", lambda: next(clock))
+        expired_refresh = AsyncMock()
+        assert (
+            await tracker.async_wait(
+                changed=lambda: False,
+                streaming=lambda: False,
+                refresh=expired_refresh,
+                timeout=1,
+                poll_interval=1,
+            )
+            is False
+        )
+        expired_refresh.assert_awaited_once_with()
+
     run(scenario())
 
 
