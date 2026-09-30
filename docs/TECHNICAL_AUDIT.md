@@ -206,11 +206,11 @@ shipped.
 
 | Check | Result |
 |---|---|
-| Unit and integration-isolation tests | 401 passed |
+| Unit and integration-isolation tests | 402 passed |
 | Actual Home Assistant runtime tests | 3 passed |
 | Python modules measured | 19 |
-| Statements | 2,865 / 2,865 |
-| Branches | 940 / 940 |
+| Statements | 2,871 / 2,871 |
+| Branches | 942 / 942 |
 | Line coverage | 100% |
 | Branch coverage | 100% |
 | Ruff | passed |
