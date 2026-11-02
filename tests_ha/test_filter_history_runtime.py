@@ -6,6 +6,7 @@ from datetime import UTC, datetime, timedelta
 from functools import partial
 from types import SimpleNamespace
 
+import pytest
 from homeassistant.components.recorder.db_schema import Statistics, StatisticsShortTerm
 from homeassistant.components.recorder.models import StatisticMeanType
 from homeassistant.components.recorder.statistics import get_metadata, statistics_during_period
@@ -15,6 +16,11 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.ha_delonghi_coffeelink_eletta_explore.const import DOMAIN
 from custom_components.ha_delonghi_coffeelink_eletta_explore.statistics_migration import async_migrate_filter_statistics
+
+
+@pytest.fixture
+def mock_recorder_before_hass(recorder_db_url: str) -> None:
+    """Prepare the in-memory database before the HA fixture is constructed."""
 
 
 async def test_filter_scale_archive_keeps_ids_preferences_and_unmodified_history(hass: HomeAssistant, recorder_mock) -> None:
