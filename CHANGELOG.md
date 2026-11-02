@@ -12,7 +12,28 @@ All notable user-visible changes are documented here. The project follows
   retaining the compatible runtime validation import used by older HA releases.
   Resolve the binary-sensor device-class type from its current defining module
   while retaining the public runtime import available in both HA generations.
-  No entity names, translations, protocol frames or cloud-session behavior change.
+  These typing adjustments do not alter entities or protocol behavior.
+
+- Send Coffee Link's `0xe8 0xf0` statistics request instead of the `03 02`
+  session refresh when synchronizing statistics. On Eletta Explore the `03 02`
+  frame only republished `d302`, so beverage counters stayed frozen until the
+  official app was opened or the appliance reconnected to Wi-Fi. Thanks to
+  @danjul89 for the frame and live observations in #16. Response latency remains
+  firmware-dependent; physical acceptance of the combined candidate is pending.
+- Verify statistics within one 45-second deadline instead of treating the first
+  event or a ten-second timeout as sufficient evidence. Exclude settings and
+  software-version properties from the counter snapshot. Keep no-publication
+  results unverified, accept later DSS updates normally and distinguish observed
+  snapshot changes from guaranteed freshness of every individual counter.
+- Serialize statistics requests without holding the appliance-command lock
+  throughout verification; a concurrent request cannot overwrite active results.
+
+### Added
+
+- Request a statistics snapshot when a beverage prepared at the machine finishes
+  (an accepted live DSS monitor returns from preparing to ready). Diagnostics
+  report this as `beverage_finished`. The periodic request remains the fallback
+  when no completion transition is observed.
 
 ### Development
 
@@ -20,6 +41,10 @@ All notable user-visible changes are documented here. The project follows
   target HA 2026.10.4 independently on Ubuntu. Add real-runtime regression
   coverage for configuration and service schemas, and keep strict mypy enabled
   against the current target without suppressing the newly detected errors.
+- Prepare the next beta as 1.3.2-beta.1; no tag, release or HA deployment has been
+  made. Add protocol, delayed-update, concurrency and real-HA Eletta regressions,
+  and align current English/Czech documentation without changing entity names
+  or translation keys.
 
 ## [1.3.1] - 2026-09-30
 
