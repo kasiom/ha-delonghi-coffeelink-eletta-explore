@@ -92,6 +92,7 @@ def _install_homeassistant_stubs() -> None:
     components = types.ModuleType("homeassistant.components")
     sensor_component = types.ModuleType("homeassistant.components.sensor")
     binary_sensor_component = types.ModuleType("homeassistant.components.binary_sensor")
+    binary_sensor_constants = types.ModuleType("homeassistant.components.binary_sensor.const")
     button_component = types.ModuleType("homeassistant.components.button")
     core = types.ModuleType("homeassistant.core")
     config_entries = types.ModuleType("homeassistant.config_entries")
@@ -274,6 +275,7 @@ def _install_homeassistant_stubs() -> None:
     sensor_component.SensorEntity = SensorEntity
     sensor_component.SensorStateClass = SensorStateClass
     binary_sensor_component.BinarySensorDeviceClass = BinarySensorDeviceClass
+    binary_sensor_constants.BinarySensorDeviceClass = BinarySensorDeviceClass
     binary_sensor_component.BinarySensorEntity = BinarySensorEntity
     button_component.ButtonEntity = ButtonEntity
     entity_platform.AddEntitiesCallback = object
@@ -284,6 +286,7 @@ def _install_homeassistant_stubs() -> None:
             "homeassistant.components": components,
             "homeassistant.components.sensor": sensor_component,
             "homeassistant.components.binary_sensor": binary_sensor_component,
+            "homeassistant.components.binary_sensor.const": binary_sensor_constants,
             "homeassistant.components.button": button_component,
             "homeassistant.core": core,
             "homeassistant.const": constants,
