@@ -28,7 +28,7 @@ platform. It combines near-real-time cloud push with an automatic polling fallba
 | Home Assistant | 2026.8.2 or newer |
 | Languages | English and Czech |
 | Development tests | 464 isolated tests at 100% line/branch coverage + 5 actual Home Assistant runtime tests on each of 2026.8.2 and 2026.10.4 |
-| Next candidate | 1.3.2-beta.1 planned; not released or installed; physical statistics acceptance pending |
+| Opt-in prerelease | 1.3.2-beta.1; physical statistics acceptance pending; latest stable remains 1.3.1 |
 | Distribution | HACS custom repository or manual installation from a GitHub release; default-catalog review is pending |
 
 The PrimaDonna Soul profile remains available for compatibility testing, but it

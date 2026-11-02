@@ -6,6 +6,8 @@ All notable user-visible changes are documented here. The project follows
 
 ## [Unreleased]
 
+## [1.3.2-beta.1] - 2026-11-02
+
 ### Fixed
 
 - Match current Home Assistant schema types during strict static checking while
@@ -41,10 +43,19 @@ All notable user-visible changes are documented here. The project follows
   target HA 2026.10.4 independently on Ubuntu. Add real-runtime regression
   coverage for configuration and service schemas, and keep strict mypy enabled
   against the current target without suppressing the newly detected errors.
-- Prepare the next beta as 1.3.2-beta.1; no tag, release or HA deployment has been
-  made. Add protocol, delayed-update, concurrency and real-HA Eletta regressions,
+- Prepare prerelease 1.3.2-beta.1 for supervised statistics acceptance. Add
+  protocol, delayed-update, concurrency and real-HA Eletta regressions,
   and align current English/Czech documentation without changing entity names
   or translation keys.
+
+### Validation and release boundary
+
+- Pass 464 isolated tests at 100% line and branch coverage, five real-HA tests
+  on each of Home Assistant 2026.8.2 and 2026.10.4, strict mypy, Ruff, HACS and
+  hassfest. Release metadata is verified again on the exact tagged candidate.
+- This is an opt-in prerelease from a release branch; main and the latest stable
+  release remain unchanged. No beverage preparation is started by installing it.
+  Physical acceptance of the new statistics path is still pending.
 
 ## [1.3.1] - 2026-09-30
 
