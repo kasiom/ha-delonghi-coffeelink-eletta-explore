@@ -7,6 +7,8 @@ from functools import partial
 from types import SimpleNamespace
 
 import pytest
+from homeassistant.components.recorder import migration as recorder_schema_migration
+from homeassistant.components.recorder.core import Recorder
 from homeassistant.components.recorder.db_schema import Statistics, StatisticsShortTerm
 from homeassistant.components.recorder.models import StatisticMeanType
 from homeassistant.components.recorder.statistics import get_metadata, statistics_during_period
@@ -19,8 +21,12 @@ from custom_components.ha_delonghi_coffeelink_eletta_explore.statistics_migratio
 
 
 @pytest.fixture
-def mock_recorder_before_hass(recorder_db_url: str) -> None:
+def mock_recorder_before_hass(recorder_db_url: str, monkeypatch: pytest.MonkeyPatch) -> None:
     """Prepare the in-memory database before the HA fixture is constructed."""
+    # The upstream fixture autospecs _find_schema_errors. Python 3.14 evaluates
+    # its deferred annotation although HA imports Recorder only for TYPE_CHECKING.
+    # Supply the genuine class for introspection; do not mock database behavior.
+    monkeypatch.setattr(recorder_schema_migration, "Recorder", Recorder, raising=False)
 
 
 async def test_filter_scale_archive_keeps_ids_preferences_and_unmodified_history(hass: HomeAssistant, recorder_mock) -> None:
