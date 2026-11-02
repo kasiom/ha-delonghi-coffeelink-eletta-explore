@@ -67,6 +67,9 @@
       "water_total_quantity": { "name": "Celková spotřeba vody" },
       "total_filters_used": { "name": "Počet použitých filtrů" },
       "water_filter_quantity": { "name": "Objem vody přes vložený filtr" },
+      "service_descale_progress": { "name": "Využití limitu odvápnění" },
+      "service_descale_status": { "name": "Kód stavu odvápnění" },
+      "water_filter_quantity_legacy": { "name": "Objem vody přes filtr (archiv původního přepočtu)" },
       "descale_status": { "name": "Stav odvápnění" },
       "water_hardness": { "name": "Tvrdost vody" },
       "beverages_since_descale_warning": { "name": "Počet nápojů od upozornění na odvápnění" },
@@ -184,6 +187,10 @@
     "raw_command_invalid": { "message": "Binární příkaz neprošel kontrolou protokolu, podpisu zařízení nebo bezpečnostního stavu." }
   },
   "issues": {
+    "statistics_learning_required": {
+      "title": "Zprovozněte automatické načítání statistik Coffee Link",
+      "description": "Automatické požadavky na statistiky zařízení {device_name} zatím nemohou probíhat, protože nebyl naučen ověřený podpis kávovaru. Čtení cloudu funguje, ale jeho čítače mohou obsahovat starší údaje. Při spuštěném Home Assistantu a s připravenou vhodnou nádobou jednou v oficiální aplikaci Coffee Link zapněte kávovar nebo pod dohledem připravte nápoj. Potom aplikaci zavřete. Upozornění zmizí automaticky po naučení platného příkazu s podpisem kávovaru; kvůli dalším aktualizacím nemusíte Coffee Link opakovaně otevírat. Integrace tuto podmínku neobchází odesláním neověřeného příkazu."
+    },
     "relearn_commands": {
       "title": "Znovu naučte příkazy Coffee Link",
       "description": "Home Assistant zahodil uložené příkazy pro zařízení {device_name}, protože neprošly kontrolou integrity nebo podpisu zařízení. V oficiální aplikaci Coffee Link znovu spusťte nedostupné recepty; každý recept také zastavte, pokud je nedostupné jeho tlačítko Stop, a podle potřeby kávovar jednou probuďte. Po opětovném naučení všech zahozených příkazů se tato oprava automaticky odstraní. Zbývá naučit: {count}."

@@ -176,6 +176,7 @@ def _install_homeassistant_stubs() -> None:
 
     class IssueSeverity:
         ERROR = "error"
+        WARNING = "warning"
 
     class ConfigFlow:
         def __init_subclass__(cls, **kwargs):
@@ -697,7 +698,7 @@ def test_unknown_model_does_not_guess_legacy_counter_semantics(monkeypatch):
     ("key", "raw", "expected"),
     [
         ("water_total_quantity", "1234", 0.617),
-        ("water_filter_quantity", "2500", 2.5),
+        ("water_filter_quantity", "2500", 1.25),
         ("water_hardness", "2", 3),
         ("descale_limit_usage", "21", 79),
         ("grounds_container_fill", "42", 42),
@@ -1801,6 +1802,7 @@ class _LifecycleConfigEntries:
 
 def _lifecycle_hass(*, unload_ok=True):
     return types.SimpleNamespace(
+        config=types.SimpleNamespace(components=set()),
         entity_registry=_LifecycleRegistry(),
         device_registry=_LifecycleDeviceRegistry(),
         config_entries=_LifecycleConfigEntries(unload_ok=unload_ok),

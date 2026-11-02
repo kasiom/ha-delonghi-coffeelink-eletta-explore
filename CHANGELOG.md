@@ -6,6 +6,37 @@ All notable user-visible changes are documented here. The project follows
 
 ## [Unreleased]
 
+## [1.3.2-beta.2] - 2026-11-03
+
+### Fixed
+
+- Correct d555 filtered-water volume to half-millilitre ticks on the known
+  `DL-striker-cb` profile, based on twelve paired historical intervals. Preserve
+  the independent filter percentage and other models' existing conversion.
+- Preserve old-scale filter history in a hidden, disabled archive using HA's
+  registry rename hooks. Keep the active entity ID and user preferences while
+  starting a clean corrected series, avoiding a false consumption/reset spike.
+  Journal the migration for interruption recovery; require a database-inclusive
+  backup and use backup restoration rather than a simple downgrade to roll back.
+
+### Added
+
+- Explain the missing device-signature prerequisite in an actionable EN/CS
+  Repair, automatically removed after a valid frame is learned. Do not bypass
+  signature checks or claim all cloud counters are stale.
+- Add optional, default-disabled d580 service-threshold progress and numeric
+  descale-status diagnostics only when valid fields exist. Keep missing fields
+  unknown and do not assign speculative units or status meanings.
+- Document every request and limitation from #15 in English and Czech. Do not
+  mislabel d701 as a lifetime all-beverage total or blindly sum d733/d734/d740.
+
+### Validation
+
+- Beta.1 passed a supervised Espresso prepared at the machine display with
+  Coffee Link closed; one automatic statistics request followed ready by eight
+  seconds and the coffee summary increased once. Beta.2 requires its own
+  automated and deployment acceptance; this is not a stable-release promotion.
+
 ## [1.3.2-beta.1] - 2026-11-02
 
 ### Fixed
