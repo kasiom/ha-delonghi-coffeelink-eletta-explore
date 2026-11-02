@@ -10,7 +10,8 @@ All notable user-visible changes are documented here. The project follows
 
 - Match current Home Assistant schema types during strict static checking while
   retaining the compatible runtime validation import used by older HA releases.
-  Import the binary-sensor device class from its defining public module.
+  Resolve the binary-sensor device-class type from its current defining module
+  while retaining the public runtime import available in both HA generations.
   No entity names, translations, protocol frames or cloud-session behavior change.
 
 ### Development
