@@ -14,7 +14,9 @@ from homeassistant.components.recorder.models import StatisticMeanType
 from homeassistant.components.recorder.statistics import get_metadata, statistics_during_period
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers import recorder as recorder_helpers
 from pytest_homeassistant_custom_component.common import MockConfigEntry
+from sqlalchemy.orm.session import Session
 
 from custom_components.ha_delonghi_coffeelink_eletta_explore.const import DOMAIN
 from custom_components.ha_delonghi_coffeelink_eletta_explore.statistics_migration import async_migrate_filter_statistics
@@ -27,10 +29,14 @@ def mock_recorder_before_hass(recorder_db_url: str, monkeypatch: pytest.MonkeyPa
     # its deferred annotation although HA imports Recorder only for TYPE_CHECKING.
     # Supply the genuine class for introspection; do not mock database behavior.
     monkeypatch.setattr(recorder_schema_migration, "Recorder", Recorder, raising=False)
+    monkeypatch.setattr(recorder_helpers, "Session", Session, raising=False)
+    monkeypatch.setattr(recorder_helpers, "Recorder", Recorder, raising=False)
 
 
 async def test_filter_scale_archive_keeps_ids_preferences_and_unmodified_history(hass: HomeAssistant, recorder_mock) -> None:
     """Do not recycle old-scale statistics into the corrected active entity."""
+    # The upstream fixture starts its worker only when the test HA is running.
+    await hass.async_start()
     entry = MockConfigEntry(domain=DOMAIN, data={}, title="Synthetic Coffee Link")
     entry.add_to_hass(hass)
     registry = er.async_get(hass)
