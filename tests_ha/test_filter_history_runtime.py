@@ -6,6 +6,7 @@ import asyncio
 from datetime import UTC, datetime, timedelta
 from functools import partial
 from types import SimpleNamespace
+from unittest.mock import patch
 
 import pytest
 from homeassistant.components.recorder import migration as recorder_schema_migration
@@ -13,7 +14,7 @@ from homeassistant.components.recorder.core import Recorder
 from homeassistant.components.recorder.db_schema import Statistics, StatisticsShortTerm
 from homeassistant.components.recorder.models import StatisticMeanType
 from homeassistant.components.recorder.statistics import get_metadata, statistics_during_period
-from homeassistant.core import HomeAssistant
+from homeassistant.core import CoreState, HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers import recorder as recorder_helpers
@@ -48,11 +49,18 @@ async def test_filter_scale_archive_keeps_ids_preferences_and_unmodified_history
     )
     # Reproduce the live first-install bootstrap ordering: migration must release
     # setup for retry, not wait for a Recorder job before HA reaches RUNNING.
-    with pytest.raises(ConfigEntryNotReady, match="Waiting for Home Assistant startup"):
+    # recorder_mock may already advance the shared HA fixture to RUNNING. Hold
+    # the genuine HA object's lifecycle state at the exact bootstrap condition;
+    # no Recorder method or migration behavior is mocked by this context.
+    with (
+        patch.object(hass, "state", CoreState.not_running),
+        pytest.raises(ConfigEntryNotReady, match="Waiting for Home Assistant startup"),
+    ):
         await asyncio.wait_for(async_migrate_filter_statistics(hass, entry, [coordinator]), timeout=2)
     assert registry.async_get_entity_id("sensor", DOMAIN, unique) == old.entity_id
     assert registry.async_get_entity_id("sensor", DOMAIN, unique + "_legacy_scale_v1") is None
-    await hass.async_start()
+    if hass.state is not CoreState.running:
+        await hass.async_start()
     recorder_mock.async_import_statistics(
         {
             "statistic_id": old.entity_id,
