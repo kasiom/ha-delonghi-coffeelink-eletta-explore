@@ -36,7 +36,9 @@ changelog and safety notes first, create a Home Assistant backup and keep the
 coffee maker supervised during the required physical acceptance checks. Disable
 beta versions again if the installation should follow only stable releases.
 
-Before upgrading to 1.3.2-beta.2, include the Recorder database in the backup.
+Before upgrading to 1.3.2-beta.3, include the Recorder database in the backup.
+Beta.2 was withdrawn; beta.3 defers first-time history migration until HA has
+fully started, rather than waiting for Recorder inside bootstrap.
 On verified `DL-striker-cb` models the filter-volume conversion changes from
 `/1000` to `/2000`. The old history is preserved in a disabled, hidden legacy
 archive; the active entity keeps its ID and user preferences and starts a clean

@@ -21,6 +21,9 @@ All notable user-visible changes are documented here. The project follows
 
 ## [1.3.2-beta.2] - 2026-11-03
 
+Withdrawn after first-install testing exposed a Recorder/bootstrap wait; use
+beta.3 or newer. The tag is retained for auditability, not rewritten.
+
 ### Fixed
 
 - Correct d555 filtered-water volume to half-millilitre ticks on the known

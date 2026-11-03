@@ -2,7 +2,13 @@
 
 Audit date: 2026-11-03
 
-Audited candidate: 1.3.2-beta.2; latest stable remains 1.3.1
+Audited candidate: 1.3.2-beta.3; latest stable remains 1.3.1
+
+Beta.2 was withdrawn after live first-install testing found a Recorder/bootstrap
+dependency wait. Its journal resumed and the archive completed, but beta.3 now
+defers that first transition through normal HA setup retry until fully running.
+The real-HA archive regression explicitly tests the pre-start condition as well
+as the post-start archive; new/already-migrated entities avoid this delay.
 
 ## Current statistics audit
 

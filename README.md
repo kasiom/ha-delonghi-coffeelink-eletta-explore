@@ -38,7 +38,7 @@ experimental. See [Compatibility and known limitations](docs/COMPATIBILITY.md).
 ## Features
 
 See [Statistics, counter meanings and upgrade notes](docs/STATISTICS.md) for
-model-specific totals, optional service diagnostics and the beta.2 filter-volume
+model-specific totals, optional service diagnostics and the beta.3 filter-volume
 history archive. The Czech explanation is included in the same document.
 
 - UI-based account setup, reauthentication, reconfiguration and multi-device

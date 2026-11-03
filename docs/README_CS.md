@@ -16,7 +16,7 @@ připojené přes Coffee Link a platformu Ayla IoT.
 | Volitelná předběžná verze | 1.3.2-beta.3; beta.2 byla stažena kvůli pořadí prvního startu při archivaci; stabilní verzí zůstává 1.3.1 |
 
 Význam čítačů, volitelnou servisní diagnostiku a archivaci původního přepočtu
-filtru při přechodu na beta.2 popisuje [dokumentace statistik](STATISTICS.md#česky).
+filtru při přechodu na beta.3 popisuje [dokumentace statistik](STATISTICS.md#česky).
 | Distribuce | vlastní repozitář HACS nebo ruční instalace z vydání na GitHubu; zařazení do výchozího katalogu se posuzuje |
 
 Profil PrimaDonna Soul zůstává v kódu pro zkoušky kompatibility, neprošel však
