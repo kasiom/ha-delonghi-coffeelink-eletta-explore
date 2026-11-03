@@ -27,8 +27,8 @@ platform. It combines near-real-time cloud push with an automatic polling fallba
 | Verified machine | Eletta Explore ECAM450.65.G (`DL-striker-cb`, EU region) |
 | Home Assistant | 2026.8.2 or newer |
 | Languages | English and Czech |
-| Development tests | 464 isolated tests at 100% line/branch coverage + 5 actual Home Assistant runtime tests on each of 2026.8.2 and 2026.10.4 |
-| Opt-in prerelease | 1.3.2-beta.1; physical statistics acceptance pending; latest stable remains 1.3.1 |
+| Development tests | Isolated regression tests require 100% line/branch coverage; real Home Assistant CI targets 2026.8.2 and 2026.10.4 |
+| Opt-in prerelease | 1.3.2-beta.3; beta.2 was withdrawn after a first-install startup-order issue; latest stable remains 1.3.1 |
 | Distribution | HACS custom repository or manual installation from a GitHub release; default-catalog review is pending |
 
 The PrimaDonna Soul profile remains available for compatibility testing, but it
@@ -36,6 +36,10 @@ has not completed the same physical acceptance matrix and is therefore
 experimental. See [Compatibility and known limitations](docs/COMPATIBILITY.md).
 
 ## Features
+
+See [Statistics, counter meanings and upgrade notes](docs/STATISTICS.md) for
+model-specific totals, optional service diagnostics and the beta.3 filter-volume
+history archive. The Czech explanation is included in the same document.
 
 - UI-based account setup, reauthentication, reconfiguration and multi-device
   discovery.

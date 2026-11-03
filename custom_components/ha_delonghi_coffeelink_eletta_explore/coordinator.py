@@ -188,6 +188,7 @@ class DelonghiCoordinator(DataUpdateCoordinator[AylaProperties]):
         self.learned_wake_frame: str | None = None
         self._discarded_learning_keys: set[str] = set()
         self._learning_issue_id = f"relearn_commands_{device_hash}"
+        self._statistics_learning_issue_id = f"statistics_learning_{device_hash}"
         # Decoded d302_monitor_machine state (standby/ready/...), surfaced via
         # the Machine Status sensor. Empty dict until a blob parses.
         self.monitor: dict[str, Any] = {}
@@ -248,6 +249,7 @@ class DelonghiCoordinator(DataUpdateCoordinator[AylaProperties]):
             if self.profile.uses_cloud_session and self.connected_property is None:
                 self.connected_property = self._detect_property(props, CONNECTED_PROPERTY_CANDIDATES, "connected", required=False)
             self._sniff_app_traffic(props)
+            self._sync_statistics_learning_issue()
             self._update_monitor(props)
             self._update_session_from_props(props)
             # Device metadata changes slowly. Avoid listing every account device
@@ -490,6 +492,7 @@ class DelonghiCoordinator(DataUpdateCoordinator[AylaProperties]):
             self.response_property,
         }:
             self._sniff_app_traffic(data)
+            self._sync_statistics_learning_issue()
         if property_name == APP_ID_PROPERTY:
             self._update_session_from_props(data)
         if property_name == self.response_property:
@@ -760,6 +763,22 @@ class DelonghiCoordinator(DataUpdateCoordinator[AylaProperties]):
     def has_device_signature(self) -> bool:
         """Return whether ECAM commands can use a learned machine signature."""
         return not self.profile.uses_cloud_session or self._learned_device_signature() is not None
+
+    def _sync_statistics_learning_issue(self) -> None:
+        """Explain blocked first-time statistics requests without asserting staleness."""
+        if not self.profile.uses_cloud_session or not self.connected_property or self.has_device_signature():
+            ir.async_delete_issue(self.hass, DOMAIN, self._statistics_learning_issue_id)
+            return
+        ir.async_create_issue(
+            self.hass,
+            DOMAIN,
+            self._statistics_learning_issue_id,
+            is_fixable=False,
+            is_persistent=False,
+            severity=ir.IssueSeverity.WARNING,
+            translation_key="statistics_learning_required",
+            translation_placeholders={"device_name": self.device.name},
+        )
 
     @staticmethod
     def _command_timestamp() -> str:

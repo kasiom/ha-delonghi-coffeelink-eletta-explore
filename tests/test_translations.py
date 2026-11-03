@@ -163,6 +163,9 @@ def test_all_runtime_entity_translation_keys_exist_in_both_languages() -> None:
             "last_command_status",
             "cloud_session_app_id",
             "wifi_signal_strength",
+            "service_descale_progress",
+            "service_descale_status",
+            "water_filter_quantity_legacy",
         }
     )
     button_keys = {f"start_{item[1]}" for item in beverages}

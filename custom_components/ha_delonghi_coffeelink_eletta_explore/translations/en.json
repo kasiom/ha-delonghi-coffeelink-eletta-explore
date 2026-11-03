@@ -146,6 +146,9 @@
       "water_filter_quantity": {
         "name": "Water volume through installed filter"
       },
+      "service_descale_progress": { "name": "Descale threshold usage" },
+      "service_descale_status": { "name": "Descale status code" },
+      "water_filter_quantity_legacy": { "name": "Filter water volume (legacy scale archive)" },
       "descale_status": {
         "name": "Descale status"
       },
@@ -343,6 +346,10 @@
     "raw_command_invalid": { "message": "The raw command failed its protocol, device-signature, or safety validation." }
   },
   "issues": {
+    "statistics_learning_required": {
+      "title": "Enable automatic Coffee Link statistics refresh",
+      "description": "Automatic statistics requests for {device_name} are blocked because no validated device signature has been learned yet. Cloud readings still work, but their counters may be an older snapshot. With Home Assistant running and a suitable container in place, use the official Coffee Link app once to wake the machine or prepare a supervised beverage. Then close the app. This notice clears automatically after a valid device-specific frame is learned; you do not need to reopen Coffee Link for each later refresh. No command is sent to bypass this prerequisite."
+    },
     "relearn_commands": {
       "title": "Relearn Coffee Link commands",
       "description": "Home Assistant discarded saved commands for {device_name} because integrity or device-signature validation failed. In the official Coffee Link app, repeat the unavailable recipes; stop each recipe if its Stop button is unavailable, and wake the coffee maker once if needed. This repair is removed automatically after every discarded command has been learned again. Commands remaining: {count}."

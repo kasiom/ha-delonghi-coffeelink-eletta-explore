@@ -45,6 +45,7 @@ class ModelProfile:
     # properties.  Keep that mapping explicit and independent from the command
     # fallback selected for an otherwise unknown model.
     statistics_family: str | None = None
+    filter_water_volume_divisor = 1000
 
     @classmethod
     def matches(cls, oem_model: str) -> bool:
@@ -149,10 +150,15 @@ def profile_for(oem_model: str | None, command_property: str | None = None) -> M
     oem = oem_model or ""
     for profile in PROFILES:
         if profile.matches(oem):
-            return profile()
+            matched = profile()
+            if oem.lower().startswith("dl-striker-cb"):
+                # Confirmed by twelve paired counter intervals on ECAM450.65.G.
+                matched.filter_water_volume_divisor = 2000
+            return matched
     fallback: ModelProfile = SoulProfile() if command_property == "data_request" else ElettaProfile()
     # The command channel is a useful safe fallback for command framing, but it
     # does not prove the semantics of d700-d703.  Unknown machines therefore do
     # not inherit a known model's statistics formula by accident.
     fallback.statistics_family = None
+    fallback.filter_water_volume_divisor = 1000
     return fallback

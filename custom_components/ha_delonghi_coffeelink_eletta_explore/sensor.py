@@ -43,6 +43,8 @@ from .counters import (
     parse_total_water_volume_liters,
     parse_water_hardness_level,
     parse_water_volume_liters,
+    service_descale_progress,
+    service_parameter_integer,
 )
 from .entity import DelonghiCoordinatorEntity
 
@@ -134,6 +136,10 @@ async def async_setup_entry(
                 )
                 continue
             entities.append(DelonghiBreakdownCounterSensor(coord, prop_name, key, icon, breakdown_keys))
+        for key in ("service_descale_progress", "service_descale_status"):
+            service_entity = DelonghiServiceParameterSensor(coord, key)
+            if service_entity.native_value is not None:
+                entities.append(service_entity)
         entities.append(DelonghiMachineStatusSensor(coord))
         entities.append(DelonghiLastCommandSensor(coord))
         if coord.connection_info.get("rssi") is not None:
@@ -217,7 +223,7 @@ class DelonghiCounterSensor(_Base):
         if self._key == "water_total_quantity":
             result = parse_total_water_volume_liters(val)
         elif self._key == "water_filter_quantity":
-            result = parse_water_volume_liters(val)
+            result = parse_water_volume_liters(val, divisor=self.coordinator.profile.filter_water_volume_divisor)
         elif self._key == "water_hardness":
             result = parse_water_hardness_level(val)
         elif self._key == "descale_limit_usage":
@@ -244,6 +250,29 @@ class DelonghiCounterSensor(_Base):
         # Large JSON breakdowns change often and unnecessarily grow Recorder.
         # Selected useful totals are exposed as their own sensors instead.
         return None
+
+
+class DelonghiServiceParameterSensor(_Base):
+    """Opt-in service diagnostics; absent/invalid fields never become zero."""
+
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_entity_registry_enabled_default = False
+    _attr_state_class = None
+
+    def __init__(self, coord: DelonghiCoordinator, key: str) -> None:
+        super().__init__(coord, key)
+        self._key = key
+        if key == "service_descale_progress":
+            self._attr_native_unit_of_measurement = PERCENTAGE
+            self._attr_state_class = SensorStateClass.MEASUREMENT
+
+    @property
+    def native_value(self) -> int | None:
+        prop = (self.coordinator.data or {}).get("d580_service_parameters")
+        value = prop.get("value") if isinstance(prop, dict) else None
+        if self._key == "service_descale_progress":
+            return service_descale_progress(value)
+        return service_parameter_integer(value, "descale_status")
 
 
 class DelonghiCoffeeLinkAggregateSensor(_Base):

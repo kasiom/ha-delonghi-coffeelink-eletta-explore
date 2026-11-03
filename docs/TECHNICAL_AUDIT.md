@@ -1,8 +1,38 @@
 # Technical audit
 
-Audit date: 2026-09-30
+Audit date: 2026-11-03
 
-Audited release: 1.3.1 stable
+Audited candidate: 1.3.2-beta.3; latest stable remains 1.3.1
+
+Beta.2 was withdrawn after live first-install testing found a Recorder/bootstrap
+dependency wait. Its journal resumed and the archive completed, but beta.3 now
+defers that first transition through normal HA setup retry until fully running.
+The real-HA archive regression explicitly tests the pre-start condition as well
+as the post-start archive; new/already-migrated entities avoid this delay.
+
+## Current statistics audit
+
+Issue #15 is evaluated property by property in [Statistics](STATISTICS.md).
+`d701_tot_bev_b` is not a lifetime total of every beverage on the verified
+Eletta: Coffee Link assembles black-coffee statistics from this value and the
+selected iced-coffee counters. Mug and recipe aggregates must not be blindly
+added to overlapping summaries. Service progress is optional, validated and
+disabled by default; raw status codes are not assigned speculative meanings.
+
+Beta.1 passed one panel-prepared Espresso test without Coffee Link open or a
+manual refresh. The next statistics request started eight seconds after ready
+and a fresh counter arrived about thirty seconds after ready. This verifies
+that path on the target Eletta, not every recipe, firmware or model.
+
+Twelve paired historical intervals on ECAM450.65.G consistently showed twice
+the filtered-water increase compared with the independently verified total-water
+scale, within display rounding. Beta.2 therefore applies `/2000` to d555 only on
+the known `DL-striker-cb` profile; it preserves other models' previous conversion
+and the independent d513 filter percentage. The archive migration uses HA's
+entity-registry rename hooks rather than direct SQL or partial statistics
+rewrites that could let old raw states regenerate false consumption.
+
+## Earlier release audit history
 
 ## Verdict
 

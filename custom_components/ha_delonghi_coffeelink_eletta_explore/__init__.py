@@ -33,6 +33,7 @@ from .const import (
 from .coordinator import DelonghiCoordinator
 from .dss import AylaDssManager
 from .errors import translated_auth_error, translated_service_error
+from .statistics_migration import async_migrate_filter_statistics
 
 if TYPE_CHECKING:
     # Only the static checker imports the current validation engine directly.
@@ -227,6 +228,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: DelonghiConfigEntry) -> 
 
     dss_manager = AylaDssManager(hass, entry, client, coordinators)
     entry.runtime_data = DelonghiRuntimeData(client, coordinators, dss_manager)
+    try:
+        await async_migrate_filter_statistics(hass, entry, coordinators)
+    except Exception as err:
+        await asyncio.gather(*(coordinator.async_shutdown() for coordinator in coordinators), return_exceptions=True)
+        raise ConfigEntryNotReady("Filter-volume statistics migration could not be completed safely") from err
     _async_remove_stale_devices(hass, entry, active_dsns)
     _async_remove_retired_sensor_entities(hass, entry)
     dss_manager.start()

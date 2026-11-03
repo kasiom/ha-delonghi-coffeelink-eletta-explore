@@ -50,19 +50,34 @@ def parse_counter_value(val: Any) -> int | None:
         return None
 
 
-def parse_water_volume_liters(val: Any) -> float | None:
-    """Convert a legacy/filter water-volume counter from millilitres to litres.
-
-    This conversion is intentionally kept separate from
-    :func:`parse_total_water_volume_liters`.  Coffee Link 4.9.6 proves the
-    half-millilitre scale only for ``d553_water_tot_qty``; applying it to the
-    filter counter without equivalent evidence would silently change an
-    unrelated sensor.
-    """
-    milliliters = parse_counter_value(val)
-    if milliliters is None:
+def parse_water_volume_liters(val: Any, *, divisor: int = 1000) -> float | None:
+    """Convert water-volume ticks using the explicitly verified model scale."""
+    ticks = parse_counter_value(val)
+    if ticks is None:
         return None
-    return round(milliliters / 1000, 3)
+    return round(ticks / divisor, 3)
+
+
+def service_parameter_integer(value: Any, key: str) -> int | None:
+    """Read one non-negative integer without summing an unknown JSON object."""
+    data = value if isinstance(value, dict) else counter_breakdown(value)
+    raw = data.get(key) if data is not None else None
+    if isinstance(raw, bool) or not isinstance(raw, int | str):
+        return None
+    try:
+        result = int(raw)
+    except ValueError:
+        return None
+    return result if result >= 0 else None
+
+
+def service_descale_progress(value: Any) -> int | None:
+    """Return an optional service-threshold ratio, not physical water litres."""
+    quantity = service_parameter_integer(value, "last_4_water_calc_qty")
+    threshold = service_parameter_integer(value, "last_4_calc_threshold")
+    if quantity is None or threshold is None or threshold == 0:
+        return None
+    return min(round(quantity / threshold * 100), 100)
 
 
 def parse_total_water_volume_liters(val: Any) -> float | None:

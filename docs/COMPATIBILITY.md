@@ -11,13 +11,20 @@ checks do not change appliance protocol behavior or broaden model support.
 
 ## Support matrix
 
-The prerelease statistics candidate 1.3.2-beta.1 incorporates PR #16's
+The prerelease statistics candidate 1.3.2-beta.3 incorporates PR #16's
 Coffee Link `0xe8 0xf0` request, a single 45-second verification deadline and
 serialized statistics requests. Its live-monitor completion trigger depends on
 observing an accepted DSS transition; hourly refresh remains the fallback.
 The byte layout matches Coffee Link 4.9.6 and automated tests cover both HA
-targets, but physical statistics acceptance on the user's Eletta is still
-pending. This does not broaden model support or
+targets. Beta.1 completed a supervised panel-prepared Espresso test with Coffee
+Link closed: the black-coffee summary advanced once and the automatic request
+followed the ready transition by eight seconds. Beta.2 adds the model-scoped
+filter-volume correction, an archived old-scale history, optional service
+diagnostics and the initial-learning repair described in [Statistics](STATISTICS.md).
+Beta.2 was withdrawn after its first live installation exposed a Recorder
+startup-order wait. The archive and corrected values completed after a retry;
+beta.3 adds an explicit pre-start deferral and regression for that scenario.
+Physical beta.3 acceptance remains separate. This does not broaden model support or
 replace the published 1.3.1 release's acceptance evidence.
 
 | Model/profile | Cloud channel | Status |
