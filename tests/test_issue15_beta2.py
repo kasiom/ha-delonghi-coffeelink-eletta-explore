@@ -203,6 +203,7 @@ def _migration_environment(monkeypatch, *, entity=True, metadata=True):
     monkeypatch.setattr(migration.er, "RegistryEntryHider", types.SimpleNamespace(INTEGRATION="integration"), raising=False)
     registry = Registry()
     hass = types.SimpleNamespace(
+        state="running",
         config=types.SimpleNamespace(components={"recorder"}),
         entity_registry=registry,
         states=types.SimpleNamespace(async_remove=Mock()),
@@ -236,6 +237,18 @@ def test_new_filter_sensor_has_no_old_history_to_archive(monkeypatch):
     hass, coordinator, state, *_ = _migration_environment(monkeypatch, entity=False, metadata=False)
     asyncio.run(migration.async_migrate_filter_statistics(hass, _lifecycle_entry(), [coordinator]))
     assert state["journal"] == {"complete": True, "reason": "new_entity"}
+
+
+def test_first_migration_defers_before_start_without_touching_registry(monkeypatch):
+    hass, coordinator, state, registry, *_ = _migration_environment(monkeypatch)
+    hass.state = "not_running"
+    before = set(registry.entities)
+    with pytest.raises(RuntimeError, match="Waiting for Home Assistant startup"):
+        asyncio.run(migration.async_migrate_filter_statistics(hass, _lifecycle_entry(), [coordinator]))
+    assert state["journal"] is None and set(registry.entities) == before
+    # A completed marker must not delay subsequent HA restarts.
+    state["journal"] = {"complete": True}
+    asyncio.run(migration.async_migrate_filter_statistics(hass, _lifecycle_entry(), [coordinator]))
 
 
 def test_statistics_migration_is_fail_closed_and_optional(monkeypatch):

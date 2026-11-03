@@ -14,7 +14,8 @@ from functools import partial
 from typing import TYPE_CHECKING, Any
 
 from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant
+from homeassistant.core import CoreState, HomeAssistant
+from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.storage import Store
 
@@ -45,11 +46,16 @@ async def async_migrate_filter_statistics(
         journal = await store.async_load()
         if journal is not None and journal.get("complete"):
             continue
+        entity_id = journal["entity_id"] if journal is not None else registry.async_get_entity_id("sensor", DOMAIN, unique_id)
+        if entity_id is None:
+            await store.async_save({"complete": True, "reason": "new_entity"})
+            continue
+        # Recorder's worker can wait for HA startup before consuming queued jobs.
+        # ConfigEntryNotReady releases the bootstrap wait and lets HA retry after
+        # reaching RUNNING. A new/already-migrated entity never needs this wait.
+        if hass.state is not CoreState.running:
+            raise ConfigEntryNotReady("Waiting for Home Assistant startup before archiving legacy filter history")
         if journal is None:
-            entity_id = registry.async_get_entity_id("sensor", DOMAIN, unique_id)
-            if entity_id is None:
-                await store.async_save({"complete": True, "reason": "new_entity"})
-                continue
             old = registry.entities[entity_id]
             archive_id = f"{entity_id}_legacy_scale_v1_{device_hash}"
             archive_statistics = await recorder.async_add_executor_job(partial(get_metadata, hass, statistic_ids={archive_id}))
@@ -113,4 +119,4 @@ async def async_migrate_filter_statistics(
         registry.async_update_entity(active.entity_id, new_entity_id=entity_id, **preferences)
         for domain, options in journal["options"].items():
             registry.async_update_entity_options(entity_id, domain, options)
-        await store.async_save({"complete": True, "entity_id": entity_id, "archive_id": archive_id, "version": "1.3.2-beta.2"})
+        await store.async_save({"complete": True, "entity_id": entity_id, "archive_id": archive_id, "version": "1.3.2-beta.3"})

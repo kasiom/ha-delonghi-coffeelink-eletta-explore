@@ -2,6 +2,12 @@
 
 ## English
 
+Use beta.3 or newer, not withdrawn beta.2. The first history transition is
+deferred using HA's normal config-entry retry until HA is fully running; it
+must not wait for Recorder jobs inside bootstrap. Already completed transitions
+and new entities do not wait. The same journal safely resumes an interrupted
+beta.2 transition; no second archive or rescaling is performed.
+
 ### What issue #15 does and does not establish
 
 | Requested property | Handling |
@@ -73,6 +79,11 @@ the integration. Beta.2 is not a stable-release promotion or a universal model
 compatibility claim.
 
 ## Česky
+
+Použijte beta.3 nebo novější, nikoli staženou beta.2. První přechod historie se
+odloží standardním opakováním nastavení integrace, dokud HA plně nenaběhne.
+Dokončené přechody a nové položky nečekají. Přerušený přechod z beta.2 se bezpečně
+dokončí ze stejného záznamu; nevytváří se druhý archiv ani další přepočet.
 
 ### Výsledky prověření #15
 

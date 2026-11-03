@@ -6,6 +6,19 @@ All notable user-visible changes are documented here. The project follows
 
 ## [Unreleased]
 
+## [1.3.2-beta.3] - 2026-11-03
+
+### Fixed
+
+- Do not wait for Recorder jobs while Home Assistant is still bootstrapping.
+  Defer an existing filter-history transition through the normal config-entry
+  retry mechanism until HA is fully running. New entities and completed
+  migrations do not incur this wait. Add a real-HA pre-start regression.
+- Supersede withdrawn beta.2. Its live first installation revealed a startup
+  dependency wait despite the post-start Recorder test passing; HA eventually
+  retried and completed the archive. Beta.3 retains the same corrected values,
+  archive journal, entity IDs/preferences, EN/CS resources and #15 diagnostics.
+
 ## [1.3.2-beta.2] - 2026-11-03
 
 ### Fixed

@@ -13,7 +13,7 @@ připojené přes Coffee Link a platformu Ayla IoT.
 | Home Assistant | 2026.8.2 nebo novější |
 | Jazyky | čeština a angličtina |
 | Vývojové testy | Izolované regresní testy vyžadují 100% pokrytí řádků i větví; CI ověřuje skutečný HA 2026.8.2 a 2026.10.4 |
-| Volitelná předběžná verze | 1.3.2-beta.2; beta.1 prošla jedním testem statistik Espressa připraveného na displeji se zavřenou Coffee Link; stabilní verzí zůstává 1.3.1 |
+| Volitelná předběžná verze | 1.3.2-beta.3; beta.2 byla stažena kvůli pořadí prvního startu při archivaci; stabilní verzí zůstává 1.3.1 |
 
 Význam čítačů, volitelnou servisní diagnostiku a archivaci původního přepočtu
 filtru při přechodu na beta.2 popisuje [dokumentace statistik](STATISTICS.md#česky).

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from datetime import UTC, datetime, timedelta
 from functools import partial
 from types import SimpleNamespace
@@ -13,6 +14,7 @@ from homeassistant.components.recorder.db_schema import Statistics, StatisticsSh
 from homeassistant.components.recorder.models import StatisticMeanType
 from homeassistant.components.recorder.statistics import get_metadata, statistics_during_period
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers import recorder as recorder_helpers
 from pytest_homeassistant_custom_component.common import MockConfigEntry
@@ -35,14 +37,22 @@ def mock_recorder_before_hass(recorder_db_url: str, monkeypatch: pytest.MonkeyPa
 
 async def test_filter_scale_archive_keeps_ids_preferences_and_unmodified_history(hass: HomeAssistant, recorder_mock) -> None:
     """Do not recycle old-scale statistics into the corrected active entity."""
-    # The upstream fixture starts its worker only when the test HA is running.
-    await hass.async_start()
     entry = MockConfigEntry(domain=DOMAIN, data={}, title="Synthetic Coffee Link")
     entry.add_to_hass(hass)
     registry = er.async_get(hass)
     unique = "synthetic-filter-device_water_filter_quantity"
     old = registry.async_get_or_create("sensor", DOMAIN, unique, config_entry=entry, suggested_object_id="test_filter_water")
     registry.async_update_entity(old.entity_id, name="My filter", disabled_by=er.RegistryEntryDisabler.USER)
+    coordinator = SimpleNamespace(
+        device=SimpleNamespace(dsn="synthetic-filter-device"), profile=SimpleNamespace(filter_water_volume_divisor=2000)
+    )
+    # Reproduce the live first-install bootstrap ordering: migration must release
+    # setup for retry, not wait for a Recorder job before HA reaches RUNNING.
+    with pytest.raises(ConfigEntryNotReady, match="Waiting for Home Assistant startup"):
+        await asyncio.wait_for(async_migrate_filter_statistics(hass, entry, [coordinator]), timeout=2)
+    assert registry.async_get_entity_id("sensor", DOMAIN, unique) == old.entity_id
+    assert registry.async_get_entity_id("sensor", DOMAIN, unique + "_legacy_scale_v1") is None
+    await hass.async_start()
     recorder_mock.async_import_statistics(
         {
             "statistic_id": old.entity_id,

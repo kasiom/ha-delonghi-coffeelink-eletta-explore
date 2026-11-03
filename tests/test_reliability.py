@@ -222,6 +222,7 @@ def _install_homeassistant_stubs() -> None:
         return types.SimpleNamespace(version="0.3.16")
 
     core.HomeAssistant = object
+    core.CoreState = types.SimpleNamespace(running="running")
     core.ServiceCall = object
     config_entries.ConfigEntry = ConfigEntry
     config_entries.ConfigEntryState = ConfigEntryState
